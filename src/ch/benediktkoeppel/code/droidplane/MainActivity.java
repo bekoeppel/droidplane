@@ -31,10 +31,6 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import org.acra.*;
-import org.acra.annotation.*;
-
-@ReportsCrashes(formKey = "dGVacG0ydVHnaNHjRjVTUTEtb3FPWGc6MQ") 
 public class MainActivity extends Activity implements OnItemClickListener {
 	
 	private static final String TAG = "DroidPlane";
@@ -67,10 +63,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     @SuppressLint("NewApi")
 	@Override
     public void onCreate(Bundle savedInstanceState) {
-        // initialize ACRA crash reports
-		//ACRA.init(this);
-		
-        super.onCreate(savedInstanceState);
+    	super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
         // initialize android stuff
