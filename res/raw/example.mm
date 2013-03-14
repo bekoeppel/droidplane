@@ -27,6 +27,13 @@
 <node TEXT="Copy the text of a node" ID="ID_1543180359" CREATED="1363243796156" MODIFIED="1363243804355"/>
 <node TEXT="Support for editing Mindmaps" ID="ID_601546453" CREATED="1363243760701" MODIFIED="1363243776088"/>
 </node>
+<node TEXT="Required Permissions" ID="ID_323022740" CREATED="1363245286764" MODIFIED="1363245391248">
+<node TEXT="In order to make the application better, I use ACRA framework." ID="ID_1341438393" CREATED="1363245391605" MODIFIED="1363245426163">
+<node TEXT="http://acra.ch/" ID="ID_1922921414" CREATED="1363245433802" MODIFIED="1363245433807" LINK="http://acra.ch/"/>
+</node>
+<node TEXT="ACRA transmits crash reports to Google. I will analyze these crash reports in order to make the application better." ID="ID_945632101" CREATED="1363245434833" MODIFIED="1363245468766"/>
+<node TEXT="I promise you that I don&apos;t transmit any of your Mindmaps or other private information to Google, my server or anywhere else." ID="ID_1427063683" CREATED="1363245468961" MODIFIED="1363245495906"/>
+</node>
 <node TEXT="Feedback" ID="ID_1851185539" CREATED="1363243592512" MODIFIED="1363243593836">
 <node TEXT="If you want to report a bug, have any suggestions how to improve DroidPlane, or want to ask for a new feature, please drop me a line to code@benediktkoeppel.ch" ID="ID_1770042450" CREATED="1363243624837" MODIFIED="1363243669762"/>
 </node>
