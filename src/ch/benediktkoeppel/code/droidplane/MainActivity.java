@@ -52,10 +52,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	DocumentBuilder docBuilder;
 	Document document;
 	// stack of parent nodes
+	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
 	Stack<Node> parents = new Stack<Node>();
-	// the latest parent node (all visible nodes are childs of this currentParent
-	// TODO: shouldn't this be the same as parents.peek()?
-	Node currentParent;
 	// the currently visible nodes
 	ArrayList<Node> currentListedNodes = new ArrayList<Node>();
 	// the text of the currently visible nodes
@@ -98,7 +96,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         		try {
 					mm = cr.openInputStream(uri);
 				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
+					// TODO: show a pop up that the file does not exist
 					e.printStackTrace();
 				}
         	}
@@ -136,8 +134,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
 		// TODO: in the beginning, don't only display the root node. display it as if the root node was already opened
 		// TODO: in the menu bar, the name of the root node should be displayed (truncated to fit the width)
-    	currentParent = document.getDocumentElement();
-		listChildren();
+    	down(document.getDocumentElement());
         
     }
 
@@ -155,29 +152,43 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		return true;
 	}
 
-    // navigates back up one level in the Mindmap
-    public void up() {
-		if ( parents.size() > 0 ) {
-			currentParent = parents.pop();
+    // navigates back up one level in the Mindmap, if possible (otherwise does nothing)
+	public void up() {
+		
+		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
+		// we pop the current node, and then display it's parent's child nodes
+		if ( parents.size() > 1 ) {
+			parents.pop();
 			listChildren();
-		} 
+		}
+	}
+	
+	// navigates back up one level in the Mindmap. If we already display the root node, the application will finish
+	public void upOrClose() {
+		if ( parents.size() > 1 ) {
+			parents.pop();
+			listChildren();
+		} else {
+			finish();
+		}
+	}
+    
+	// open up Node node, and display all its child nodes
+    public void down(Node node) {
+    	parents.push(node);
+    	listChildren();
     }
     
     
-    
-    // TODO: documentation
-    // TODO: cleanup
-    // TODO: has a lot of side effects...! :-) (nothing else than...)
+    // lists the child nodes of the latest parent (i.e. of parents.peek() Node)
     private void listChildren() {
-    	
-    	Log.e(TAG, "listChildren called");
     	
     	// create new, empty ArrayLists
     	str_currentListedNodes = new ArrayList<String>();
     	currentListedNodes = new ArrayList<Node>();
     	
     	// fetch the children nodes of the current parent
-    	NodeList tmp_children = currentParent.getChildNodes();
+    	NodeList tmp_children = parents.peek().getChildNodes();
     	for (int i = 0; i < tmp_children.getLength(); i++) {
     		Node tmp_n = tmp_children.item(i);
     		
@@ -221,12 +232,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     		
 		// App button (top left corner)
     	case android.R.id.home:
-        	if ( parents.size() > 0 ) {
-    			currentParent = parents.pop();
-    			listChildren();
-        	} else {
-        		finish();
-        	}
+    		upOrClose();
         	break;
     	}
     	
@@ -247,10 +253,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 	
-		parents.push(currentParent);
-		currentParent = currentListedNodes.get(position);
-		
-		listChildren();
+		down(currentListedNodes.get(position));
 	}
 
 
