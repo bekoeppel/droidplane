@@ -36,12 +36,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class MainActivity extends Activity implements OnItemClickListener {
+
+// TODO: add Google Analytics tracking
+// TODO: add icon
+// TODO: can we get built in icons as svg?
+// TODO: release on AppStore
+
+public class MainActivity extends Activity implements OnItemClickListener, OnItemLongClickListener {
 	
 	private static final String TAG = "DroidPlane";
 
@@ -77,6 +84,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         // components
         listView = (ListView)findViewById(R.id.list_view);
     	listView.setOnItemClickListener(this);
+    	listView.setOnItemLongClickListener(this);
     	
         enableHomeButton();
     	
@@ -334,6 +342,31 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		
 	}
 	
+	
+
+	// Handler when an item is long clicked
+	@Override
+	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+		
+		Node pushedNode = currentListedNodes.get(position);
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Not yet implemented");
+        builder.setCancelable(true);
+        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+        	public void onClick(DialogInterface dialog, int which) {
+        		return;
+        	}
+        });
+
+        AlertDialog alert = builder.create();
+        alert.show();
+		
+		return true;
+		
+	}
+
+	
 	// returns the number of child Mindmap nodes 
 	// "Mindmap node" = XML node && ELEMENT_NODE && "node" tag
 	private int getNumChildMindmapNodes(Node node) {
@@ -478,5 +511,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			return v;
 		}
 	}
+
 
 }
