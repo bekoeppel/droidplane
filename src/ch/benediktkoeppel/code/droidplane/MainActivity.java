@@ -18,6 +18,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.google.analytics.tracking.android.EasyTracker;
+
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
@@ -43,10 +45,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 
-// TODO: add Google Analytics tracking
-// TODO: add icon
+//TODO: release on AppStore
+// TODO: does Google Analytics tracking work?
 // TODO: can we get built in icons as svg?
-// TODO: release on AppStore
 
 public class MainActivity extends Activity implements OnItemClickListener, OnItemLongClickListener {
 	
@@ -74,6 +75,20 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 	// the text of the currently visible nodes
 	ArrayList<String> str_currentListedNodes = new ArrayList<String>();
 	
+	@Override
+	  public void onStart() {
+	    super.onStart();
+	    EasyTracker.getInstance().activityStart(this);
+	  }
+
+	@Override
+	  public void onStop() {
+	    super.onStop();
+	    EasyTracker.getInstance().activityStop(this);
+	    EasyTracker.getInstance().dispatch();
+
+	  }
+
 	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -81,10 +96,14 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
         setContentView(R.layout.activity_main);
         
         // initialize android stuff
+        // EasyTracker
+        EasyTracker.getInstance().setContext(this);
         // components
         listView = (ListView)findViewById(R.id.list_view);
     	listView.setOnItemClickListener(this);
     	listView.setOnItemLongClickListener(this);
+    	
+    	EasyTracker.getTracker().sendView("MainActivity");
     	
         enableHomeButton();
     	
@@ -93,6 +112,8 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
         String action = intent.getAction();
         String type = intent.getType();
 
+        // start measuring the document load time
+		long loadDocumentStartTime = System.currentTimeMillis();
         
         // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
         // started from ACTION_EDIT/VIEW intent
@@ -148,7 +169,12 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 			return;
 		}
 		
+		long loadDocumentEndTime = System.currentTimeMillis();
+	    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
 		Log.d(TAG, "Document loaded");
+	    
+		long numNodes = document.getElementsByTagName("node").getLength();
+		EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
 		
 		// navigate down into the root node
 		down(document.getDocumentElement());
@@ -345,6 +371,7 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 	
 
 	// Handler when an item is long clicked
+	// TODO do this!
 	@Override
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 		
