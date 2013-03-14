@@ -5,7 +5,7 @@ import android.app.Application;
 import org.acra.*;
 import org.acra.annotation.*;
 
-@ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ", mode = ReportingInteractionMode.TOAST, resToastText = R.string.sending_crash_report) 
+@ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 
 	@Override

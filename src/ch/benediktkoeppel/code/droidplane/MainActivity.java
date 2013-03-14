@@ -3,6 +3,7 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -10,6 +11,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.acra.ACRA;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -19,7 +21,9 @@ import org.xml.sax.SAXException;
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -60,7 +64,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	ArrayList<String> str_currentListedNodes = new ArrayList<String>();
 	
 	
-    @SuppressLint("NewApi")
 	@Override
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
@@ -71,11 +74,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         listView = (ListView)findViewById(R.id.list_view);
     	listView.setOnItemClickListener(this);
     	
-        // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
-    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-	    	ActionBar bar = getActionBar();
-	    	bar.setDisplayHomeAsUpEnabled(true);
-    	}
+        enableHomeButton();
     	
     	// intents (how we are called)
         Intent intent = getIntent();
@@ -96,7 +95,12 @@ public class MainActivity extends Activity implements OnItemClickListener {
         		try {
 					mm = cr.openInputStream(uri);
 				} catch (FileNotFoundException e) {
-					// TODO: show a pop up that the file does not exist
+
+			    	abortWithPopup(R.string.filenotfound);
+			    	
+					ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
+					ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
+					ACRA.getErrorReporter().putCustomData("URI", uri.toString());
 					e.printStackTrace();
 				}
         	}
@@ -119,24 +123,46 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			docBuilder = docBuilderFactory.newDocumentBuilder();
 			document = docBuilder.parse(mm);
 		} catch (ParserConfigurationException e) {
+			ACRA.getErrorReporter().putCustomData("Exception", "ParserConfigurationException");
 			e.printStackTrace();
 			return;
 		} catch (SAXException e) {
+			ACRA.getErrorReporter().putCustomData("Exception", "SAXException");
 			e.printStackTrace();
 			return;
 		} catch (IOException e) {
+			ACRA.getErrorReporter().putCustomData("Exception", "IOException");
 			e.printStackTrace();
 			return;
 		}
 		
 		Log.d(TAG, "Document loaded");
 		
-
-		// TODO: in the beginning, don't only display the root node. display it as if the root node was already opened
-		// TODO: in the menu bar, the name of the root node should be displayed (truncated to fit the width)
-    	down(document.getDocumentElement());
+		// navigate down into the root node
+		down(document.getDocumentElement());
         
     }
+
+    // enables the home button
+	@SuppressLint("NewApi")
+	private void enableHomeButton() {
+		// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
+    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+	    	ActionBar bar = getActionBar();
+	    	bar.setDisplayHomeAsUpEnabled(true);
+    	}
+	}
+	
+    // disables the home button
+	@SuppressLint("NewApi")
+	private void disableHomeButton() {
+		// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
+    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+	    	ActionBar bar = getActionBar();
+	    	bar.setDisplayHomeAsUpEnabled(false);
+    	}
+	}
+	
 
     // sets the menu
     @Override
@@ -184,6 +210,31 @@ public class MainActivity extends Activity implements OnItemClickListener {
     
     // lists the child nodes of the latest parent (i.e. of parents.peek() Node)
     private void listChildren() {
+    	
+    	// enable the up navigation with the Home (app) button (top left corner)
+    	// if we only have one parent (i.e. this is the root node), then we disable the home button
+    	if ( parents.size() > 1 ) {
+    		enableHomeButton();
+    	} else {
+    		disableHomeButton();
+    	}
+    	
+		// set activity title to current parent's text. This is only possible if
+		// the parent is indeed an Element, a tag "node" and has a "TEXT"
+		// attribute. This should be always the case, but just be on the safe
+		// side.
+    	Node parent_n = parents.peek();
+    	if ( parent_n.getNodeType() == Node.ELEMENT_NODE ) {
+    		Element parent_e = (Element)parent_n;
+    		if ( parent_e.getTagName().equals("node") ) {
+    			String text = parent_e.getAttribute("TEXT");
+    			if ( !text.equals("") ) {
+    				setTitle(text);
+    			} else {
+    				setTitle(R.string.app_name);
+    			}
+    		}
+    	}
     	
     	// create new, empty ArrayLists
     	str_currentListedNodes = new ArrayList<String>();
@@ -234,7 +285,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     		
 		// App button (top left corner)
     	case android.R.id.home:
-    		upOrClose();
+    		up();
         	break;
     	}
     	
@@ -245,7 +296,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     // Navigate one level up, and stay at the root node
     @Override
     public void onBackPressed() {
-    	up();
+    	upOrClose();
     }
     
     // Handler when one of the ListItem's item is clicked
@@ -256,6 +307,22 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 	
 		down(currentListedNodes.get(position));
+	}
+	
+	// Shows a popup with an error message and then closes the application
+	public void abortWithPopup(int stringResourceId) {
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(stringResourceId);
+        builder.setCancelable(true);
+        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+        	public void onClick(DialogInterface dialog, int which) {
+        		finish();
+        	}
+        });
+
+        AlertDialog alert = builder.create();
+        alert.show();
 	}
 
 
