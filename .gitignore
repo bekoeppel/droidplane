@@ -21,3 +21,6 @@ local.properties
 
 # backup files of the examples.mm Mindmap
 res/raw/.backup
+
+# VIM swap files
+*.swp

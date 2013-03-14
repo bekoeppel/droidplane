@@ -2,22 +2,26 @@
 <!--To view this file, download free mind mapping software Freeplane from http://freeplane.sourceforge.net -->
 <node TEXT="DroidPlane Help" ID="ID_1385587321" CREATED="1361978276662" MODIFIED="1363243426259">
 <hook NAME="MapStyle" max_node_width="600"/>
-<node TEXT="Opening Files" POSITION="right" ID="ID_564005984" CREATED="1363198401582" MODIFIED="1363198403584">
+<node TEXT="Opening Files" POSITION="right" ID="ID_564005984" CREATED="1363198401582" MODIFIED="1363254066336">
+<icon BUILTIN="full-1"/>
 <node TEXT="DroidPlane can be launched from any file manager application. For example, you can open Mindmap files from Dropbox, Root Explorer, ASTRO File Manager and others." ID="ID_1932877744" CREATED="1363243479606" MODIFIED="1363243823601"/>
 <node TEXT="Simply locate your Mindmap document (ending in &quot;.mm&quot;) and tap the document." ID="ID_1348665736" CREATED="1363243532552" MODIFIED="1363243556485"/>
 <node TEXT="You might be asked with which application you want to open your MindMap: simply choose DroidPlane" ID="ID_691670280" CREATED="1363198418886" MODIFIED="1363243569404"/>
 </node>
-<node TEXT="Navigating" POSITION="right" ID="ID_1112944485" CREATED="1363243720200" MODIFIED="1363243721951">
+<node TEXT="Navigating" POSITION="right" ID="ID_1112944485" CREATED="1363243720200" MODIFIED="1363254069557">
+<icon BUILTIN="full-2"/>
 <node TEXT="Once you have opened a Mindmap, you will see the root node of your Mindmap." ID="ID_815653366" CREATED="1363243722626" MODIFIED="1363243839151"/>
 <node TEXT="Tapping a node will open this node, and display all its child nodes." ID="ID_1446105429" CREATED="1363243839703" MODIFIED="1363243860971"/>
 <node TEXT="To navigate back up in the Mindmap, you can press the back button or the application button in the upper left corner." ID="ID_409514355" CREATED="1363243861212" MODIFIED="1363243884810"/>
 </node>
-<node TEXT="Editing" POSITION="right" ID="ID_1832587474" CREATED="1363243888925" MODIFIED="1363243889965">
+<node TEXT="Editing" POSITION="right" ID="ID_1832587474" CREATED="1363243888925" MODIFIED="1363254070139">
+<icon BUILTIN="full-3"/>
 <node TEXT="Editing is currently not possible. But it is on the list of Future Features." ID="ID_400456261" CREATED="1363243890193" MODIFIED="1363243906057">
 <arrowlink DESTINATION="ID_624973113" STARTINCLINATION="338;0;" ENDINCLINATION="338;0;" STARTARROW="NONE" ENDARROW="DEFAULT"/>
 </node>
 </node>
-<node TEXT="About" POSITION="right" ID="ID_495169311" CREATED="1363198391806" MODIFIED="1363198394109">
+<node TEXT="About" POSITION="right" ID="ID_495169311" CREATED="1363198391806" MODIFIED="1363254076420">
+<icon BUILTIN="attach"/>
 <node TEXT="Author" ID="ID_1678888380" CREATED="1363198433472" MODIFIED="1363243586941">
 <node TEXT="DroidPlane is developed by Benedikt K&#xf6;ppel" ID="ID_825321977" CREATED="1363243594597" MODIFIED="1363243600965"/>
 <node TEXT="Benedikt K&#xf6;ppel&#xa;code@benediktkoeppel.ch&#xa;http://www.benediktkoeppel.ch" ID="ID_721590164" CREATED="1363243605288" MODIFIED="1363243616253"/>

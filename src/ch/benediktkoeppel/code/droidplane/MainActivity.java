@@ -3,8 +3,8 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Stack;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -23,29 +23,33 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MenuInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnItemClickListener {
 	
 	private static final String TAG = "DroidPlane";
 
 	// GUI stuff
-	// Menu identifiers
-	private static final int MENU_UP = 0;
-	
 	// Components
 	ListView listView;
-	ArrayAdapter<String> adapter;
+	//ArrayAdapter<String> adapter;
+	MindmapNodeAdapter adapter;
 
 
 	
@@ -168,17 +172,21 @@ public class MainActivity extends Activity implements OnItemClickListener {
     @Override
 	public boolean onCreateOptionsMenu(android.view.Menu menu) {
 
-    	// TODO: shouldn't this be in some kind of menu.xml?
-    	// add one menu item "Up"
-    	// TODO: what does this line actually do? what do the two 0 mean?
-		menu.add(0, MENU_UP, 0, "Up");
-		
-		// TODO: add "Go to Top" button
 		// TODO: add "Find" button and menu -> should search underneath the current node (or with an option, under the root node)
-		return true;
+
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main, menu);
+        return true;
+
 	}
        
     
+    // navigates to the top of the Mindmap
+    public void top() {
+    	parents.clear();
+    	parents.push(document.getDocumentElement());
+    	listChildren();
+    }
 
     // navigates back up one level in the Mindmap, if possible (otherwise does nothing)
 	public void up() {
@@ -224,48 +232,57 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		// attribute. This should be always the case, but just be on the safe
 		// side.
     	Node parent_n = parents.peek();
-    	if ( parent_n.getNodeType() == Node.ELEMENT_NODE ) {
-    		Element parent_e = (Element)parent_n;
-    		if ( parent_e.getTagName().equals("node") ) {
-    			String text = parent_e.getAttribute("TEXT");
-    			if ( !text.equals("") ) {
-    				setTitle(text);
-    			} else {
-    				setTitle(R.string.app_name);
-    			}
-    		}
+    	if ( isMindmapNode(parent_n) ) {
+    		Element parent_e = getMindmapNode(parent_n);
+   			String text = parent_e.getAttribute("TEXT");
+			if ( !text.equals("") ) {
+				setTitle(text);
+			} else {
+				setTitle(R.string.app_name);
+			}
     	}
     	
     	// create new, empty ArrayLists
     	str_currentListedNodes = new ArrayList<String>();
     	currentListedNodes = new ArrayList<Node>();
+    	ArrayList<MindmapNode> currentListedMindmapNodes = new ArrayList<MindmapNode>();
     	
     	// fetch the children nodes of the current parent
     	NodeList tmp_children = parents.peek().getChildNodes();
     	for (int i = 0; i < tmp_children.getLength(); i++) {
     		Node tmp_n = tmp_children.item(i);
     		
-    		// only interested in the elements (no comments, etc.)
-    		if ( tmp_n.getNodeType() == Node.ELEMENT_NODE ) {
-    			Element tmp_e = (Element)tmp_n;
-
-    			// TODO: handle other tags, such as icons, links etc.
+    		if ( isMindmapNode(tmp_n) ) {
+    			Element tmp_e = getMindmapNode(tmp_n);
+				
+				// extract the string (TEXT attribute) of the nodes
+    			String text = tmp_e.getAttribute("TEXT");
     			
-    			// only interested in nodes called "node"
-    			if ( tmp_e.getTagName().equals("node") ) {
-    				
-    				// extract the string (TEXT attribute) of the nodes
-	    			str_currentListedNodes.add(tmp_e.getAttribute("TEXT"));
-	    			currentListedNodes.add(tmp_e);
+    			// extract icons
+    			// TODO: how do we handle multiple icons?
+    			ArrayList<String> icons = getIcons(tmp_e);
+    			String icon="";
+    			int icon_id = 0;
+    			if ( icons.size() > 0 ) {
+    				icon = icons.get(0);
+    				icon_id = getResources().getIdentifier("@drawable/" + icon, "id", getPackageName());
     			}
+    			
+    			// find out if it has sub nodes
+    			boolean expandable = ( getNumChildMindmapNodes(tmp_e) > 0 );
+    			
+    			str_currentListedNodes.add(text);
+    			currentListedNodes.add(tmp_e);
+    			currentListedMindmapNodes.add(new MindmapNode(text, icon, icon_id, expandable));
+    			
+    			
     		}
-		}
+ 		}
     	
     	// create adapter (i.e. data provider) for the listView
-    	// TODO: maybe we need a special list item layout, so that we can show links, icons and text
-    	adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, android.R.id.text1, str_currentListedNodes);
+    	adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, currentListedMindmapNodes);
     	listView.setAdapter(adapter); 
-    	  	
+
     }
 
     
@@ -279,8 +296,13 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	switch (item.getItemId()) {
     	
     	// "Up" menu action
-    	case MENU_UP:
+    	case R.id.up:
     		up();
+    		break;
+    		
+		// "Top" menu action
+    	case R.id.top:
+    		top();
     		break;
     		
 		// App button (top left corner)
@@ -301,12 +323,90 @@ public class MainActivity extends Activity implements OnItemClickListener {
     
     // Handler when one of the ListItem's item is clicked
     // Find the node which was clicked, and redraw the screen with this node as new parent
-    // TODO: menu items should be clickable across the full width!
-    // TODO: menu items with no children should not be clickable
+    // if the clicked node has no child, then we stop here
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 	
-		down(currentListedNodes.get(position));
+		Node pushedNode = currentListedNodes.get(position);
+		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
+			down(pushedNode);
+		}
+		
+	}
+	
+	// returns the number of child Mindmap nodes 
+	// "Mindmap node" = XML node && ELEMENT_NODE && "node" tag
+	private int getNumChildMindmapNodes(Node node) {
+		
+		int numMindmapNodes = 0;
+		
+		NodeList childNodes = node.getChildNodes();
+		for (int i = 0; i < childNodes.getLength(); i++) {
+			
+			Node n = childNodes.item(i);
+			if ( isMindmapNode(n) ) {
+				numMindmapNodes++;
+			}
+		}
+		
+		return numMindmapNodes;
+		
+	}
+	
+	// checks whether node is a Mindmap node, i.e. has type ELEMENT_NODE and tag "node"
+	private boolean isMindmapNode(Node node) {
+		
+		if ( node.getNodeType() == Node.ELEMENT_NODE ) {
+			Element element = (Element)node;
+			
+			if ( element.getTagName().equals("node") ) {
+				return true;
+			}
+		}
+		
+		return false;
+		
+	}
+	
+	private ArrayList<String> getIcons(Element node) {
+		
+		ArrayList<String> icons = new ArrayList<String>();
+		
+		NodeList childNodes = node.getChildNodes();		
+		for (int i = 0; i < childNodes.getLength(); i++) {
+			
+			Node n = childNodes.item(i);
+			if ( n.getNodeType() == Node.ELEMENT_NODE ) {
+				Element e = (Element)n;
+				
+				if ( e.getTagName().equals("icon") && e.hasAttribute("BUILTIN") ) {
+					icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN")));
+				}
+			}
+		}
+		
+		return icons;
+		
+	}
+	
+	// converts the node into an Element. If it is no Mindmap node, null is returned
+	private Element getMindmapNode(Node node) {
+		
+		if ( isMindmapNode(node) ) {
+			return (Element)node;
+		} else {
+			return null;
+		}
+		
+	}
+	
+
+	// Mindmap icons have names such as 'button-ok', but resources have to have names with pattern [a-z0-9_.]
+	private String getDrawableNameFromMindmapIcon(String iconName) {
+		Locale locale = getResources().getConfiguration().locale;
+		String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
+		name.replaceAll("_$", "");
+		return name;
 	}
 	
 	// Shows a popup with an error message and then closes the application
@@ -324,6 +424,59 @@ public class MainActivity extends Activity implements OnItemClickListener {
         AlertDialog alert = builder.create();
         alert.show();
 	}
-
+	
+	// TODO: maybe we should have proper Mindmap and MindmapNode classes
+	class MindmapNode {
+		public String text;
+		public String icon_name;
+		public int icon_res_id;
+		public boolean isExpandable;
+		
+		
+		public MindmapNode(String text, String icon_name, int icon_res_id, boolean isExpandable) {
+			this.text = text;
+			this.icon_name = icon_name;
+			this.icon_res_id = icon_res_id;
+			this.isExpandable = isExpandable;
+		}
+	}
+	
+	class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
+		private ArrayList<MindmapNode> mindmapNodes;
+		
+		public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNode> mindmapNodes) {
+			super(context, textViewResourceId, mindmapNodes);
+			this.mindmapNodes = mindmapNodes;
+		}
+		
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View v = convertView;
+			if ( v == null ) {
+				LayoutInflater vi = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+				v = vi.inflate(R.layout.mindmap_node_list_item, null);
+			}
+			
+			MindmapNode node = mindmapNodes.get(position);
+			if ( node != null) {
+				
+				TextView text = (TextView) v.findViewById(R.id.label);
+				text.setText(node.text);
+				
+				ImageView icon = (ImageView) v.findViewById(R.id.icon);
+				icon.setImageResource(node.icon_res_id);
+				icon.setContentDescription(node.icon_name);
+				
+				TextView expandable = (TextView) v.findViewById(R.id.expandable);
+				if ( node.isExpandable ) {
+					expandable.setText("+");
+				} else {
+					expandable.setText("");
+				}
+			}
+			
+			return v;
+		}
+	}
 
 }
