@@ -24,3 +24,6 @@ res/raw/.backup
 
 # VIM swap files
 *.swp
+
+# don't ignore the release folder
+!/release/**/*.apk
