@@ -36,11 +36,14 @@ import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -346,10 +349,37 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     	case android.R.id.home:
     		up();
         	break;
+        	
+    	// Slide button
+    	case R.id.slide:
+    		slide();
+    		break;
     	}
     	
     	return true;
     }
+    
+    // moves the current ListView to the left, and pushes in a new one from the right
+    public void slide() {
+
+    	ListView l = new ListView(this); 
+    	l.setAdapter(listView.getAdapter());
+    	
+    	LinearLayout ll = (LinearLayout)findViewById(R.id.root);
+    	ll.addView(l);
+    	
+    	TranslateAnimation mAnimation = new TranslateAnimation(0, 0, 0, 599);
+		mAnimation.setDuration(10000);
+		mAnimation.setFillAfter(true);
+		mAnimation.setRepeatCount(-1);
+		mAnimation.setRepeatMode(Animation.REVERSE);
+		l.setAnimation(mAnimation);
+    	
+    	
+    	
+    	
+    }
+    
     
     // Handler for the back button
     // Navigate one level up, and stay at the root node

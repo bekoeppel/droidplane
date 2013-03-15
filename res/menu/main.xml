@@ -8,5 +8,8 @@
     <item android:id="@+id/top"
         android:title="@string/gototop"
         android:showAsAction="ifRoom" />
+    <item android:id="@+id/slide"
+        android:title="@string/slide"
+        android:showAsAction="ifRoom" />
 
 </menu>

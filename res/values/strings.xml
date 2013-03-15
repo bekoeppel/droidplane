@@ -9,4 +9,5 @@
     <string name="ok">OK</string>
     <string name="filenotfound">Sorry, I could not find the file you wanted to open!</string>
     <string name="noicon">no icon</string>
+    <string name="slide">Slide!</string>
 </resources>
