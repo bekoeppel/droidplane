@@ -35,14 +35,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.TextView;
 
 
 //TODO: release on AppStore
@@ -55,9 +51,17 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 
 	// GUI stuff
 	// Components
-	ListView listView;
+	//ArrayList<ListView> listViews;
+	//int nextListViewToUse;
+	ListViewArray listViewArray;
 	//ArrayAdapter<String> adapter;
-	MindmapNodeAdapter adapter;
+	//MindmapNodeAdapter adapter;
+	
+	/*
+	 * Note: we stack multiple ListViews side by side for the landscape view. These stacked ListViews are stored in ArrayList<ListView> listView.
+	 * This means that we also need to store the list of nodes for each individual listViews, this is stored in ArrayList<ArrayList<Node>> currentListedNodes;
+	 * And their respective texts are stored in ArrayList<ArrayList<String>> str_currentListedNodes.
+	 */
 
 
 	
@@ -69,11 +73,13 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 	Document document;
 	// stack of parent nodes
 	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
-	Stack<Node> parents = new Stack<Node>();
+	// TODO: parents should probably also be a ArrayList<Stack<Node>>, like everything else nowadays
+	//Stack<Node> parents = new Stack<Node>();
 	// the currently visible nodes
-	ArrayList<Node> currentListedNodes = new ArrayList<Node>();
+	//ArrayList<ArrayList<Node>> currentListedNodes = new ArrayList<ArrayList<Node>>();
 	// the text of the currently visible nodes
-	ArrayList<String> str_currentListedNodes = new ArrayList<String>();
+	// TODO: do we really still use this??? We have switched to use MindmapNodes, and they store the text.
+	//ArrayList<ArrayList<String>> str_currentListedNodes = new ArrayList<ArrayList<String>>();
 	
 	@Override
 	  public void onStart() {
@@ -99,10 +105,28 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
         // EasyTracker
         EasyTracker.getInstance().setContext(this);
         // components
-        listView = (ListView)findViewById(R.id.list_view);
-    	listView.setOnItemClickListener(this);
-    	listView.setOnItemLongClickListener(this);
-    	
+        ArrayList<ListView> listViews = new ArrayList<ListView>();
+        ListView listView0 = (ListView)findViewById(R.id.list_view0);
+        ListView listView1 = (ListView)findViewById(R.id.list_view1);
+        ListView listView2 = (ListView)findViewById(R.id.list_view2);
+        if ( listView0 != null ) {
+        	listView0.setOnItemClickListener(this);
+        	listView0.setOnItemLongClickListener(this);
+        	listViews.add(listView0);
+        }
+        if ( listView1 != null ) {
+        	listView1.setOnItemClickListener(this);
+        	listView1.setOnItemLongClickListener(this);
+        	listViews.add(listView1);
+        }
+        if ( listView2 != null ) {
+        	listView2.setOnItemClickListener(this);
+        	listView2.setOnItemLongClickListener(this);
+        	listViews.add(listView2);
+        }
+        listViewArray = new ListViewArray(listViews);
+
+        
     	EasyTracker.getTracker().sendView("MainActivity");
     	
         enableHomeButton();
@@ -217,13 +241,21 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     
     // navigates to the top of the Mindmap
     public void top() {
-    	parents.clear();
-    	parents.push(document.getDocumentElement());
-    	listChildren();
+    	listViewArray.wipeAll();
+
     }
 
     // navigates back up one level in the Mindmap, if possible (otherwise does nothing)
 	public void up() {
+		
+		listViewArray.removeOne();
+		
+		// if we have multiple views, we want to go one up. But if we are already only using one listView, we can't go further up
+		if ( nextListViewToUse <= 1 ) {
+			nextListViewToUse = 0;
+		} else {
+			nextListViewToUse = nextListViewToUse-1;
+		}
 		
 		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
 		// we pop the current node, and then display it's parent's child nodes
@@ -234,7 +266,16 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 	}
 	
 	// navigates back up one level in the Mindmap. If we already display the root node, the application will finish
+	// TODO: DRY with up(); !!!
 	public void upOrClose() {
+		
+		// if we have multiple views, we want to go one up. But if we are already only using one listView, we can't go further up
+		if ( nextListViewToUse <= 1 ) {
+			nextListViewToUse = 0;
+		} else {
+			nextListViewToUse = nextListViewToUse-1;
+		}
+		
 		if ( parents.size() > 1 ) {
 			parents.pop();
 			listChildren();
@@ -245,13 +286,42 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     
 	// open up Node node, and display all its child nodes
     public void down(Node node) {
+    	
+    	// TODO: we have to tell listChildren into which target listView we need to write. Because if "down" comes from listView[0], then we write into listView[1] (and wipe listView[>=2]), regardless of whether there was anything else there before.
+    	// determine the next list view to use
+    	nextListViewToUse = nextListViewToUse+1;
+    	
+    	// if nextListViewToUse would be too far right, we have to shift everything one left (and then use the right most listView)
+    	if ( nextListViewToUse >= listViews.size() ) {
+    		shiftListViewsOneLeft();
+    		nextListViewToUse = listViews.size()-1;
+    	}
+
     	parents.push(node);
     	listChildren();
+
     }
     
+    // shifts the contents of listViews[i] to listViews[i-1]
+    private void shiftListViewsOneLeft() {
+    	
+		// we already used all available ListViews
+		// so we remove listView[0], and shift listView[i] to listView[i-1]
+		for (int i = 1; i < listViews.size(); i++) {
+			listViews.get(i-1).setAdapter( listViews.get(i).getAdapter() );
+		}
+    }
+    
+    private void wipeListViewsRightOf() {
+    	for (int i = nextListViewToUse; i < listViews.size(); i++) {
+    		listViews.get(i).setAdapter(null);
+		}
+    }
     
     // lists the child nodes of the latest parent (i.e. of parents.peek() Node)
     private void listChildren() {
+    	
+    	// TODO: also wipe all listViews further right than targetListViewIndex.
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
@@ -260,6 +330,7 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     	} else {
     		disableHomeButton();
     	}
+
     	
 		// set activity title to current parent's text. This is only possible if
 		// the parent is indeed an Element, a tag "node" and has a "TEXT"
@@ -277,8 +348,15 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     	}
     	
     	// create new, empty ArrayLists
-    	str_currentListedNodes = new ArrayList<String>();
-    	currentListedNodes = new ArrayList<Node>();
+    	if ( str_currentListedNodes.size() == nextListViewToUse ) {
+    		// str_currentListedNodes does not yet have index nextListView, so we add one
+        	str_currentListedNodes.add(new ArrayList<String>());
+        	currentListedNodes.add(new ArrayList<Node>());
+    	} else {
+    		// str_currentListedNodes already has an item at nextListView, so we overwrite (set) it
+        	str_currentListedNodes.set(nextListViewToUse, new ArrayList<String>());
+        	currentListedNodes.set(nextListViewToUse, new ArrayList<Node>());
+    	}
     	ArrayList<MindmapNode> currentListedMindmapNodes = new ArrayList<MindmapNode>();
     	
     	// fetch the children nodes of the current parent
@@ -305,8 +383,8 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     			// find out if it has sub nodes
     			boolean expandable = ( getNumChildMindmapNodes(tmp_e) > 0 );
     			
-    			str_currentListedNodes.add(text);
-    			currentListedNodes.add(tmp_e);
+    			str_currentListedNodes.get(nextListViewToUse).add(text);
+    			currentListedNodes.get(nextListViewToUse).add(tmp_e);
     			currentListedMindmapNodes.add(new MindmapNode(text, icon, icon_id, expandable));
     			
     			
@@ -314,9 +392,18 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
  		}
     	
     	// create adapter (i.e. data provider) for the listView
-    	adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, currentListedMindmapNodes);
-    	listView.setAdapter(adapter); 
+    	adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, currentListedMindmapNodes, (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
+    	listViews.get(nextListViewToUse).setAdapter(adapter); 
 
+    }
+    
+    // checks whether listView is already the last one we have vertically
+    private boolean isRightMostListView(ListView listView) {
+    	if ( listViews.get(listViews.size()).getId() == listView.getId() ) {
+    		return true;
+    	} else {
+    		return false;
+    	}
     }
 
     
@@ -360,8 +447,17 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
     // if the clicked node has no child, then we stop here
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		
+		// find out in which listView we pushed
+		int pushedListView = 0;
+		for (int i = 0; i < listViews.size(); i++) {
+			if ( listViews.get(i).getId() == ((ListView)parent).getId() ) {
+				pushedListView = i;
+			}
+		}
 	
-		Node pushedNode = currentListedNodes.get(position);
+		// TODO: something goes wrong here
+		Node pushedNode = currentListedNodes.get(pushedListView).get(position);
 		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
 			down(pushedNode);
 		}
@@ -375,7 +471,7 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 	@Override
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 		
-		Node pushedNode = currentListedNodes.get(position);
+		//Node pushedNode = currentListedNodes.get(position);
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Not yet implemented");
@@ -484,60 +580,9 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
         AlertDialog alert = builder.create();
         alert.show();
 	}
+
 	
-	// TODO: maybe we should have proper Mindmap and MindmapNode classes
-	class MindmapNode {
-		public String text;
-		public String icon_name;
-		public int icon_res_id;
-		public boolean isExpandable;
-		
-		
-		public MindmapNode(String text, String icon_name, int icon_res_id, boolean isExpandable) {
-			this.text = text;
-			this.icon_name = icon_name;
-			this.icon_res_id = icon_res_id;
-			this.isExpandable = isExpandable;
-		}
-	}
-	
-	class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
-		private ArrayList<MindmapNode> mindmapNodes;
-		
-		public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNode> mindmapNodes) {
-			super(context, textViewResourceId, mindmapNodes);
-			this.mindmapNodes = mindmapNodes;
-		}
-		
-		@Override
-		public View getView(int position, View convertView, ViewGroup parent) {
-			View v = convertView;
-			if ( v == null ) {
-				LayoutInflater vi = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-				v = vi.inflate(R.layout.mindmap_node_list_item, null);
-			}
-			
-			MindmapNode node = mindmapNodes.get(position);
-			if ( node != null) {
-				
-				TextView text = (TextView) v.findViewById(R.id.label);
-				text.setText(node.text);
-				
-				ImageView icon = (ImageView) v.findViewById(R.id.icon);
-				icon.setImageResource(node.icon_res_id);
-				icon.setContentDescription(node.icon_name);
-				
-				TextView expandable = (TextView) v.findViewById(R.id.expandable);
-				if ( node.isExpandable ) {
-					expandable.setText("+");
-				} else {
-					expandable.setText("");
-				}
-			}
-			
-			return v;
-		}
-	}
+
 
 
 }
