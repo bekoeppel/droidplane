@@ -120,8 +120,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
         	listViews.add(listView2);
         }
         
-        // if the number of list views has not changed, we simply re-attach all adapters
         if ( application.getListViews() != null ) {
+            // if the number of list views has not changed, we simply re-attach all adapters
 	        if ( listViews.size() >= previousNumListViews ) {
 	        	for (int i = 0; i < application.getListViews().size(); i++) {
 	        		listViews.get(i).setAdapter(application.getListViews().get(i).getAdapter());
@@ -129,10 +129,12 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	        }
 	        
 	        // we have fewer list views than before, we take the right most adapter
+	        // TODO: handle the case where we go from 3 list views to 2 or something like that (or maybe 5 to 2, on a tablet)
 	        else /* if ( listViews.size() < previousNumListViews )*/ {
-	        	for (int i = application.getListViews().size()-1; i > 0; i--) {
+	        	for (int i = application.getListViews().size()-1; i >= 0; i--) {
 	        		if ( application.getListViews().get(i).getAdapter() != null ) {
 	        			listViews.get(0).setAdapter(application.getListViews().get(i).getAdapter());
+	        			break;
 	        		}
 				}
 	        }
@@ -151,7 +153,12 @@ public class MainActivity extends Activity implements OnItemClickListener {
         // start measuring the document load time
 		long loadDocumentStartTime = System.currentTimeMillis();
 		
-		if ( application.document == null ) {
+		if ( application.document == null || application.getUri() != intent.getData() ) {
+			
+			// clear all existing adapters, they are all invalid
+			for (int i = 0; i < application.getListViews().size(); i++) {
+				application.getListViews().get(i).setAdapter(null);
+			}
 	        
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
@@ -175,6 +182,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 						e.printStackTrace();
 					}
 	        	}
+	        	
+	        	application.setUri(uri);
 	        } 
 	        
 	        // started from the launcher

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Stack;
 
 import android.app.Application;
+import android.net.Uri;
 import android.widget.ListView;
 
 import org.acra.*;
@@ -24,6 +25,8 @@ public class MainApplication extends Application {
 	// the parent stack which is used in the MainActivity
 	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
 	Stack<Node> parents = new Stack<Node>();
+
+	private Uri uri;
 
 	
 
@@ -49,6 +52,14 @@ public class MainApplication extends Application {
 		} else {
 			return this.listViews.size();
 		}
+	}
+
+	public Uri getUri() {
+		return this.uri;
+	}
+
+	public void setUri(Uri uri) {
+		this.uri = uri;
 	}
 
 	
