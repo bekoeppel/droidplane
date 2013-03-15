@@ -31,6 +31,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IInterface;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
@@ -39,8 +40,11 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.TableLayout.LayoutParams;
 import android.widget.ArrayAdapter;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -57,6 +61,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	// GUI stuff
 	// Components
 	ArrayList<ListView> listViews;
+	int initialNumberOfListViews;
 	//ArrayAdapter<String> adapter;
 	//ArrayList<MindmapNodeAdapter> mindmapNodeAdapters;
 
@@ -106,16 +111,19 @@ public class MainActivity extends Activity implements OnItemClickListener {
         	listView0.setOnItemClickListener(this);
         	//listView0.setOnItemLongClickListener(this);
         	listViews.add(listView0);
+            initialNumberOfListViews = 1;
         }
         if ( listView1 != null ) {
         	listView1.setOnItemClickListener(this);
         	//listView1.setOnItemLongClickListener(this);
         	listViews.add(listView1);
+            initialNumberOfListViews = 2;
         }
         if ( listView2 != null ) {
         	listView2.setOnItemClickListener(this);
         	//listView2.setOnItemLongClickListener(this);
         	listViews.add(listView2);
+            initialNumberOfListViews = 3;
         }
 
     	// enable the Android home button
@@ -237,6 +245,11 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	for (int i = 0; i < listViews.size(); i++) {
     		listViews.get(i).setAdapter(null);
 		}
+    	
+    	// remove all unnecessairy list views
+    	for (int i = initialNumberOfListViews; i < listViews.size(); i++) {
+    		listViews.remove(i);
+		}
 
     	// clear the parents stack and re-add the document root node
     	parents.clear();
@@ -264,6 +277,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		if ( parents.size() > 1 ) {
 			parents.pop();
 			Log.d(TAG, "parents has " + parents.size() + " elements after popping");
+			
+			// TODO list all unnecessair list views
 			
 			// remove the adapter as far right as possible
 			for (int i = listViews.size()-1; i >= 0; i--) {
@@ -375,26 +390,37 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	// create adapter (i.e. data provider) for the listView
     	MindmapNodeAdapter adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, mindmapNodes);
 
-    	// all ListViews already have a MindmapNodeAdapter
-    	if ( listViews.get(listViews.size()-1).getAdapter() != null ) {
-        	// need to shift all one to the left
-    		for (int i = 1; i < listViews.size(); i++) {
-    			listViews.get(i-1).setAdapter(listViews.get(i).getAdapter());
-			}
-    		// and attach our new adapter at the far right
-    		listViews.get(listViews.size()-1).setAdapter(adapter);    		
-    	} 
+    	// add a new list view
+    	ListView listView = new ListView(this);
+    	listView.setAdapter(adapter);
+    	listView.setLayoutParams(new LayoutParams(0, 0));
+    	listView.setLayoutParams(new LayoutParams(listViews.get(0).getLayoutParams()));
     	
-    	// find the first free listView (i.e. listView with no adapter)
-    	else {
-    		for (int i = 0; i < listViews.size(); i++) {
-    			if ( listViews.get(i).getAdapter() == null ) {
-    				// and attach our adapter at the first free ListView
-    				listViews.get(i).setAdapter(adapter);
-    				break;
-    			}
-			}
-    	}
+    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
+    	linearLayout.addView(listView, linearLayout.getChildCount());
+    	
+    	listViews.add(listView);
+    	
+//    	// all ListViews already have a MindmapNodeAdapter
+//    	if ( listViews.get(listViews.size()-1).getAdapter() != null ) {
+//        	// need to shift all one to the left
+//    		for (int i = 1; i < listViews.size(); i++) {
+//    			listViews.get(i-1).setAdapter(listViews.get(i).getAdapter());
+//			}
+//    		// and attach our new adapter at the far right
+//    		listViews.get(listViews.size()-1).setAdapter(adapter);    		
+//    	} 
+//    	
+//    	// find the first free listView (i.e. listView with no adapter)
+//    	else {
+//    		for (int i = 0; i < listViews.size(); i++) {
+//    			if ( listViews.get(i).getAdapter() == null ) {
+//    				// and attach our adapter at the first free ListView
+//    				listViews.get(i).setAdapter(adapter);
+//    				break;
+//    			}
+//			}
+//    	}
 
     }
 
