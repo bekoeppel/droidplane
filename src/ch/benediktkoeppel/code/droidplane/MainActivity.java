@@ -57,9 +57,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	// GUI stuff
 	// Components
 	ArrayList<ListView> listViews;
-	//ArrayAdapter<String> adapter;
-	//ArrayList<MindmapNodeAdapter> mindmapNodeAdapters;
-
 
 	
 	// Mindmap stuff
@@ -397,11 +394,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	}
 
     }
-
-    
-    public int getNumListViews() {
-    	return listViews.size();
-    }
     
     
     // Handler of all menu events
@@ -644,6 +636,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			return nodeList;
 		}
 
+		@SuppressLint("InlinedApi")
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v = convertView;
@@ -669,8 +662,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 					expandable.setText("");
 				}
 				
-				// if the node is selected, give it a special background
-				if ( node.getIsSelected() ) {
+				// if the node is selected and has child nodes, give it a special background
+				if ( node.getIsSelected() && getNumChildMindmapNodes(node.getNode()) > 0 ) {
 					int backgroundColor;
 					
 					// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
@@ -693,10 +686,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		
 
 		// Sets the color on the node at the specified position
-		@SuppressLint("InlinedApi")
 		public void setItemColor(int position) {
 			
-			// unselect all nodes
+			// deselect all nodes
 			for (int i = 0; i < mindmapNodes.size(); i++) {
 				mindmapNodes.get(i).setSelected(false);
 			}
