@@ -45,9 +45,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 
-//TODO: release on AppStore
-// TODO: does Google Analytics tracking work?
-// TODO: can we get built in icons as svg?
+// TODO: can we get built-in icons as svg?
+// TODO: properly parse richtext nodes
+// TODO: when orientation changes, the onCreate is executed again. This means that we jump back to root. We should stay wherever we were before the orientation change. Maybe check if Uri is still the same, and if it is we don't re-initialize (but reuse).
+// TODO: when we click the TOP button, we get back to the top, but the Application Title is not adjusted. This happens because we pop everything from parents, so parent's parent does not exist. We should then just re-set the title to DroidPlane
 
 public class MainActivity extends Activity implements OnItemClickListener, OnItemLongClickListener {
 	
@@ -274,7 +275,9 @@ public class MainActivity extends Activity implements OnItemClickListener, OnIte
 			} else {
 				setTitle(R.string.app_name);
 			}
-    	}
+    	} else {
+			setTitle(R.string.app_name);
+		}
     	
     	// create new, empty ArrayLists
     	str_currentListedNodes = new ArrayList<String>();

@@ -25,6 +25,8 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            
+            <!-- works from Nexus 4 Dropbox -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.EDIT" />
@@ -34,9 +36,11 @@
                 <data android:scheme="file" />
                 <data android:host="*" />
                 <data android:pathPattern=".*\\.mm" />
-                <data android:mimeType="application/x-freemind" />
+                <!-- <data android:mimeType="application/x-freemind" /> -->
+                <data android:mimeType="*/*" />
             </intent-filter>
-        </activity>
+
+            </activity>
     </application>
 
 </manifest>
