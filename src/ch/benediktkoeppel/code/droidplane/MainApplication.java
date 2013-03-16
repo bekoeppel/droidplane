@@ -15,14 +15,10 @@ import org.w3c.dom.Node;
 @ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 	
-	public ArrayList<ListView> listViews;
+	public ArrayList<NodeColumn> nodeColumns;
 	
 	// the document which is used in MainActivity
 	public Document document;
-	
-	// the parent stack which is used in the MainActivity
-	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
-	public Stack<Node> parents;
 
 	private Uri uri;
 

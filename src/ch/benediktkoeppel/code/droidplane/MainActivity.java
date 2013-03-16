@@ -60,10 +60,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	// MainApplication
 	MainApplication application;
 
-	// stack of parent nodes
-	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
-	// TODO: why do we need parents? shouldn't we remove this, and just have everyting in the listViews array? Maybe the MindmapNodeAdapter should have a set/getParent
-	
 	@Override
 	public void onStart() {
 		super.onStart();
@@ -109,9 +105,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			DocumentBuilderFactory docBuilderFactory;
 			DocumentBuilder docBuilder;
 			
-			// clear all existing list views and parents, they are all invalid
-			application.listViews = new ArrayList<ListView>();
-			application.parents = new Stack<Node>();
+			// clear all existing columns, they are all invalid
+			application.nodeColumns = new ArrayList<NodeColumn>();
 	        
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
@@ -189,29 +184,26 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		else {
 			
 			Log.d(TAG, "Restarted Activity, but Application remained intact");
-			Log.d(TAG, "Re-Adding " + application.listViews.size() + " existing ListViews");
+			Log.d(TAG, "Re-Adding " + application.nodeColumns.size() + " existing ListViews");
 			
 			// add all listViews back
 	    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
 			int columnWidth = getColumnWidth();
 			Log.d(TAG, "columnWidth = " + columnWidth);
-			for (int i = 0; i < application.listViews.size(); i++) {
-				ListView listView = application.listViews.get(i);
+			for (int i = 0; i < application.nodeColumns.size(); i++) {
+				NodeColumn nodeColumn = application.nodeColumns.get(i);
 				
-				// first remove the listView from the GUI (the GUI is not valid anymore anyway, but listView still has its parent set)
-				if ( listView.getParent() != null ) {
-					((ViewGroup)listView.getParent()).removeView(listView);
-				}
+				// remove the column from it's GUI parent (the GUI layout has been recreated, so its parent is not valid anymore anyway)
+				nodeColumn.removeFromParent();
 				
-				// then fix the width of the listView
-				ViewGroup.LayoutParams listViewParam = listView.getLayoutParams();
-				listViewParam.width = columnWidth;
-				listView.setLayoutParams(listViewParam);
+				// then resize it
+				nodeColumn.setWidth(columnWidth);
 				
-				listView.setOnItemClickListener(this);
+				// TODO CLEANUP: who should be the on click listener for the column? the column itself maybe?
+				nodeColumn.setOnItemClickListener(this);
 				
 				// then re-add it to the linearLayout we have now
-		    	linearLayout.addView(application.listViews.get(i), linearLayout.getChildCount());
+		    	linearLayout.addView(nodeColumn, linearLayout.getChildCount());
 			}
 			
 	    	// Scroll all the way to the right
@@ -269,12 +261,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	linearLayout.removeAllViews();
     	
     	// discard all list views
-    	for (int i = 0; i < application.listViews.size(); i++) {
-			application.listViews.remove(i);
+    	for (int i = 0; i < application.nodeColumns.size(); i++) {
+			application.nodeColumns.remove(i);
 		}
-    	
-    	// clear the parents stack and re-add the document root node
-    	application.parents.clear();
     	
     	// go down into the root node
     	down(application.document.getDocumentElement());
@@ -295,23 +284,21 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				
 		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
 		// we pop the current node, and then display it's parent's child nodes
-		if ( application.listViews.size() > 1 ) {
-			application.parents.pop();
-			Log.d(TAG, "parents has " + application.parents.size() + " elements after popping");
+		if ( application.nodeColumns.size() > 1 ) {
 			
 			// remove the list view as far right as possible
-			ListView listViewToRemove = application.listViews.get(application.listViews.size()-1);
+			ListView listViewToRemove = application.nodeColumns.get(application.nodeColumns.size()-1);
 			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
 			
 			// remove it from listViews
-			application.listViews.remove(application.listViews.size()-1);
+			application.nodeColumns.remove(application.nodeColumns.size()-1);
 			
 			// deselect all nodes on the right-most view
-			((MindmapNodeAdapter)application.listViews.get(application.listViews.size()-1).getAdapter()).clearAllItemColor();
+			((MindmapNodeAdapter)application.nodeColumns.get(application.nodeColumns.size()-1).getAdapter()).clearAllItemColor();
 			
 	    	// enable the up navigation with the Home (app) button (top left corner)
 	    	// if we only have one parent (i.e. this is the root node), then we disable the home button
-	    	if ( application.listViews.size() > 1 ) {
+	    	if ( application.nodeColumns.size() > 1 ) {
 	    		enableHomeButton();
 	    	} else {
 	    		disableHomeButton();
@@ -322,7 +309,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			// the parent is indeed an Element, a tag "node" and has a "TEXT"
 			// attribute. This should be always the case, but just be on the safe
 			// side.
-	    	Node parent_n = application.parents.peek();
+	    	Node parent_n = application.nodeColumns.get(application.nodeColumns.size()-1).parent;
 	    	if ( isMindmapNode(parent_n) ) {
 	    		Element parent_e = getMindmapNode(parent_n);
 	   			String text = parent_e.getAttribute("TEXT");
@@ -347,21 +334,24 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	
 	// open up Node node, and display all its child nodes
     public void down(Node node) {
-    	application.parents.push(node);
-    	listChildren();
+    	listChildren(node);
     }
     
     
+    // TODO: listChildren is only used in down(), but has a lot of stuff that is also used in onItemClick. Split it up (one method should probably be to get a new ListView back), and then join parts of it with down()
     // lists the child nodes of the latest parent (i.e. of application.parents.peek() Node)
-	private void listChildren() {
-    	
-    	// create a new list view
-    	ListView listView = new ListView(getApplicationContext());
-    	listView.setOnItemClickListener(this);
+	private void listChildren(Node node) {
+		
+		// create a new Node Column
+		NodeColumn nodeColumn = new NodeColumn(getApplicationContext());
+		nodeColumn.setOnItemClickListener(this);
+		
+		// set the parent node (i.e. the node that is parent to everything we display in this column)
+		nodeColumn.parent = node;
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
-    	if ( application.parents.size() > 1 ) {
+    	if ( application.nodeColumns.size() > 1 ) {
     		enableHomeButton();
     	} else {
     		disableHomeButton();
@@ -371,9 +361,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		// the parent is indeed an Element, a tag "node" and has a "TEXT"
 		// attribute. This should be always the case, but just be on the safe
 		// side.
-    	Node parent_n = application.parents.peek();
-    	if ( isMindmapNode(parent_n) ) {
-    		Element parent_e = getMindmapNode(parent_n);
+    	if ( isMindmapNode(node) ) {
+    		Element parent_e = getMindmapNode(node);
    			String text = parent_e.getAttribute("TEXT");
 			if ( !text.equals("") ) {
 				setTitle(text);
@@ -387,7 +376,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
     	// fetch the children nodes of the current parent
     	ArrayList<MindmapNode> mindmapNodes = new ArrayList<MainActivity.MindmapNode>();
-    	NodeList tmp_children = application.parents.peek().getChildNodes();
+    	NodeList tmp_children = node.getChildNodes();
     	for (int i = 0; i < tmp_children.getLength(); i++) {
     		Node tmp_n = tmp_children.item(i);
     		
@@ -424,17 +413,17 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	listViewLayout.width = getColumnWidth();
 
     	// set the defined layout
-    	listView.setLayoutParams(listViewLayout);
+    	nodeColumn.setLayoutParams(listViewLayout);
     	
     	// add the content adapter
-    	listView.setAdapter(adapter);
+    	nodeColumn.setAdapter(adapter);
     	
     	// add it to the listViews array
-    	application.listViews.add(listView);
+    	application.nodeColumns.add(nodeColumn);
     	
     	// add it on the parent_list_view linear layout
     	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
-    	linearLayout.addView(listView, linearLayout.getChildCount());
+    	linearLayout.addView(nodeColumn, linearLayout.getChildCount());
     	
     	// Scroll all the way to the right
     	new Handler().postDelayed(new Runnable() {
@@ -511,17 +500,14 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		
 		// find out which view it was, then null all adapters to the right
 		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents. 
-		for (int i = application.listViews.size()-1; i >= application.listViews.lastIndexOf((ListView)parent)+1; i--) {
-		
-			// remove a parent
-			application.parents.pop();
-			
+		for (int i = application.nodeColumns.size()-1; i >= application.nodeColumns.lastIndexOf((ListView)parent)+1; i--) {
+					
 			// remove the list view as far right as possible
-			ListView listViewToRemove = application.listViews.get(i);
+			ListView listViewToRemove = application.nodeColumns.get(i);
 			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
 			
 			// remove it from listViews
-			application.listViews.remove(application.listViews.size()-1);
+			application.nodeColumns.remove(application.nodeColumns.size()-1);
 			
 		}
 
