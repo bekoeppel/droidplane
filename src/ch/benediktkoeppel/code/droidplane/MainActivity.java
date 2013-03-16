@@ -53,6 +53,9 @@ import android.widget.TextView;
 public class MainActivity extends Activity implements OnItemClickListener {
 	
 	private static final String TAG = "DroidPlane";
+	
+	// MainApplication
+	MainApplication application;
 
 	// GUI stuff
 	// Components
@@ -61,13 +64,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	
 	// Mindmap stuff
 	InputStream mm;
-	// XML document
+	// XML document builder. The document itself is in the MainApplication
 	DocumentBuilderFactory docBuilderFactory;
 	DocumentBuilder docBuilder;
-	Document document;
-	// stack of parent nodes
-	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
-	Stack<Node> parents = new Stack<Node>();
 	
 	@Override
 	  public void onStart() {
@@ -88,6 +87,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        application = (MainApplication)getApplication();
+        int previousNumListViews = application.getNumListViews();
 
     	
         // initialize android stuff
@@ -114,6 +116,28 @@ public class MainActivity extends Activity implements OnItemClickListener {
         	//listView2.setOnItemLongClickListener(this);
         	listViews.add(listView2);
         }
+        
+        if ( application.getListViews() != null ) {
+            // if the number of list views has not changed, we simply re-attach all adapters
+	        if ( listViews.size() >= previousNumListViews ) {
+	        	for (int i = 0; i < application.getListViews().size(); i++) {
+	        		listViews.get(i).setAdapter(application.getListViews().get(i).getAdapter());
+				}
+	        }
+	        
+	        // we have fewer list views than before, we take the right most adapter
+	        // TODO: handle the case where we go from 3 list views to 2 or something like that (or maybe 5 to 2, on a tablet)
+	        else /* if ( listViews.size() < previousNumListViews )*/ {
+	        	for (int i = application.getListViews().size()-1; i >= 0; i--) {
+	        		if ( application.getListViews().get(i).getAdapter() != null ) {
+	        			listViews.get(0).setAdapter(application.getListViews().get(i).getAdapter());
+	        			break;
+	        		}
+				}
+	        }
+        }
+        
+        application.setListView(listViews);
 
     	// enable the Android home button
         enableHomeButton();
@@ -125,70 +149,81 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
         // start measuring the document load time
 		long loadDocumentStartTime = System.currentTimeMillis();
-        
-        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
-        // started from ACTION_EDIT/VIEW intent
-        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
-        	
-        	Log.d(TAG, "started from ACTION_EDIT/VIEW intent");
-        	
-        	// get the URI to the target document (the Mindmap we are opening) and open the InputStream
-        	Uri uri = intent.getData();
-        	if ( uri != null ) {
-        		ContentResolver cr = getContentResolver();
-        		try {
-					mm = cr.openInputStream(uri);
-				} catch (FileNotFoundException e) {
-
-			    	abortWithPopup(R.string.filenotfound);
-			    	
-					ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
-					ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
-					ACRA.getErrorReporter().putCustomData("URI", uri.toString());
-					e.printStackTrace();
-				}
-        	}
-        } 
-        
-        // started from the launcher
-        else {
-        	
-        	Log.d(TAG, "started from app launcher intent");
-        	
-        	// display the default Mindmap "example.mm", from the resources
-	    	mm = this.getResources().openRawResource(R.raw.example);
-        }
-        
-        Log.d(TAG, "InputStream fetched, now starting to load document");
-        
-        // load the Mindmap from the InputStream
-        docBuilderFactory = DocumentBuilderFactory.newInstance();
-		try {
-			docBuilder = docBuilderFactory.newDocumentBuilder();
-			document = docBuilder.parse(mm);
-		} catch (ParserConfigurationException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "ParserConfigurationException");
-			e.printStackTrace();
-			return;
-		} catch (SAXException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "SAXException");
-			e.printStackTrace();
-			return;
-		} catch (IOException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "IOException");
-			e.printStackTrace();
-			return;
+		
+		if ( application.document == null || application.getUri() != intent.getData() ) {
+			
+			// clear all existing adapters, they are all invalid
+			for (int i = 0; i < application.getListViews().size(); i++) {
+				application.getListViews().get(i).setAdapter(null);
+			}
+	        
+	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
+	        // started from ACTION_EDIT/VIEW intent
+	        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
+	        	
+	        	Log.d(TAG, "started from ACTION_EDIT/VIEW intent");
+	        	
+	        	// get the URI to the target document (the Mindmap we are opening) and open the InputStream
+	        	Uri uri = intent.getData();
+	        	if ( uri != null ) {
+	        		ContentResolver cr = getContentResolver();
+	        		try {
+						mm = cr.openInputStream(uri);
+					} catch (FileNotFoundException e) {
+	
+				    	abortWithPopup(R.string.filenotfound);
+				    	
+						ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
+						ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
+						ACRA.getErrorReporter().putCustomData("URI", uri.toString());
+						e.printStackTrace();
+					}
+	        	}
+	        	
+	        	application.setUri(uri);
+	        } 
+	        
+	        // started from the launcher
+	        else {
+	        	
+	        	Log.d(TAG, "started from app launcher intent");
+	        	
+	        	// display the default Mindmap "example.mm", from the resources
+		    	mm = this.getResources().openRawResource(R.raw.example);
+	        }
+	        
+	        Log.d(TAG, "InputStream fetched, now starting to load document");
+	        
+	        // load the Mindmap from the InputStream
+	        docBuilderFactory = DocumentBuilderFactory.newInstance();
+			try {
+				docBuilder = docBuilderFactory.newDocumentBuilder();
+				application.document = docBuilder.parse(mm);
+			} catch (ParserConfigurationException e) {
+				ACRA.getErrorReporter().putCustomData("Exception", "ParserConfigurationException");
+				e.printStackTrace();
+				return;
+			} catch (SAXException e) {
+				ACRA.getErrorReporter().putCustomData("Exception", "SAXException");
+				e.printStackTrace();
+				return;
+			} catch (IOException e) {
+				ACRA.getErrorReporter().putCustomData("Exception", "IOException");
+				e.printStackTrace();
+				return;
+			}
+			
+			long loadDocumentEndTime = System.currentTimeMillis();
+		    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
+			Log.d(TAG, "Document loaded");
+		    
+			long numNodes = application.document.getElementsByTagName("node").getLength();
+			EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
+			
+			// navigate down into the root node
+			down(application.document.getDocumentElement());
+			
 		}
-		
-		long loadDocumentEndTime = System.currentTimeMillis();
-	    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
-		Log.d(TAG, "Document loaded");
-	    
-		long numNodes = document.getElementsByTagName("node").getLength();
-		EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
-		
-		// navigate down into the root node
-		down(document.getDocumentElement());
         
     }
 
@@ -236,8 +271,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		}
 
     	// clear the parents stack and re-add the document root node
-    	parents.clear();
-    	parents.push(document.getDocumentElement());
+    	application.parents.clear();
+    	application.parents.push(application.document.getDocumentElement());
     	
     	// redraw display
     	listChildren();
@@ -258,9 +293,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				
 		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
 		// we pop the current node, and then display it's parent's child nodes
-		if ( parents.size() > 1 ) {
-			parents.pop();
-			Log.d(TAG, "parents has " + parents.size() + " elements after popping");
+		if ( application.parents.size() > 1 ) {
+			application.parents.pop();
+			Log.d(TAG, "parents has " + application.parents.size() + " elements after popping");
 			
 			// remove the adapter as far right as possible
 			for (int i = listViews.size()-1; i >= 0; i--) {
@@ -306,7 +341,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	
 	// open up Node node, and display all its child nodes
     public void down(Node node) {
-    	parents.push(node);
+    	application.parents.push(node);
     	listChildren();
     }
     
@@ -316,7 +351,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
-    	if ( parents.size() > 1 ) {
+    	if ( application.parents.size() > 1 ) {
     		enableHomeButton();
     	} else {
     		disableHomeButton();
@@ -326,7 +361,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		// the parent is indeed an Element, a tag "node" and has a "TEXT"
 		// attribute. This should be always the case, but just be on the safe
 		// side.
-    	Node parent_n = parents.peek();
+    	Node parent_n = application.parents.peek();
     	if ( isMindmapNode(parent_n) ) {
     		Element parent_e = getMindmapNode(parent_n);
    			String text = parent_e.getAttribute("TEXT");
@@ -342,7 +377,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
     	// fetch the children nodes of the current parent
     	ArrayList<MindmapNode> mindmapNodes = new ArrayList<MainActivity.MindmapNode>();
-    	NodeList tmp_children = parents.peek().getChildNodes();
+    	NodeList tmp_children = application.parents.peek().getChildNodes();
     	for (int i = 0; i < tmp_children.getLength(); i++) {
     		Node tmp_n = tmp_children.item(i);
     		
@@ -441,7 +476,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		for (int i = listViews.lastIndexOf((ListView)parent)+1; i < listViews.size(); i++) {
 			if ( listViews.get(i).getAdapter() != null ) {
 				listViews.get(i).setAdapter(null);
-				parents.pop();
+				application.parents.pop();
 			}
 		}
 
