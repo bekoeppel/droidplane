@@ -3,19 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical" >
-
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/horizontal_scroll_view" >
-
-        <LinearLayout
-            android:id="@+id/parent_list_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-
-        </LinearLayout>
-    </HorizontalScrollView>
+    android:orientation="vertical"
+    android:id="@+id/layout_wrapper" >
 
 </LinearLayout>

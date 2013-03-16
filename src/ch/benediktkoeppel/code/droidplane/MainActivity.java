@@ -3,21 +3,14 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Locale;
-import java.util.Stack;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.acra.ACRA;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-
-import com.google.analytics.tracking.android.EasyTracker;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
@@ -31,35 +24,34 @@ import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.TableLayout.LayoutParams;
-import android.widget.ArrayAdapter;
-import android.widget.HorizontalScrollView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TextView;
+
+import com.google.analytics.tracking.android.EasyTracker;
 
 
 // TODO: can we get built-in icons as SVG?
 // TODO: properly parse rich text nodes
 // TODO: implement OnItemLongClickListener with a context menu (show all icons, follow link, copy text, and ultimately also edit)
 
+/**
+ * The MainActivity can be started from the App Launcher, or with a File Open
+ * intent. If the MainApplication was already running, the previously used
+ * document is re-used. Also, most of the information about the mind map and the
+ * currently opened views is stored in the MainApplication. This enables the
+ * MainActivity to resume wherever it was before it got restarted. A restart
+ * can happen when the screen is rotated, and we want to continue wherever we
+ * were before the screen rotate.
+ */
 public class MainActivity extends Activity implements OnItemClickListener {
 	
-	private static final String TAG = "DroidPlane";
-	
-	// MainApplication
 	MainApplication application;
-
+	
 	@Override
 	public void onStart() {
 		super.onStart();
@@ -79,7 +71,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         setContentView(R.layout.activity_main);
         
         application = (MainApplication)getApplication();
-    	
+        
         // initialize android stuff
         // EasyTracker
         EasyTracker.getInstance().setContext(this);
@@ -92,7 +84,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         Intent intent = getIntent();
         String action = intent.getAction();
         String type = intent.getType();
-
+        
         // start measuring the document load time
 		long loadDocumentStartTime = System.currentTimeMillis();
 		
@@ -105,14 +97,14 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			DocumentBuilderFactory docBuilderFactory;
 			DocumentBuilder docBuilder;
 			
-			// clear all existing columns, they are all invalid
-			application.nodeColumns = new ArrayList<NodeColumn>();
+			// create a new HorizontalMindmapView
+			application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
 	        
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
 	        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
 	        	
-	        	Log.d(TAG, "started from ACTION_EDIT/VIEW intent");
+	        	Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
 	        	
 	        	// get the URI to the target document (the Mindmap we are opening) and open the InputStream
 	        	Uri uri = intent.getData();
@@ -142,13 +134,13 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	        // started from the launcher
 	        else {
 	        	
-	        	Log.d(TAG, "started from app launcher intent");
+	        	Log.d(MainApplication.TAG, "started from app launcher intent");
 	        	
 	        	// display the default Mindmap "example.mm", from the resources
 		    	mm = this.getResources().openRawResource(R.raw.example);
 	        }
 	        
-	        Log.d(TAG, "InputStream fetched, now starting to load document");
+	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
 	        
 	        // load the Mindmap from the InputStream
 	        docBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -171,50 +163,67 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			
 			long loadDocumentEndTime = System.currentTimeMillis();
 		    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
-			Log.d(TAG, "Document loaded");
+			Log.d(MainApplication.TAG, "Document loaded");
 		    
 			long numNodes = application.document.getElementsByTagName("node").getLength();
 			EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
+			
+
+	        // add the HorizontalMindmapView to the Layout Wrapper
+			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
+			
 			
 			// navigate down into the root node
 			down(application.document.getDocumentElement());
 		}
 		
-		// otherwise, we can display the existing ListViews again
 		else {
 			
-			Log.d(TAG, "Restarted Activity, but Application remained intact");
-			Log.d(TAG, "Re-Adding " + application.nodeColumns.size() + " existing ListViews");
 			
-			// add all listViews back
-	    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
-			int columnWidth = getColumnWidth();
-			Log.d(TAG, "columnWidth = " + columnWidth);
-			for (int i = 0; i < application.nodeColumns.size(); i++) {
-				NodeColumn nodeColumn = application.nodeColumns.get(i);
-				
-				// remove the column from it's GUI parent (the GUI layout has been recreated, so its parent is not valid anymore anyway)
-				nodeColumn.removeFromParent();
-				
-				// then resize it
-				nodeColumn.setWidth(columnWidth);
-				
-				// TODO CLEANUP: who should be the on click listener for the column? the column itself maybe?
-				nodeColumn.setOnItemClickListener(this);
-				
-				// then re-add it to the linearLayout we have now
-		    	linearLayout.addView(nodeColumn, linearLayout.getChildCount());
+	        // add the HorizontalMindmapView to the Layout Wrapper
+			LinearLayout tmp_parent = ((LinearLayout)application.horizontalMindmapView.getParent());
+			if ( tmp_parent != null ) {
+				tmp_parent.removeView(application.horizontalMindmapView);
 			}
+	        ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
+
+	        // fix the widths of all columns
+			application.horizontalMindmapView.resizeAllColumns(calculateColumnWidth());
 			
-	    	// Scroll all the way to the right
-	    	new Handler().postDelayed(new Runnable() {
-	    		public void run() {
-	    	    	HorizontalScrollView horizontalScrollView = (HorizontalScrollView)findViewById(R.id.horizontal_scroll_view);
-	    	    	horizontalScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
-	    		}
-	    	}, 100L);			
+			
 			
 		}
+//		
+//		// otherwise, we can display the existing ListViews again
+//		else {
+//			
+//			Log.d(MainApplication.TAG, "Restarted Activity, but Application remained intact");
+//			Log.d(MainApplication.TAG, "Re-Adding " + application.nodeColumns.size() + " existing ListViews");
+//			
+//			// add all listViews back
+//			int columnWidth = getColumnWidth();
+//			Log.d(MainApplication.TAG, "columnWidth = " + columnWidth);
+//			for (int i = 0; i < application.nodeColumns.size(); i++) {
+//				NodeColumn nodeColumn = application.nodeColumns.get(i);
+//				
+//				// remove the column from it's GUI parent (the GUI layout has been recreated, so its parent is not valid anymore anyway)
+//				nodeColumn.removeFromParent();
+//				
+//				// then resize it
+//				nodeColumn.setWidth(columnWidth);
+//				
+//				// TODO CLEANUP: who should be the on click listener for the column? the column itself maybe?
+//				nodeColumn.setOnItemClickListener(this);
+//				
+//				// then re-add it to the linearLayout we have now
+//				application.horizontalMindmapView.addColumn(nodeColumn);
+//			}
+//			
+//			// then scroll to right
+//			application.horizontalMindmapView.scrollToRight();
+//			
+//		}
+
         
     }
 
@@ -245,6 +254,10 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
 		// TODO: add "Find" button and menu -> should search underneath the
 		// current node (or with an option, under the root node)
+    	
+    	// TODO: menu "Open"
+    	
+    	// TODO: settings (to set the number of horizontal and vertical columns)
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
@@ -257,13 +270,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     public void top() {
     	
     	// remove all ListView layouts in linearLayout parent_list_view
-    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
-    	linearLayout.removeAllViews();
-    	
-    	// discard all list views
-    	for (int i = 0; i < application.nodeColumns.size(); i++) {
-			application.nodeColumns.remove(i);
-		}
+    	application.horizontalMindmapView.removeAllColumns();
     	
     	// go down into the root node
     	down(application.document.getDocumentElement());
@@ -281,163 +288,68 @@ public class MainActivity extends Activity implements OnItemClickListener {
     
     // navigates back up one level in the Mindmap, if possible. If force is true, the application closes if we can't go further up
 	public void up(boolean force) {
-				
-		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
-		// we pop the current node, and then display it's parent's child nodes
-		if ( application.nodeColumns.size() > 1 ) {
-			
-			// remove the list view as far right as possible
-			ListView listViewToRemove = application.nodeColumns.get(application.nodeColumns.size()-1);
-			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
-			
-			// remove it from listViews
-			application.nodeColumns.remove(application.nodeColumns.size()-1);
-			
-			// deselect all nodes on the right-most view
-			((MindmapNodeAdapter)application.nodeColumns.get(application.nodeColumns.size()-1).getAdapter()).clearAllItemColor();
-			
-	    	// enable the up navigation with the Home (app) button (top left corner)
-	    	// if we only have one parent (i.e. this is the root node), then we disable the home button
-	    	if ( application.nodeColumns.size() > 1 ) {
-	    		enableHomeButton();
-	    	} else {
-	    		disableHomeButton();
-	    	}
-
-	    	// TODO: set app title appropriately
-			// set activity title to current parent's text. This is only possible if
-			// the parent is indeed an Element, a tag "node" and has a "TEXT"
-			// attribute. This should be always the case, but just be on the safe
-			// side.
-	    	Node parent_n = application.nodeColumns.get(application.nodeColumns.size()-1).parent;
-	    	if ( isMindmapNode(parent_n) ) {
-	    		Element parent_e = getMindmapNode(parent_n);
-	   			String text = parent_e.getAttribute("TEXT");
-				if ( !text.equals("") ) {
-					setTitle(text);
-				} else {
-					setTitle(R.string.app_name);
-				}
-	    	} else {
-				setTitle(R.string.app_name);
-			}
-
-		}
 		
-		// there was no remaining node in parents, and force was specified, so we exit
-		else if (force) {
+		boolean wasColumnRemoved = application.horizontalMindmapView.removeRightmostColumn();
+		
+		// close the application if no column was removed, and the force switch was on
+		if (!wasColumnRemoved && force ) {
 			finish();
 		}
 		
-		// otherwise (no remaining nodes, but force==false), we do nothing
-	}
-	
-	// open up Node node, and display all its child nodes
-    public void down(Node node) {
-    	listChildren(node);
-    }
-    
-    
-    // TODO: listChildren is only used in down(), but has a lot of stuff that is also used in onItemClick. Split it up (one method should probably be to get a new ListView back), and then join parts of it with down()
-    // lists the child nodes of the latest parent (i.e. of application.parents.peek() Node)
-	private void listChildren(Node node) {
-		
-		// create a new Node Column
-		NodeColumn nodeColumn = new NodeColumn(getApplicationContext());
-		nodeColumn.setOnItemClickListener(this);
-		
-		// set the parent node (i.e. the node that is parent to everything we display in this column)
-		nodeColumn.parent = node;
-    	
     	// enable the up navigation with the Home (app) button (top left corner)
-    	// if we only have one parent (i.e. this is the root node), then we disable the home button
-    	if ( application.nodeColumns.size() > 1 ) {
+		enableHomeButtonIfEnoughColumns();
+
+		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
+		setApplicationTitle();
+
+	}
+
+	/**
+	 * Sets the application title to the name of the parent node of the rightmost column, which is the most recently clicked node.
+	 */
+	private void setApplicationTitle() {
+		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
+		// set the application title to this nodeTitle. If the nodeTitle is empty, we set the default Application title
+		String nodeTitle = application.horizontalMindmapView.getTitleOfRightmostParent();
+		if ( nodeTitle.equals("") ) {
+			setTitle(R.string.app_name);
+		} else {
+			setTitle(nodeTitle);
+		}
+	}
+
+	/**
+	 * Enables the Home button in the application if we have enough columns, i.e. if "Up" will remove a column.
+	 */
+	private void enableHomeButtonIfEnoughColumns() {
+		// if we only have one column (i.e. this is the root node), then we disable the home button
+		int numberOfColumns = application.horizontalMindmapView.getNumberOfColumns();
+		if ( numberOfColumns >= 2 ) {
     		enableHomeButton();
     	} else {
     		disableHomeButton();
     	}
-    	
-		// set activity title to current parent's text. This is only possible if
-		// the parent is indeed an Element, a tag "node" and has a "TEXT"
-		// attribute. This should be always the case, but just be on the safe
-		// side.
-    	if ( isMindmapNode(node) ) {
-    		Element parent_e = getMindmapNode(node);
-   			String text = parent_e.getAttribute("TEXT");
-			if ( !text.equals("") ) {
-				setTitle(text);
-			} else {
-				setTitle(R.string.app_name);
-			}
-    	} else {
-			setTitle(R.string.app_name);
-		}
-    	
+	}
+	
+	// open up Node node, and display all its child nodes
+    public void down(Node node) {
+		
+		// add a new column for this node and add it to the HorizontalMindmapView
+    	NodeColumn nodeColumn = new NodeColumn(getApplicationContext(), node);
+		nodeColumn.setOnItemClickListener(this);
+		application.horizontalMindmapView.addColumn(nodeColumn);
+		
+    	// enable the up navigation with the Home (app) button (top left corner)
+		enableHomeButtonIfEnoughColumns();
 
-    	// fetch the children nodes of the current parent
-    	ArrayList<MindmapNode> mindmapNodes = new ArrayList<MainActivity.MindmapNode>();
-    	NodeList tmp_children = node.getChildNodes();
-    	for (int i = 0; i < tmp_children.getLength(); i++) {
-    		Node tmp_n = tmp_children.item(i);
-    		
-    		if ( isMindmapNode(tmp_n) ) {
-    			Element tmp_e = getMindmapNode(tmp_n);
-				
-				// extract the string (TEXT attribute) of the nodes
-    			String text = tmp_e.getAttribute("TEXT");
-    			
-    			// extract icons
-    			// TODO: how do we handle multiple icons?
-    			ArrayList<String> icons = getIcons(tmp_e);
-    			String icon="";
-    			int icon_id = 0;
-    			if ( icons.size() > 0 ) {
-    				icon = icons.get(0);
-    				icon_id = getResources().getIdentifier("@drawable/" + icon, "id", getPackageName());
-    			}
-    			
-    			// find out if it has sub nodes
-    			boolean expandable = ( getNumChildMindmapNodes(tmp_e) > 0 );
-    			
-    			mindmapNodes.add(new MindmapNode(text, icon, icon_id, expandable, tmp_n));
-    		}
- 		}
-    	
-    	// create adapter (i.e. data provider) for the listView
-    	MindmapNodeAdapter adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, mindmapNodes);
+		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
+		setApplicationTitle();
 
-    	// define the layout of the listView
-    	LayoutParams listViewLayout = new LayoutParams();
-    	// should be as high as the parent (i.e. full screen height)
-    	listViewLayout.height = LayoutParams.MATCH_PARENT;
-    	listViewLayout.width = getColumnWidth();
-
-    	// set the defined layout
-    	nodeColumn.setLayoutParams(listViewLayout);
-    	
-    	// add the content adapter
-    	nodeColumn.setAdapter(adapter);
-    	
-    	// add it to the listViews array
-    	application.nodeColumns.add(nodeColumn);
-    	
-    	// add it on the parent_list_view linear layout
-    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
-    	linearLayout.addView(nodeColumn, linearLayout.getChildCount());
-    	
-    	// Scroll all the way to the right
-    	new Handler().postDelayed(new Runnable() {
-    		public void run() {
-    	    	HorizontalScrollView horizontalScrollView = (HorizontalScrollView)findViewById(R.id.horizontal_scroll_view);
-    	    	horizontalScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
-    		}
-    	}, 100L);
-    	
     }
     
     @SuppressWarnings("deprecation")
 	@SuppressLint("NewApi")
-    public int getColumnWidth() {
+    public int calculateColumnWidth() {
     	// and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
     	// so we need 1/(horizontall_visible_panes) * screen width as column width
     	int horizontallyVisiblePanes = getResources().getInteger(R.integer.horizontally_visible_panes);
@@ -499,35 +411,40 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		
 		// find out which view it was, then null all adapters to the right
-		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents. 
-		for (int i = application.nodeColumns.size()-1; i >= application.nodeColumns.lastIndexOf((ListView)parent)+1; i--) {
-					
-			// remove the list view as far right as possible
-			ListView listViewToRemove = application.nodeColumns.get(i);
-			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
-			
-			// remove it from listViews
-			application.nodeColumns.remove(application.nodeColumns.size()-1);
-			
-		}
-
-		// then get all nodes from this adapter
-		MindmapNodeAdapter adapter = (MindmapNodeAdapter)((ListView)parent).getAdapter();
-		ArrayList<Node> currentListedNodes = adapter.getNodeList();
-	
-		// extract the pushed node
-		Node pushedNode = currentListedNodes.get(position);
+		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents.
+		application.horizontalMindmapView.removeAllColumnsRightOf((ListView)view);
 		
-		// if the node has child nodes (i.e. should be clickable)
-		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
+				
 
-			// give the pushed node a special color
-			adapter.setItemColor(position);
-			
-			// and drill down 
-			down(pushedNode);
-		}
-		
+		// TODO implement this
+//		for (int i = application.nodeColumns.size()-1; i >= application.nodeColumns.lastIndexOf((ListView)parent)+1; i--) {
+//					
+//			// remove the list view as far right as possible
+//			ListView listViewToRemove = application.nodeColumns.get(i);
+//			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
+//			
+//			// remove it from listViews
+//			application.nodeColumns.remove(application.nodeColumns.size()-1);
+//			
+//		}
+//
+//		// then get all nodes from this adapter
+//		MindmapNodeAdapter adapter = (MindmapNodeAdapter)((ListView)parent).getAdapter();
+//		ArrayList<Node> currentListedNodes = adapter.getNodeList();
+//	
+//		// extract the pushed node
+//		Node pushedNode = currentListedNodes.get(position);
+//		
+//		// if the node has child nodes (i.e. should be clickable)
+//		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
+//
+//			// give the pushed node a special color
+//			adapter.setItemColor(position);
+//			
+//			// and drill down 
+//			down(pushedNode);
+//		}
+//		
 	}
 	
 	
@@ -556,80 +473,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 //	}
 
 	
-	// returns the number of child Mindmap nodes 
-	// "Mindmap node" = XML node && ELEMENT_NODE && "node" tag
-	private int getNumChildMindmapNodes(Node node) {
-		
-		int numMindmapNodes = 0;
-		
-		NodeList childNodes = node.getChildNodes();
-		for (int i = 0; i < childNodes.getLength(); i++) {
-			
-			Node n = childNodes.item(i);
-			if ( isMindmapNode(n) ) {
-				numMindmapNodes++;
-			}
-		}
-		
-		return numMindmapNodes;
-		
-	}
-	
-	// checks whether node is a Mindmap node, i.e. has type ELEMENT_NODE and tag "node"
-	private boolean isMindmapNode(Node node) {
-		
-		if ( node.getNodeType() == Node.ELEMENT_NODE ) {
-			Element element = (Element)node;
-			
-			if ( element.getTagName().equals("node") ) {
-				return true;
-			}
-		}
-		
-		return false;
-		
-	}
-	
-	private ArrayList<String> getIcons(Element node) {
-		
-		ArrayList<String> icons = new ArrayList<String>();
-		
-		NodeList childNodes = node.getChildNodes();		
-		for (int i = 0; i < childNodes.getLength(); i++) {
-			
-			Node n = childNodes.item(i);
-			if ( n.getNodeType() == Node.ELEMENT_NODE ) {
-				Element e = (Element)n;
-				
-				if ( e.getTagName().equals("icon") && e.hasAttribute("BUILTIN") ) {
-					icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN")));
-				}
-			}
-		}
-		
-		return icons;
-		
-	}
-	
-	// converts the node into an Element. If it is no Mindmap node, null is returned
-	private Element getMindmapNode(Node node) {
-		
-		if ( isMindmapNode(node) ) {
-			return (Element)node;
-		} else {
-			return null;
-		}
-		
-	}
-	
-
-	// Mindmap icons have names such as 'button-ok', but resources have to have names with pattern [a-z0-9_.]
-	private String getDrawableNameFromMindmapIcon(String iconName) {
-		Locale locale = getResources().getConfiguration().locale;
-		String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
-		name.replaceAll("_$", "");
-		return name;
-	}
 	
 	// Shows a popup with an error message and then closes the application
 	public void abortWithPopup(int stringResourceId) {
@@ -646,139 +489,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         AlertDialog alert = builder.create();
         alert.show();
 	}
-	
-	// TODO: maybe we should have proper Mindmap and MindmapNode classes
-	class MindmapNode {
-		private String text;
-		private String icon_name;
-		private int icon_res_id;
-		private boolean isExpandable;
-		private Node node;
-		private View view;
-		private boolean selected;
-		
-		
-		public MindmapNode(String text, String icon_name, int icon_res_id, boolean isExpandable, Node node) {
-			this.text = text;
-			this.icon_name = icon_name;
-			this.icon_res_id = icon_res_id;
-			this.isExpandable = isExpandable;
-			this.node = node;
-		}
-		
-		public Node getNode() {
-			return this.node;
-		}
 
-		public void setView(View view) {
-			this.view = view;
-		}
-		
-		public View getView() {
-			return this.view;
-		}
-		
-		public void setSelected(boolean selected) {
-			this.selected = selected;
-		}
-
-		public boolean getIsSelected() {
-			return this.selected;
-		}
-		
-	}
-	
-	class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
-		private ArrayList<MindmapNode> mindmapNodes;
-		
-		public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNode> mindmapNodes) {
-			super(context, textViewResourceId, mindmapNodes);
-			this.mindmapNodes = mindmapNodes;
-		}
-		
-		public ArrayList<Node> getNodeList() {
-			ArrayList<Node> nodeList = new ArrayList<Node>();
-			for (int i = 0; i < mindmapNodes.size(); i++) {
-				nodeList.add(mindmapNodes.get(i).getNode());
-			}
-			return nodeList;
-		}
-
-		@SuppressLint("InlinedApi")
-		@Override
-		public View getView(int position, View convertView, ViewGroup parent) {
-			View v = convertView;
-			if ( v == null ) {
-				LayoutInflater vi = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-				v = vi.inflate(R.layout.mindmap_node_list_item, null);
-			}
-			
-			MindmapNode node = mindmapNodes.get(position);
-			if ( node != null) {
-				
-				TextView text = (TextView) v.findViewById(R.id.label);
-				text.setText(node.text);
-				
-				ImageView icon = (ImageView) v.findViewById(R.id.icon);
-				icon.setImageResource(node.icon_res_id);
-				icon.setContentDescription(node.icon_name);
-				
-				TextView expandable = (TextView) v.findViewById(R.id.expandable);
-				if ( node.isExpandable ) {
-					expandable.setText("+");
-				} else {
-					expandable.setText("");
-				}
-				
-				// if the node is selected and has child nodes, give it a special background
-				if ( node.getIsSelected() && getNumChildMindmapNodes(node.getNode()) > 0 ) {
-					int backgroundColor;
-					
-					// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
-			    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-			    		backgroundColor = getResources().getColor(android.R.color.holo_blue_bright);
-			    	} else {
-			    		backgroundColor = getResources().getColor(android.R.color.background_dark);
-			    	}
-					
-					v.setBackgroundColor(backgroundColor);	
-				} else {
-					v.setBackgroundColor(0);
-				}
-				
-				node.setView(v);
-			}
-			
-			return v;
-		}
-		
-
-		// Sets the color on the node at the specified position
-		public void setItemColor(int position) {
-			
-			// deselect all nodes
-			for (int i = 0; i < mindmapNodes.size(); i++) {
-				mindmapNodes.get(i).setSelected(false);
-			}
-			
-			// then select node at position
-			mindmapNodes.get(position).setSelected(true);
-			
-			// then notify about the GUI change
-			this.notifyDataSetChanged();
-		}
-		
-		// Clears the item color on all nodes
-		public void clearAllItemColor() {
-			for (int i = 0; i < mindmapNodes.size(); i++) {
-				mindmapNodes.get(i).setSelected(false);
-			}
-			
-			// then notify about the GUI change
-			this.notifyDataSetChanged();
-		}
-		
-	}
 
 
 }
