@@ -7,30 +7,14 @@
 
     <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent" >
+        android:layout_height="match_parent"
+        android:id="@+id/horizontal_scroll_view" >
 
         <LinearLayout
             android:id="@+id/parent_list_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent" >
 
-            <ListView
-                android:id="@+id/list_view0"
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ListView
-                android:id="@+id/list_view1"
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ListView
-                android:id="@+id/list_view2"
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
         </LinearLayout>
     </HorizontalScrollView>
 

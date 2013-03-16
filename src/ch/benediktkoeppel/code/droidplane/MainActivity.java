@@ -28,9 +28,11 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IInterface;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -104,27 +106,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	EasyTracker.getTracker().sendView("MainActivity");
         // components
         listViews = new ArrayList<ListView>();
-        ListView listView0 = (ListView)findViewById(R.id.list_view0);
-        ListView listView1 = (ListView)findViewById(R.id.list_view1);
-        ListView listView2 = (ListView)findViewById(R.id.list_view2);
-        if ( listView0 != null ) {
-        	listView0.setOnItemClickListener(this);
-        	//listView0.setOnItemLongClickListener(this);
-        	listViews.add(listView0);
-            initialNumberOfListViews = 1;
-        }
-        if ( listView1 != null ) {
-        	listView1.setOnItemClickListener(this);
-        	//listView1.setOnItemLongClickListener(this);
-        	listViews.add(listView1);
-            initialNumberOfListViews = 2;
-        }
-        if ( listView2 != null ) {
-        	listView2.setOnItemClickListener(this);
-        	//listView2.setOnItemLongClickListener(this);
-        	listViews.add(listView2);
-            initialNumberOfListViews = 3;
-        }
 
     	// enable the Android home button
         enableHomeButton();
@@ -330,7 +311,14 @@ public class MainActivity extends Activity implements OnItemClickListener {
     
     
     // lists the child nodes of the latest parent (i.e. of parents.peek() Node)
-    private void listChildren() {
+    @SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	private void listChildren() {
+    	
+    	// create a new list view
+    	ListView listView = new ListView(this);
+    	listView.setOnItemClickListener(this);
+    	//listView0.setOnItemLongClickListener(this);
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
@@ -390,38 +378,48 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	// create adapter (i.e. data provider) for the listView
     	MindmapNodeAdapter adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, mindmapNodes);
 
-    	// add a new list view
-    	ListView listView = new ListView(this);
-    	listView.setAdapter(adapter);
-    	listView.setLayoutParams(new LayoutParams(0, 0));
-    	listView.setLayoutParams(new LayoutParams(listViews.get(0).getLayoutParams()));
+    	// define the layout of the listView
+    	LayoutParams listViewLayout = new LayoutParams();
+    	// should be as high as the parent (i.e. full screen height)
+    	listViewLayout.height = LayoutParams.MATCH_PARENT;
+    	// and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
+    	// so we need 1/(horizontall_visible_panes) * screen width as column width
+    	int horizontallyVisiblePanes = getResources().getInteger(R.integer.horizontally_visible_panes);
+        android.view.Display display = ((android.view.WindowManager)getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+    	int displayWidth;
+        
+		// get the Display width. Before HONEYCOMB_MR2, this was display.getWidth, now it is display.getSize
+    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+        	Point displaySize = new Point();
+        	display.getSize(displaySize);
+        	displayWidth = displaySize.x;
+    	} else {
+    		displayWidth = (int)display.getWidth();
+    	}
+    	int columnWidth = displayWidth / horizontallyVisiblePanes;
+    	listViewLayout.width = columnWidth;
+
+    	// set the defined layout
+    	listView.setLayoutParams(listViewLayout);
     	
+    	// add the content adapter
+    	listView.setAdapter(adapter);
+    	
+    	// add it to the listViews array
+    	listViews.add(listView);
+    	
+    	// add it on the parent_list_view linear layout
     	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
     	linearLayout.addView(listView, linearLayout.getChildCount());
     	
-    	listViews.add(listView);
+    	// Scroll all the way to the right
+    	new Handler().postDelayed(new Runnable() {
+    		public void run() {
+    	    	HorizontalScrollView horizontalScrollView = (HorizontalScrollView)findViewById(R.id.horizontal_scroll_view);
+    	    	horizontalScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
+    		}
+    	}, 100L);
     	
-//    	// all ListViews already have a MindmapNodeAdapter
-//    	if ( listViews.get(listViews.size()-1).getAdapter() != null ) {
-//        	// need to shift all one to the left
-//    		for (int i = 1; i < listViews.size(); i++) {
-//    			listViews.get(i-1).setAdapter(listViews.get(i).getAdapter());
-//			}
-//    		// and attach our new adapter at the far right
-//    		listViews.get(listViews.size()-1).setAdapter(adapter);    		
-//    	} 
-//    	
-//    	// find the first free listView (i.e. listView with no adapter)
-//    	else {
-//    		for (int i = 0; i < listViews.size(); i++) {
-//    			if ( listViews.get(i).getAdapter() == null ) {
-//    				// and attach our adapter at the first free ListView
-//    				listViews.get(i).setAdapter(adapter);
-//    				break;
-//    			}
-//			}
-//    	}
-
     }
 
     
