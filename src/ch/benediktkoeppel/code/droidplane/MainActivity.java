@@ -12,7 +12,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.acra.ACRA;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -28,9 +27,11 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
@@ -39,15 +40,17 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.TableLayout.LayoutParams;
 import android.widget.ArrayAdapter;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
 
 // TODO: can we get built-in icons as SVG?
 // TODO: properly parse rich text nodes
-// TODO: when orientation changes, the onCreate is executed again. This means that we jump back to root. We should stay wherever we were before the orientation change. Maybe check if Uri is still the same, and if it is we don't re-initialize (but reuse).
 // TODO: implement OnItemLongClickListener with a context menu (show all icons, follow link, copy text, and ultimately also edit)
 
 public class MainActivity extends Activity implements OnItemClickListener {
@@ -57,31 +60,22 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	// MainApplication
 	MainApplication application;
 
-	// GUI stuff
-	// Components
-	ArrayList<ListView> listViews;
-
-	
-	// Mindmap stuff
-	InputStream mm;
-	// XML document builder. The document itself is in the MainApplication
-	DocumentBuilderFactory docBuilderFactory;
-	DocumentBuilder docBuilder;
+	// stack of parent nodes
+	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
+	// TODO: why do we need parents? shouldn't we remove this, and just have everyting in the listViews array? Maybe the MindmapNodeAdapter should have a set/getParent
 	
 	@Override
-	  public void onStart() {
-	    super.onStart();
-	    EasyTracker.getInstance().activityStart(this);
-	  }
+	public void onStart() {
+		super.onStart();
+		EasyTracker.getInstance().activityStart(this);
+	}
 
 	@Override
-	  public void onStop() {
-	    super.onStop();
-	    EasyTracker.getInstance().activityStop(this);
-	    EasyTracker.getInstance().dispatch();
-
-	  }
-
+	public void onStop() {
+		super.onStop();
+		EasyTracker.getInstance().activityStop(this);
+		EasyTracker.getInstance().dispatch();
+	}
 	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
@@ -89,55 +83,11 @@ public class MainActivity extends Activity implements OnItemClickListener {
         setContentView(R.layout.activity_main);
         
         application = (MainApplication)getApplication();
-        int previousNumListViews = application.getNumListViews();
-
     	
         // initialize android stuff
         // EasyTracker
         EasyTracker.getInstance().setContext(this);
     	EasyTracker.getTracker().sendView("MainActivity");
-        // components
-        listViews = new ArrayList<ListView>();
-        ListView listView0 = (ListView)findViewById(R.id.list_view0);
-        ListView listView1 = (ListView)findViewById(R.id.list_view1);
-        ListView listView2 = (ListView)findViewById(R.id.list_view2);
-        if ( listView0 != null ) {
-        	listView0.setOnItemClickListener(this);
-        	//listView0.setOnItemLongClickListener(this);
-        	listViews.add(listView0);
-        }
-        if ( listView1 != null ) {
-        	listView1.setOnItemClickListener(this);
-        	//listView1.setOnItemLongClickListener(this);
-        	listViews.add(listView1);
-        }
-        if ( listView2 != null ) {
-        	listView2.setOnItemClickListener(this);
-        	//listView2.setOnItemLongClickListener(this);
-        	listViews.add(listView2);
-        }
-        
-        if ( application.getListViews() != null ) {
-            // if the number of list views has not changed, we simply re-attach all adapters
-	        if ( listViews.size() >= previousNumListViews ) {
-	        	for (int i = 0; i < application.getListViews().size(); i++) {
-	        		listViews.get(i).setAdapter(application.getListViews().get(i).getAdapter());
-				}
-	        }
-	        
-	        // we have fewer list views than before, we take the right most adapter
-	        // TODO: handle the case where we go from 3 list views to 2 or something like that (or maybe 5 to 2, on a tablet)
-	        else /* if ( listViews.size() < previousNumListViews )*/ {
-	        	for (int i = application.getListViews().size()-1; i >= 0; i--) {
-	        		if ( application.getListViews().get(i).getAdapter() != null ) {
-	        			listViews.get(0).setAdapter(application.getListViews().get(i).getAdapter());
-	        			break;
-	        		}
-				}
-	        }
-        }
-        
-        application.setListView(listViews);
 
     	// enable the Android home button
         enableHomeButton();
@@ -150,12 +100,18 @@ public class MainActivity extends Activity implements OnItemClickListener {
         // start measuring the document load time
 		long loadDocumentStartTime = System.currentTimeMillis();
 		
+		// if the application was reset, or the document has changed, we need to re-initialize everything
 		if ( application.document == null || application.getUri() != intent.getData() ) {
 			
-			// clear all existing adapters, they are all invalid
-			for (int i = 0; i < application.getListViews().size(); i++) {
-				application.getListViews().get(i).setAdapter(null);
-			}
+			// Mindmap stuff
+			InputStream mm = null;
+			// XML document builder. The document itself is in the MainApplication
+			DocumentBuilderFactory docBuilderFactory;
+			DocumentBuilder docBuilder;
+			
+			// clear all existing list views and parents, they are all invalid
+			application.listViews = new ArrayList<ListView>();
+			application.parents = new Stack<Node>();
 	        
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
@@ -178,8 +134,13 @@ public class MainActivity extends Activity implements OnItemClickListener {
 						ACRA.getErrorReporter().putCustomData("URI", uri.toString());
 						e.printStackTrace();
 					}
+	        	} else {
+	        		abortWithPopup(R.string.novalidfile);
 	        	}
 	        	
+				// store the Uri. Next time the MainActivity is started, we'll
+				// check whether the Uri has changed (-> load new document) or
+				// remained the same (-> reuse previous document)
 	        	application.setUri(uri);
 	        } 
 	        
@@ -222,6 +183,44 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			
 			// navigate down into the root node
 			down(application.document.getDocumentElement());
+		}
+		
+		// otherwise, we can display the existing ListViews again
+		else {
+			
+			Log.d(TAG, "Restarted Activity, but Application remained intact");
+			Log.d(TAG, "Re-Adding " + application.listViews.size() + " existing ListViews");
+			
+			// add all listViews back
+	    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
+			int columnWidth = getColumnWidth();
+			Log.d(TAG, "columnWidth = " + columnWidth);
+			for (int i = 0; i < application.listViews.size(); i++) {
+				ListView listView = application.listViews.get(i);
+				
+				// first remove the listView from the GUI (the GUI is not valid anymore anyway, but listView still has its parent set)
+				if ( listView.getParent() != null ) {
+					((ViewGroup)listView.getParent()).removeView(listView);
+				}
+				
+				// then fix the width of the listView
+				ViewGroup.LayoutParams listViewParam = listView.getLayoutParams();
+				listViewParam.width = columnWidth;
+				listView.setLayoutParams(listViewParam);
+				
+				listView.setOnItemClickListener(this);
+				
+				// then re-add it to the linearLayout we have now
+		    	linearLayout.addView(application.listViews.get(i), linearLayout.getChildCount());
+			}
+			
+	    	// Scroll all the way to the right
+	    	new Handler().postDelayed(new Runnable() {
+	    		public void run() {
+	    	    	HorizontalScrollView horizontalScrollView = (HorizontalScrollView)findViewById(R.id.horizontal_scroll_view);
+	    	    	horizontalScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
+	    		}
+	    	}, 100L);			
 			
 		}
         
@@ -265,17 +264,20 @@ public class MainActivity extends Activity implements OnItemClickListener {
     // navigates to the top of the Mindmap
     public void top() {
     	
-    	// discard all MindmapNodeAdapters
-    	for (int i = 0; i < listViews.size(); i++) {
-    		listViews.get(i).setAdapter(null);
+    	// remove all ListView layouts in linearLayout parent_list_view
+    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
+    	linearLayout.removeAllViews();
+    	
+    	// discard all list views
+    	for (int i = 0; i < application.listViews.size(); i++) {
+			application.listViews.remove(i);
 		}
-
+    	
     	// clear the parents stack and re-add the document root node
     	application.parents.clear();
-    	application.parents.push(application.document.getDocumentElement());
     	
-    	// redraw display
-    	listChildren();
+    	// go down into the root node
+    	down(application.document.getDocumentElement());
     }
     
     // navigates back up one level in the Mindmap, if possible (otherwise does nothing)
@@ -293,42 +295,46 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				
 		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
 		// we pop the current node, and then display it's parent's child nodes
-		if ( application.parents.size() > 1 ) {
+		if ( application.listViews.size() > 1 ) {
 			application.parents.pop();
 			Log.d(TAG, "parents has " + application.parents.size() + " elements after popping");
 			
-			// remove the adapter as far right as possible
-			for (int i = listViews.size()-1; i >= 0; i--) {
-				if ( listViews.get(i).getAdapter() != null ) {
-					listViews.get(i).setAdapter(null);
-					Log.d(TAG, "Wiped ListView " + i);
-					break;
-				}
-			}
-			// TODO: this is a hack! listChildren() will add one adapter, so we
-			// remove two. Proper solution would be if we tell the
-			// listChildren() into which listView it has to write.
-			for (int i = listViews.size()-1; i >= 0; i--) {
-				if ( listViews.get(i).getAdapter() != null ) {
-					listViews.get(i).setAdapter(null);
-					Log.d(TAG, "Wiped ListView " + i);
-					break;
-				}
-			}
+			// remove the list view as far right as possible
+			ListView listViewToRemove = application.listViews.get(application.listViews.size()-1);
+			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
 			
+			// remove it from listViews
+			application.listViews.remove(application.listViews.size()-1);
+			
+			// deselect all nodes on the right-most view
+			((MindmapNodeAdapter)application.listViews.get(application.listViews.size()-1).getAdapter()).clearAllItemColor();
+			
+	    	// enable the up navigation with the Home (app) button (top left corner)
+	    	// if we only have one parent (i.e. this is the root node), then we disable the home button
+	    	if ( application.listViews.size() > 1 ) {
+	    		enableHomeButton();
+	    	} else {
+	    		disableHomeButton();
+	    	}
 
-			// TODO: in up(), if there are more than listViews.size() elements in
-			// parents, but not all listViews have an adapter (i.e. the last listView
-			// has adapter null), we can shift all adapters one to the right
-			
-			// TODO if we have enough parents to fill all listviews, we slide everything by one
-//			if ( parents.size() >= listViews.size() ) {
-//				
-//			}
-			
-			// if we have not enough, we fill from the left as much as we can
-			
-			listChildren();
+	    	// TODO: set app title appropriately
+			// set activity title to current parent's text. This is only possible if
+			// the parent is indeed an Element, a tag "node" and has a "TEXT"
+			// attribute. This should be always the case, but just be on the safe
+			// side.
+	    	Node parent_n = application.parents.peek();
+	    	if ( isMindmapNode(parent_n) ) {
+	    		Element parent_e = getMindmapNode(parent_n);
+	   			String text = parent_e.getAttribute("TEXT");
+				if ( !text.equals("") ) {
+					setTitle(text);
+				} else {
+					setTitle(R.string.app_name);
+				}
+	    	} else {
+				setTitle(R.string.app_name);
+			}
+
 		}
 		
 		// there was no remaining node in parents, and force was specified, so we exit
@@ -346,8 +352,12 @@ public class MainActivity extends Activity implements OnItemClickListener {
     }
     
     
-    // lists the child nodes of the latest parent (i.e. of parents.peek() Node)
-    private void listChildren() {
+    // lists the child nodes of the latest parent (i.e. of application.parents.peek() Node)
+	private void listChildren() {
+    	
+    	// create a new list view
+    	ListView listView = new ListView(getApplicationContext());
+    	listView.setOnItemClickListener(this);
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
@@ -407,27 +417,55 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	// create adapter (i.e. data provider) for the listView
     	MindmapNodeAdapter adapter = new MindmapNodeAdapter(this, R.layout.mindmap_node_list_item, mindmapNodes);
 
-    	// all ListViews already have a MindmapNodeAdapter
-    	if ( listViews.get(listViews.size()-1).getAdapter() != null ) {
-        	// need to shift all one to the left
-    		for (int i = 1; i < listViews.size(); i++) {
-    			listViews.get(i-1).setAdapter(listViews.get(i).getAdapter());
-			}
-    		// and attach our new adapter at the far right
-    		listViews.get(listViews.size()-1).setAdapter(adapter);    		
-    	} 
-    	
-    	// find the first free listView (i.e. listView with no adapter)
-    	else {
-    		for (int i = 0; i < listViews.size(); i++) {
-    			if ( listViews.get(i).getAdapter() == null ) {
-    				// and attach our adapter at the first free ListView
-    				listViews.get(i).setAdapter(adapter);
-    				break;
-    			}
-			}
-    	}
+    	// define the layout of the listView
+    	LayoutParams listViewLayout = new LayoutParams();
+    	// should be as high as the parent (i.e. full screen height)
+    	listViewLayout.height = LayoutParams.MATCH_PARENT;
+    	listViewLayout.width = getColumnWidth();
 
+    	// set the defined layout
+    	listView.setLayoutParams(listViewLayout);
+    	
+    	// add the content adapter
+    	listView.setAdapter(adapter);
+    	
+    	// add it to the listViews array
+    	application.listViews.add(listView);
+    	
+    	// add it on the parent_list_view linear layout
+    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
+    	linearLayout.addView(listView, linearLayout.getChildCount());
+    	
+    	// Scroll all the way to the right
+    	new Handler().postDelayed(new Runnable() {
+    		public void run() {
+    	    	HorizontalScrollView horizontalScrollView = (HorizontalScrollView)findViewById(R.id.horizontal_scroll_view);
+    	    	horizontalScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT);
+    		}
+    	}, 100L);
+    	
+    }
+    
+    @SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+    public int getColumnWidth() {
+    	// and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
+    	// so we need 1/(horizontall_visible_panes) * screen width as column width
+    	int horizontallyVisiblePanes = getResources().getInteger(R.integer.horizontally_visible_panes);
+        android.view.Display display = ((android.view.WindowManager)getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+    	int displayWidth;
+        
+		// get the Display width. Before HONEYCOMB_MR2, this was display.getWidth, now it is display.getSize
+    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+        	Point displaySize = new Point();
+        	display.getSize(displaySize);
+        	displayWidth = displaySize.x;
+    	} else {
+    		displayWidth = (int)display.getWidth();
+    	}
+    	int columnWidth = displayWidth / horizontallyVisiblePanes;
+    	
+    	return columnWidth;
     }
     
     
@@ -473,11 +511,18 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		
 		// find out which view it was, then null all adapters to the right
 		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents. 
-		for (int i = listViews.lastIndexOf((ListView)parent)+1; i < listViews.size(); i++) {
-			if ( listViews.get(i).getAdapter() != null ) {
-				listViews.get(i).setAdapter(null);
-				application.parents.pop();
-			}
+		for (int i = application.listViews.size()-1; i >= application.listViews.lastIndexOf((ListView)parent)+1; i--) {
+		
+			// remove a parent
+			application.parents.pop();
+			
+			// remove the list view as far right as possible
+			ListView listViewToRemove = application.listViews.get(i);
+			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
+			
+			// remove it from listViews
+			application.listViews.remove(application.listViews.size()-1);
+			
 		}
 
 		// then get all nodes from this adapter
@@ -487,11 +532,13 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		// extract the pushed node
 		Node pushedNode = currentListedNodes.get(position);
 		
-		// give the pushed node a special color
-		adapter.setItemColor(position);
-		
-		// and drill down (if it has child nodes)
+		// if the node has child nodes (i.e. should be clickable)
 		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
+
+			// give the pushed node a special color
+			adapter.setItemColor(position);
+			
+			// and drill down 
 			down(pushedNode);
 		}
 		
@@ -734,6 +781,17 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			// then notify about the GUI change
 			this.notifyDataSetChanged();
 		}
+		
+		// Clears the item color on all nodes
+		public void clearAllItemColor() {
+			for (int i = 0; i < mindmapNodes.size(); i++) {
+				mindmapNodes.get(i).setSelected(false);
+			}
+			
+			// then notify about the GUI change
+			this.notifyDataSetChanged();
+		}
+		
 	}
 
 

@@ -4,11 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical" >
-	
-    <ListView
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/list_view0" >
-        
-    </ListView>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/horizontal_scroll_view" >
+
+        <LinearLayout
+            android:id="@+id/parent_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
 </LinearLayout>

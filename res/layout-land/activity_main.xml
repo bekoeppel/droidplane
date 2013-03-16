@@ -3,49 +3,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:background="#999999"
-    android:baselineAligned="false" >
+    android:orientation="vertical" >
 
-    <LinearLayout
-        android:layout_width="0dip"
+    <HorizontalScrollView
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:layout_marginRight="1dip"
-        android:baselineAligned="false"
-        android:background="#ffffff" >
+        android:id="@+id/horizontal_scroll_view" >
 
-        <ListView
-            android:id="@+id/list_view0"
+        <LinearLayout
+            android:id="@+id/parent_list_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
+            android:layout_height="match_parent" >
 
-    <LinearLayout
-        android:layout_width="0dip"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:layout_marginRight="1dip"
-        android:baselineAligned="false"
-        android:background="#ffffff" >
-
-        <ListView
-            android:id="@+id/list_view1"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="0dip"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:baselineAligned="false"
-        android:background="#ffffff" >
-
-        <ListView
-            android:id="@+id/list_view2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </LinearLayout>
