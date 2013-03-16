@@ -33,7 +33,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IInterface;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
@@ -77,6 +76,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	Document document;
 	// stack of parent nodes
 	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
+	// TODO: why do we need parents? shouldn't we remove this, and just have everyting in the listViews array? Maybe the MindmapNodeAdapter should have a set/getParent
 	Stack<Node> parents = new Stack<Node>();
 	
 	@Override
@@ -90,7 +90,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	    super.onStop();
 	    EasyTracker.getInstance().activityStop(this);
 	    EasyTracker.getInstance().dispatch();
-
 	  }
 
 	
@@ -222,16 +221,15 @@ public class MainActivity extends Activity implements OnItemClickListener {
     // navigates to the top of the Mindmap
     public void top() {
     	
+    	// remove all ListView layouts in linearLayout parent_list_view
+    	LinearLayout linearLayout = (LinearLayout)findViewById(R.id.parent_list_view);
+    	linearLayout.removeAllViews();
+    	
     	// discard all MindmapNodeAdapters
     	for (int i = 0; i < listViews.size(); i++) {
-    		listViews.get(i).setAdapter(null);
+			listViews.remove(i);
 		}
     	
-    	// remove all unnecessairy list views
-    	for (int i = initialNumberOfListViews; i < listViews.size(); i++) {
-    		listViews.remove(i);
-		}
-
     	// clear the parents stack and re-add the document root node
     	parents.clear();
     	parents.push(document.getDocumentElement());
@@ -255,44 +253,47 @@ public class MainActivity extends Activity implements OnItemClickListener {
 				
 		// make sure that there is more than 1 node in the parents stack: the current one, and it's parent
 		// we pop the current node, and then display it's parent's child nodes
-		if ( parents.size() > 1 ) {
+		if ( listViews.size() > 1 ) {
 			parents.pop();
 			Log.d(TAG, "parents has " + parents.size() + " elements after popping");
 			
-			// TODO list all unnecessair list views
 			
-			// remove the adapter as far right as possible
-			for (int i = listViews.size()-1; i >= 0; i--) {
-				if ( listViews.get(i).getAdapter() != null ) {
-					listViews.get(i).setAdapter(null);
-					Log.d(TAG, "Wiped ListView " + i);
-					break;
-				}
-			}
-			// TODO: this is a hack! listChildren() will add one adapter, so we
-			// remove two. Proper solution would be if we tell the
-			// listChildren() into which listView it has to write.
-			for (int i = listViews.size()-1; i >= 0; i--) {
-				if ( listViews.get(i).getAdapter() != null ) {
-					listViews.get(i).setAdapter(null);
-					Log.d(TAG, "Wiped ListView " + i);
-					break;
-				}
-			}
+			// remove the list view as far right as possible
+			ListView listViewToRemove = listViews.get(listViews.size()-1);
+			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
 			
+			// remove it from listViews
+			listViews.remove(listViews.size()-1);
+			
+			// deselect all nodes on the right-most view
+			((MindmapNodeAdapter)listViews.get(listViews.size()-1).getAdapter()).clearAllItemColor();
+			
+	    	// enable the up navigation with the Home (app) button (top left corner)
+	    	// if we only have one parent (i.e. this is the root node), then we disable the home button
+	    	if ( listViews.size() > 1 ) {
+	    		enableHomeButton();
+	    	} else {
+	    		disableHomeButton();
+	    	}
 
-			// TODO: in up(), if there are more than listViews.size() elements in
-			// parents, but not all listViews have an adapter (i.e. the last listView
-			// has adapter null), we can shift all adapters one to the right
-			
-			// TODO if we have enough parents to fill all listviews, we slide everything by one
-//			if ( parents.size() >= listViews.size() ) {
-//				
-//			}
-			
-			// if we have not enough, we fill from the left as much as we can
-			
-			listChildren();
+	    	// TODO: set app title appropriately
+			// set activity title to current parent's text. This is only possible if
+			// the parent is indeed an Element, a tag "node" and has a "TEXT"
+			// attribute. This should be always the case, but just be on the safe
+			// side.
+	    	Node parent_n = parents.peek();
+	    	if ( isMindmapNode(parent_n) ) {
+	    		Element parent_e = getMindmapNode(parent_n);
+	   			String text = parent_e.getAttribute("TEXT");
+				if ( !text.equals("") ) {
+					setTitle(text);
+				} else {
+					setTitle(R.string.app_name);
+				}
+	    	} else {
+				setTitle(R.string.app_name);
+			}
+
 		}
 		
 		// there was no remaining node in parents, and force was specified, so we exit
@@ -318,7 +319,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	// create a new list view
     	ListView listView = new ListView(this);
     	listView.setOnItemClickListener(this);
-    	//listView0.setOnItemLongClickListener(this);
     	
     	// enable the up navigation with the Home (app) button (top left corner)
     	// if we only have one parent (i.e. this is the root node), then we disable the home button
@@ -470,11 +470,18 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		
 		// find out which view it was, then null all adapters to the right
 		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents. 
-		for (int i = listViews.lastIndexOf((ListView)parent)+1; i < listViews.size(); i++) {
-			if ( listViews.get(i).getAdapter() != null ) {
-				listViews.get(i).setAdapter(null);
-				parents.pop();
-			}
+		for (int i = listViews.size()-1; i >= listViews.lastIndexOf((ListView)parent)+1; i--) {
+		
+			// remove a parent
+			parents.pop();
+			
+			// remove the list view as far right as possible
+			ListView listViewToRemove = listViews.get(i);
+			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
+			
+			// remove it from listViews
+			listViews.remove(listViews.size()-1);
+			
 		}
 
 		// then get all nodes from this adapter
@@ -484,11 +491,13 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		// extract the pushed node
 		Node pushedNode = currentListedNodes.get(position);
 		
-		// give the pushed node a special color
-		adapter.setItemColor(position);
-		
-		// and drill down (if it has child nodes)
+		// if the node has child nodes (i.e. should be clickable)
 		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
+
+			// give the pushed node a special color
+			adapter.setItemColor(position);
+			
+			// and drill down 
 			down(pushedNode);
 		}
 		
@@ -731,6 +740,17 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			// then notify about the GUI change
 			this.notifyDataSetChanged();
 		}
+		
+		// Clears the item color on all nodes
+		public void clearAllItemColor() {
+			for (int i = 0; i < mindmapNodes.size(); i++) {
+				mindmapNodes.get(i).setSelected(false);
+			}
+			
+			// then notify about the GUI change
+			this.notifyDataSetChanged();
+		}
+		
 	}
 
 
