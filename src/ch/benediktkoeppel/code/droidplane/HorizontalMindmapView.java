@@ -7,13 +7,16 @@ import org.w3c.dom.Node;
 
 import android.content.Context;
 import android.os.Handler;
+import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.View.OnTouchListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
-import android.util.Log;
-
-public class HorizontalMindmapView extends HorizontalScrollView {
+public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener {
 	
 	/**
 	 * HorizontalScrollView can only have one view, so we need to add a
@@ -27,6 +30,27 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 	 * HorizontalScrollView.
 	 */
 	private ArrayList<NodeColumn> nodeColumns;
+	
+	/**
+	 * constants to determine the minimum swipe distance and speed
+	 */
+	private static final int SWIPE_MIN_DISTANCE = 5;
+	private static final int SWIPE_THRESHOLD_VELOCITY = 300;
+	
+	/**
+	 * Gesture detector
+	 */
+	//private GestureDetector gestureDetector;
+	
+	
+	/**
+	 * The index of the rightmost column that is visible
+	 */
+	// TODO: should it maybe be the leftmost column?
+	private int rightmostVisibleColumn;
+
+
+	
 	
 	/**
 	 * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define
@@ -52,6 +76,11 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		linearLayout = new LinearLayout(context);
     	linearLayout.setLayoutParams(linearLayoutParams);
     	this.addView(linearLayout);
+    	    	
+    	// register HorizontalMindmapView to receive all touch events on itself
+    	setOnTouchListener(this);
+    	
+
 	}
 	
 	/**
@@ -87,7 +116,7 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		
 		new Handler().postDelayed(new HorizontalMindmapViewRunnable(this), 100L);
 	}
-
+	
 	/**
 	 * Removes all columns from this HorizontalMindmapView
 	 */
@@ -211,6 +240,116 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 			// remove this column
 			removeRightmostColumn();
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * Will be called whenever the HorizontalScrollView is
+	 * touched. We have to capture the move left and right events here, and snap
+	 * to the appropriate column borders.
+	 * 
+	 * @see android.view.View.OnTouchListener#onTouch(android.view.View,
+	 * android.view.MotionEvent)
+	 */
+	@Override
+	public boolean onTouch(View view, MotionEvent event) {
+		
+		// first, we let the gestureDetector examine the event. It will process
+		// the event if it was a gesture, i.e. if it was fast enough to trigger
+		// a Fling. If it handled the event, we don't process it further.
+		// This gesture can be triggered if the user moves the finger fast
+		// enough. He does not necessarily have to move so far that the next
+		// column is mostly visible.
+		/*if ( gestureDetector.onTouchEvent(event) ) {
+			return true;
+		}
+		
+		// If it was not a gesture (i.e. the user moved his finger too slow), we
+		// simply snap to the next closest column border.
+		else*/ if ( event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL ) {
+			
+			// now we need to find out where the HorizontalMindmapView is horizontally scrolled
+			int scrollX = getScrollX();
+			Log.d(MainApplication.TAG, "HorizontalMindmapView is scrolled horizontally to " + scrollX);
+			
+			int viewWidth = getWidth();
+						
+			// and then get the leftmost visible column (just a little bit is
+			// enough)
+			// how many columns fit into less than scrollX space?
+			// sum the width of all columns until we go over scrollX. then the
+			// last column that we added to the sum is partially visible
+			int sumColumnWidths = 0;
+			NodeColumn leftmostVisibleColumn = null;
+			int numVisiblePixelsOnColumn = 0;
+			for (int i = 0; i < nodeColumns.size(); i++) {
+				sumColumnWidths += nodeColumns.get(i).getWidth();
+				
+				// if the sum of all columns so far exceeds scrollX, the current NodeColumn is (at least a little bit) visible
+				if (sumColumnWidths >= scrollX) {
+					leftmostVisibleColumn = nodeColumns.get(i);
+					
+					// how many pixels are visible of this column?
+					numVisiblePixelsOnColumn = sumColumnWidths - scrollX;
+					break;
+				}
+			}
+			
+			// if we couldn't find a column, we could not process this event. I'm not sure how this might ever happen
+			if ( leftmostVisibleColumn == null ) {
+				Log.e(MainApplication.TAG, "No leftmost visible column was detected. Not sure how this could happen!");
+				return false;
+			}
+			
+			// and then determine if the leftmost visible column shows more than 50% of its full width
+			// if it shows more than 50%, then we scroll to the left, so that we can see it fully
+			if ( numVisiblePixelsOnColumn < leftmostVisibleColumn.getWidth()/2 ) {
+				
+				Log.d(MainApplication.TAG, "Scrolling to the left, so that we can see the column fully");
+				smoothScrollTo(sumColumnWidths, 0);
+
+			}
+			
+			// if it shows less than 50%, then we scroll to the right, so that is not visible anymore 
+			else {
+
+				Log.d(MainApplication.TAG, "Scrolling to the right, so that the column is not visible anymore");
+				smoothScrollTo(sumColumnWidths-leftmostVisibleColumn.getWidth(), 0);
+				
+			}
+			
+			// we have processed this event
+			return true;
+			
+		}
+		
+		// if we did not process the event ourself we let the caller know
+		else {
+			return false;
+		}
+//		
+//		// TODO Auto-generated method stub
+//		return false;
+//		
+//    	
+//    	setOnTouchListener(new View.OnTouchListener() {
+//    		
+//    		@Override
+//    		public boolean onTouch(View view, MotionEvent event) {
+//    			if (mGestureDetector.onTouchEvent(event)) {
+//    				return true;
+//    			} else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL ) {
+//    				int scrollX = getScrollX();
+//    				int featureWidth = view.getMeasuredWidth();
+//    				mActiveFeature = ((scrollX + (featureWidth/2))/featureWidth);
+//    				int scrollTo = mActiveFeature*featureWidth;
+//    				smoothScrollTo(scrollTo, 0);
+//    				return true;
+//    			} else {
+//    				return false;
+//    			}
+//    		}
+//    	});
 	}
 }
 
