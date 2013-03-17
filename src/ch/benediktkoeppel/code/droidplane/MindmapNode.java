@@ -7,6 +7,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.content.Context;
+
 
 
 public class MindmapNode {
@@ -47,25 +49,9 @@ public class MindmapNode {
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 	}
 	
-//	public MindmapNode(String text, String icon_name, int icon_res_id, boolean isExpandable, Node node) {
-//		this.text = text;
-//		this.icon_name = icon_name;
-//		this.icon_res_id = icon_res_id;
-//		this.isExpandable = isExpandable;
-//		this.node = node;
-//	}
-	
 	public Node getNode() {
 		return this.node;
 	}
-//
-//	public void setView(View view) {
-//		this.view = view;
-//	}
-//	
-//	public View getView() {
-//		return this.view;
-//	}
 	
 	public void setSelected(boolean selected) {
 		this.selected = selected;
@@ -82,19 +68,15 @@ public class MindmapNode {
 	 */
 	public static boolean isMindmapNode(Node node) {
 		
-		if ( node.getNodeType() == Node.ELEMENT_NODE ) {
-			Element element = (Element)node;
-			
-			if ( element.getTagName().equals("node") ) {
+		if (node.getNodeType() == Node.ELEMENT_NODE) {
+			Element element = (Element) node;
+
+			if (element.getTagName().equals("node")) {
 				return true;
 			}
 		}
-		
 		return false;
-		
 	}
-	
-
 
 
 	private ArrayList<String> getIcons() {

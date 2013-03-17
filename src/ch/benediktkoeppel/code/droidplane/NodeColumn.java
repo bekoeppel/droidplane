@@ -55,11 +55,8 @@ public class NodeColumn extends ListView {
     	// define the layout of the listView
     	// should be as high as the parent (i.e. full screen height)
     	int height = LayoutParams.MATCH_PARENT;
-    	int width = getColumnWidth();
+    	int width = getOptimalColumnWidth();
     	ViewGroup.LayoutParams listViewLayout = new ViewGroup.LayoutParams(width, height);
-
-    	// set the defined layout
-    	// TODO: really shouldn't do this. node column can do it itself.
     	setLayoutParams(listViewLayout);
 
     	
@@ -84,7 +81,7 @@ public class NodeColumn extends ListView {
 	 * Sets the width of this column to columnWidth
 	 * @param columnWidth width of the column
 	 */
-	public void setWidth(int columnWidth) {
+	private void setWidth(int columnWidth) {
 		Log.d(MainApplication.TAG, "Setting column width to " + columnWidth);
 		
 		ViewGroup.LayoutParams listViewParam = this.getLayoutParams();
@@ -113,15 +110,14 @@ public class NodeColumn extends ListView {
      * Calculates the column width which this column should have
      * @return
      */
-	// TODO: is this really at the right spot here? It should go into some GUI helper class and might even be static
     @SuppressWarnings("deprecation")
 	@SuppressLint("NewApi")
-    private int getColumnWidth() {
+    private static int getOptimalColumnWidth() {
     	
     	// and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
     	// so we need 1/(horizontall_visible_panes) * displayWidth as column width
-    	int horizontallyVisiblePanes = getContext().getResources().getInteger(R.integer.horizontally_visible_panes);
-        android.view.Display display = ((android.view.WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+    	int horizontallyVisiblePanes = MainApplication.getStaticApplicationContext().getResources().getInteger(R.integer.horizontally_visible_panes);
+        android.view.Display display = ((android.view.WindowManager)MainApplication.getStaticApplicationContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
     	int displayWidth;
         
 		// get the Display width. Before HONEYCOMB_MR2, this was display.getWidth, now it is display.getSize
@@ -139,6 +135,10 @@ public class NodeColumn extends ListView {
     	return columnWidth;
     }
     
+    public void resizeColumnWidth() {
+    	setWidth(getOptimalColumnWidth());
+    }
+    
     /**
      * Fetches the MindmapNode at the given position
      * @param position the position from which the MindmapNode should be returned
@@ -148,10 +148,10 @@ public class NodeColumn extends ListView {
     	return mindmapNodes.get(position);
     }
     
-    
-
-
-	// Sets the color on the node at the specified position
+	/**
+	 * Sets the color on the node at the specified position
+	 * @param position
+	 */
 	public void setItemColor(int position) {
 		
 		// deselect all nodes
@@ -166,7 +166,9 @@ public class NodeColumn extends ListView {
 		adapter.notifyDataSetChanged();
 	}
 	
-	// Clears the item color on all nodes
+	/**
+	 * Clears the item color on all nodes
+	 */
 	public void clearAllItemColor() {
 		for (int i = 0; i < mindmapNodes.size(); i++) {
 			mindmapNodes.get(i).setSelected(false);
@@ -175,7 +177,6 @@ public class NodeColumn extends ListView {
 		// then notify about the GUI change
 		adapter.notifyDataSetChanged();
 	}
-
 	
 
 }
@@ -188,21 +189,12 @@ public class NodeColumn extends ListView {
  */
 class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 	
-	// TODO: do we need the mindmapNodes array? this is already in NodeColumn, so we could use it from there
 	private ArrayList<MindmapNode> mindmapNodes;
 	
 	public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNode> mindmapNodes) {
 		super(context, textViewResourceId, mindmapNodes);
 		this.mindmapNodes = mindmapNodes;
 	}
-//	
-//	public ArrayList<Node> getNodeList() {
-//		ArrayList<Node> nodeList = new ArrayList<Node>();
-//		for (int i = 0; i < mindmapNodes.size(); i++) {
-//			nodeList.add(mindmapNodes.get(i).getNode());
-//		}
-//		return nodeList;
-//	}
 
 	/* (non-Javadoc)
 	 * getView is responsible to return a view for each individual element in the ListView

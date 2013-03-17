@@ -13,6 +13,8 @@ public class MainApplication extends Application {
 	
 	public static final String TAG = "DroidPlane";
 	
+	// TODO: why the hell is this all sitting in here??? should go to an instance variable of the MainActivity I guess
+	
 	// the document which is used in MainActivity
 	public Document document;
 

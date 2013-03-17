@@ -17,10 +17,8 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,10 +28,13 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
+// TODO: add JavaDoc comments everywhere
+// TODO: create horizontally snapping stuff http://blog.velir.com/index.php/2010/11/17/android-snapping-horizontal-scroll/
+// TODO: stop using DOM Nodes, and switch to MindmapNodes
+// TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
 // TODO: can we get built-in icons as SVG?
 // TODO: properly parse rich text nodes
@@ -177,8 +178,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			down(application.document.getDocumentElement());
 		}
 		
+		// otherwise, we can display the existing HorizontalMindmapView again
 		else {
-			
 			
 	        // add the HorizontalMindmapView to the Layout Wrapper
 			LinearLayout tmp_parent = ((LinearLayout)application.horizontalMindmapView.getParent());
@@ -188,43 +189,11 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	        ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
 
 	        // fix the widths of all columns
-			application.horizontalMindmapView.resizeAllColumns(calculateColumnWidth());
+			application.horizontalMindmapView.resizeAllColumns();
 			
-			
-			
+			// and then scroll to the right
+			application.horizontalMindmapView.scrollToRight();
 		}
-//		
-//		// otherwise, we can display the existing ListViews again
-//		else {
-//			
-//			Log.d(MainApplication.TAG, "Restarted Activity, but Application remained intact");
-//			Log.d(MainApplication.TAG, "Re-Adding " + application.nodeColumns.size() + " existing ListViews");
-//			
-//			// add all listViews back
-//			int columnWidth = getColumnWidth();
-//			Log.d(MainApplication.TAG, "columnWidth = " + columnWidth);
-//			for (int i = 0; i < application.nodeColumns.size(); i++) {
-//				NodeColumn nodeColumn = application.nodeColumns.get(i);
-//				
-//				// remove the column from it's GUI parent (the GUI layout has been recreated, so its parent is not valid anymore anyway)
-//				nodeColumn.removeFromParent();
-//				
-//				// then resize it
-//				nodeColumn.setWidth(columnWidth);
-//				
-//				// TODO CLEANUP: who should be the on click listener for the column? the column itself maybe?
-//				nodeColumn.setOnItemClickListener(this);
-//				
-//				// then re-add it to the linearLayout we have now
-//				application.horizontalMindmapView.addColumn(nodeColumn);
-//			}
-//			
-//			// then scroll to right
-//			application.horizontalMindmapView.scrollToRight();
-//			
-//		}
-
-        
     }
 
     // enables the home button
@@ -350,29 +319,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 
     }
     
-    @SuppressWarnings("deprecation")
-	@SuppressLint("NewApi")
-    public int calculateColumnWidth() {
-    	// and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
-    	// so we need 1/(horizontall_visible_panes) * screen width as column width
-    	int horizontallyVisiblePanes = getResources().getInteger(R.integer.horizontally_visible_panes);
-        android.view.Display display = ((android.view.WindowManager)getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-    	int displayWidth;
-        
-		// get the Display width. Before HONEYCOMB_MR2, this was display.getWidth, now it is display.getSize
-    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-        	Point displaySize = new Point();
-        	display.getSize(displaySize);
-        	displayWidth = displaySize.x;
-    	} else {
-    		displayWidth = (int)display.getWidth();
-    	}
-    	int columnWidth = displayWidth / horizontallyVisiblePanes;
-    	
-    	return columnWidth;
-    }
-    
-    
     // Handler of all menu events
     // Home button: navigate one level up, and exit the application if the home button is pressed at the root node
     // Menu Up: navigate one level up, and stay at the root node
@@ -457,8 +403,6 @@ public class MainActivity extends Activity implements OnItemClickListener {
 //		return true;
 //		
 //	}
-
-	
 	
 	// Shows a popup with an error message and then closes the application
 	public void abortWithPopup(int stringResourceId) {

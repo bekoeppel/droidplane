@@ -10,7 +10,6 @@ import android.os.Handler;
 import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 
 import android.util.Log;
 
@@ -23,8 +22,18 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 	 */
 	private LinearLayout linearLayout;
 	
+	/**
+	 * nodeColumns holds the list of columns that are displayed in this
+	 * HorizontalScrollView.
+	 */
 	private ArrayList<NodeColumn> nodeColumns;
 	
+	/**
+	 * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define
+	 * the layout parameters for the HorizontalScrollView and create the
+	 * LinearLayout view inside the HorizontalScrollView.
+	 * @param context the Application Context
+	 */
 	public HorizontalMindmapView(Context context) {
 		super(context);
 		
@@ -56,7 +65,8 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 	}
 	
 	/**
-	 * GUI Helper to scroll the HorizontalMindmapView all the way to the right. Should be called after adding a NodeColumn.
+	 * GUI Helper to scroll the HorizontalMindmapView all the way to the right.
+	 * Should be called after adding a NodeColumn.
 	 * @return true if the key event is consumed by this method, false otherwise
 	 */
 	public void scrollToRight() {
@@ -90,9 +100,9 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 	 * Adjusts the width of all columns in the HorizontalMindmapView
 	 * @param columnWidth the width of each column
 	 */
-	public void resizeAllColumns(int columnWidth) {
+	public void resizeAllColumns() {
 		for (NodeColumn nodeColumn : nodeColumns) {
-			nodeColumn.setWidth(columnWidth);
+			nodeColumn.resizeColumnWidth();
 		}
 	}
 	
@@ -100,7 +110,6 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 	 * Removes the rightmost column and returns true. If there was no column to
 	 * remove, returns false. It never removes the last column, i.e. it never
 	 * removes the root node of the mind map.
-	 * 
 	 * @return True if a column was removed, false if no column was removed.
 	 */
 	public boolean removeRightmostColumn() {
@@ -176,24 +185,31 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		}
 	}
 	
+	/**
+	 * Remove all columns at the right of the specified column. 
+	 * @param nodeColumn
+	 */
 	public void removeAllColumnsRightOf(NodeColumn nodeColumn) {
 		
-		// remove the rightmost column 
+		// we go from right to left, from the end of nodeColumns back to one
+		// element after nodeColumn
+		//		
 		// nodeColumns = [ col1, col2, col3, col4, col5 ];
 		// removeAllColumnsRightOf(col2) will do:
 		//     nodeColumns.size()-1 => 4
 		//     nodeColumns.lastIndexOf(col2)+1 => 2
+		//
 		// for i in (4, 3, 2): remove rightmost column
 		//     i = 4: remove col5
 		//     i = 3: remove col4
 		//     i = 2: remove col3
+		//
 		// so at the end, we have
 		// nodeColumns = [ col1, col2 ];
 		for (int i = nodeColumns.size()-1; i >= nodeColumns.lastIndexOf(nodeColumn)+1; i--) {
 			
 			// remove this column
 			removeRightmostColumn();
-			
 		}
 	}
 }
