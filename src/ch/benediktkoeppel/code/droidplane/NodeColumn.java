@@ -1,6 +1,7 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -14,15 +15,29 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.AdapterView.OnItemClickListener;
 
 import android.util.Log;
 
 /**
- * A column of MindmapNodes, i.e. one level in the mind map.
+ * A column of MindmapNodes, i.e. one level in the mind map. It extends
+ * LinearLayout, and then embedds a ListView. This is because we want to have a
+ * fine border around the ListView and we can only achieve this by having it
+ * wrapped in a LinearLayout with a padding.
  */
-public class NodeColumn extends ListView {
+public class NodeColumn extends LinearLayout {
+	
+	/**
+	 * This translates ListViews to NodeColumns. We need this because the
+	 * OnItemClicked Events come with a ListView (i.e. the ListView which was
+	 * clicked) as parent, but we need to find out which NodeColumn was clicked.
+	 * This would have been a simple cast if NodeColumn extended ListView, but
+	 * we extend LinearLayout and wrap the ListView.
+	 */
+	private static HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<ListView, NodeColumn>();
 	
 	// the parent node (i.e. the node that is parent to everything we display in this column)
 	private Node parent;
@@ -32,6 +47,9 @@ public class NodeColumn extends ListView {
 	
 	// the adapter for this column
 	MindmapNodeAdapter adapter;
+	
+	// the actual ListView
+	ListView listView;
 
 	public NodeColumn(Context context, Node parent) {
 		super(context);
@@ -50,22 +68,45 @@ public class NodeColumn extends ListView {
 		
 		// store the parent node
 		this.parent = parent;
+		
+    	
+    	// define the layout of this LinearView
+    	int linearViewHeight = LayoutParams.MATCH_PARENT;
+    	int linearViewWidth = getOptimalColumnWidth();
+    	LinearLayout.LayoutParams linearViewLayout = new LinearLayout.LayoutParams(linearViewWidth, linearViewHeight);
+    	setLayoutParams(linearViewLayout);
+    	setPadding(0, 0, 1, 0);
+    	setBackgroundColor(context.getResources().getColor(android.R.color.darker_gray));
 
+
+		
+		// create a ListView
+		listView = new ListView(context);
 		
     	// define the layout of the listView
     	// should be as high as the parent (i.e. full screen height)
-    	int height = LayoutParams.MATCH_PARENT;
-    	int width = getOptimalColumnWidth();
-    	ViewGroup.LayoutParams listViewLayout = new ViewGroup.LayoutParams(width, height);
-    	setLayoutParams(listViewLayout);
+    	int listViewHeight = LayoutParams.MATCH_PARENT;
+    	int listViewWidth = LayoutParams.MATCH_PARENT;
+    	ViewGroup.LayoutParams listViewLayout = new ViewGroup.LayoutParams(listViewWidth, listViewHeight);
+    	listView.setLayoutParams(listViewLayout);
+    	listView.setBackgroundColor(context.getResources().getColor(android.R.color.background_light));
 
     	
     	// create adapter (i.e. data provider) for the column
     	adapter = new MindmapNodeAdapter(getContext(), R.layout.mindmap_node_list_item, mindmapNodes);
 
     	// add the content adapter
-    	setAdapter(adapter);
+    	listView.setAdapter(adapter);
     	
+    	// store the ListView to NodeColumn mapping in listViewToNodeColumn
+    	listViewToNodeColumn.put(listView, this);
+    	
+    	// add the listView to the linearView
+    	this.addView(listView);
+	}
+	
+	public static NodeColumn getNodeColumnFromListView(ListView listView) {
+		return listViewToNodeColumn.get(listView);
 	}
 
 	/**
@@ -176,6 +217,19 @@ public class NodeColumn extends ListView {
 		
 		// then notify about the GUI change
 		adapter.notifyDataSetChanged();
+	}
+	
+	/**
+	 * Simply a wrapper for ListView's setOnItemClickListener. Technically, the
+	 * NodeColumn (which is a LinearView) does not generate OnItemClick Events,
+	 * but it's child view (the ListView) does. But it's simpler if the outside
+	 * world does not have to care about that detail, so we implement
+	 * setOnItemClickListener and just forward the listener to the actual
+	 * ListView.
+	 * @param listener
+	 */
+	public void setOnItemClickListener(OnItemClickListener listener) {
+		listView.setOnItemClickListener(listener);
 	}
 	
 

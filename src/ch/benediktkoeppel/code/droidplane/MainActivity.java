@@ -28,6 +28,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
@@ -360,7 +361,12 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		
 		// the clicked column
-		NodeColumn clickedNodeColumn = (NodeColumn)parent;
+		// TODO: parent is the ListView in which the user clicked. Because
+		// NodeColumn does not extend ListView (it only wrapps a ListView), we
+		// have to find out which NodeColumn it was. We can do so because
+		// NodeColumn.getNodeColumnFromListView uses a static HashMap to do the
+		// translation.
+		NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
 		
 		// remove all columns right of the column which was clicked
 		application.horizontalMindmapView.removeAllColumnsRightOf(clickedNodeColumn);
