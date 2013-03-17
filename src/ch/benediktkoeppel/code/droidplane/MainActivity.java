@@ -339,6 +339,9 @@ public class MainActivity extends Activity implements OnItemClickListener {
 		nodeColumn.setOnItemClickListener(this);
 		application.horizontalMindmapView.addColumn(nodeColumn);
 		
+		// then scroll all the way to the right
+		application.horizontalMindmapView.scrollToRight();
+		
     	// enable the up navigation with the Home (app) button (top left corner)
 		enableHomeButtonIfEnoughColumns();
 
@@ -410,43 +413,26 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		
-		// find out which view it was, then null all adapters to the right
-		// also, because clicking on a ListView which is not the right-most ListView is like going "up", hence we have to pop elements from parents.
-		application.horizontalMindmapView.removeAllColumnsRightOf((ListView)view);
+		// the clicked column
+		NodeColumn clickedNodeColumn = (NodeColumn)parent;
 		
-				
+		// remove all columns right of the column which was clicked
+		application.horizontalMindmapView.removeAllColumnsRightOf(clickedNodeColumn);
+		
+		// then get the clicked node
+		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
+		
+		// if the clicked node has child nodes, we set it to selected and drill down
+		if ( clickedNode.getNumChildMindmapNodes() > 0 ) {
+			
+			// give it a special color
+			clickedNodeColumn.setItemColor(position);
+			
+			// and drill down
+			down(clickedNode.node);
+		}
 
-		// TODO implement this
-//		for (int i = application.nodeColumns.size()-1; i >= application.nodeColumns.lastIndexOf((ListView)parent)+1; i--) {
-//					
-//			// remove the list view as far right as possible
-//			ListView listViewToRemove = application.nodeColumns.get(i);
-//			((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
-//			
-//			// remove it from listViews
-//			application.nodeColumns.remove(application.nodeColumns.size()-1);
-//			
-//		}
-//
-//		// then get all nodes from this adapter
-//		MindmapNodeAdapter adapter = (MindmapNodeAdapter)((ListView)parent).getAdapter();
-//		ArrayList<Node> currentListedNodes = adapter.getNodeList();
-//	
-//		// extract the pushed node
-//		Node pushedNode = currentListedNodes.get(position);
-//		
-//		// if the node has child nodes (i.e. should be clickable)
-//		if ( getNumChildMindmapNodes(pushedNode) > 0 ) {
-//
-//			// give the pushed node a special color
-//			adapter.setItemColor(position);
-//			
-//			// and drill down 
-//			down(pushedNode);
-//		}
-//		
-	}
-	
+	}	
 	
 
 	// Handler when an item is long clicked

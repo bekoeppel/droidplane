@@ -31,6 +31,9 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		// list where all columns are stored
 		nodeColumns = new ArrayList<NodeColumn>();
 		
+		// set the layout for the HorizontalScrollView itself
+		setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+		
 		// create the layout parameters for a new LinearLayout
     	int height = LayoutParams.MATCH_PARENT;
     	int width = LayoutParams.MATCH_PARENT;
@@ -126,9 +129,7 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		else {
 			return false;
 		}
-		
 	}
-		
 
 	/**
 	 * Returns the number of columns in the HorizontalMindmapView.
@@ -175,38 +176,25 @@ public class HorizontalMindmapView extends HorizontalScrollView {
 		}
 	}
 	
-	public void removeAllColumnsRightOf(ListView listView) {
-		for (int i = nodeColumns.size()-1; i >= 0; i--) {
-	
-			// TODO: implement this
-//			
-//			
-//			
-//			
-//			
-//			
-//			
-//
-//			for (int i = application.nodeColumns.size()-1; i >= application.nodeColumns.lastIndexOf((ListView)parent)+1; i--) {
-//						
-//				// remove the list view as far right as possible
-//				ListView listViewToRemove = application.nodeColumns.get(i);
-//				((ViewGroup)listViewToRemove.getParent()).removeView(listViewToRemove);
-//				
-//				// remove it from listViews
-//				application.nodeColumns.remove(application.nodeColumns.size()-1);
-//				
-//			}
-//
-//			
-//			
-//			
-//			
-//			
-//			
+	public void removeAllColumnsRightOf(NodeColumn nodeColumn) {
+		
+		// remove the rightmost column 
+		// nodeColumns = [ col1, col2, col3, col4, col5 ];
+		// removeAllColumnsRightOf(col2) will do:
+		//     nodeColumns.size()-1 => 4
+		//     nodeColumns.lastIndexOf(col2)+1 => 2
+		// for i in (4, 3, 2): remove rightmost column
+		//     i = 4: remove col5
+		//     i = 3: remove col4
+		//     i = 2: remove col3
+		// so at the end, we have
+		// nodeColumns = [ col1, col2 ];
+		for (int i = nodeColumns.size()-1; i >= nodeColumns.lastIndexOf(nodeColumn)+1; i--) {
+			
+			// remove this column
+			removeRightmostColumn();
 			
 		}
-		
 	}
 }
 

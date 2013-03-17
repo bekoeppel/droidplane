@@ -22,7 +22,7 @@ public class MainApplication extends Application {
 	public HorizontalMindmapView horizontalMindmapView;
 
 	// the application context
-	private static MainApplication application;
+	private static Context context;
 	
 	
 
@@ -33,8 +33,8 @@ public class MainApplication extends Application {
 		// initialize ACRA crash reports
 		ACRA.init(this);
 		
-		// save the context. TODO: is this safe? can the context change after the onCreate()? 
-		MainApplication.setApplication(this);
+		// save the context
+		MainApplication.context = getApplicationContext();
 	}
 
 	public Uri getUri() {
@@ -46,15 +46,7 @@ public class MainApplication extends Application {
 	}
 	
 	public static Context getStaticApplicationContext() {
-		return getApplication().getApplicationContext();
-	}
-
-	public static MainApplication getApplication() {
-		return application;
-	}
-
-	public static void setApplication(MainApplication application) {
-		MainApplication.application = application;
+		return MainApplication.context;
 	}
 
 	

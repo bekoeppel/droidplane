@@ -16,7 +16,6 @@ public class MindmapNode {
 	public int icon_res_id;
 	public boolean isExpandable;
 	public Node node;
-//	public View view;
 	public boolean selected;
 	
 	public MindmapNode(Node node) {
@@ -32,20 +31,20 @@ public class MindmapNode {
 			
 		// extract the string (TEXT attribute) of the nodes
 		// TODO: how do we handle rich text nodes?
-		String text = tmp_element.getAttribute("TEXT");
+		text = tmp_element.getAttribute("TEXT");
 
 		// extract icons
 		// TODO: how do we handle multiple icons?
 		ArrayList<String> icons = getIcons();
 		String icon="";
-		int icon_id = 0;
+		icon_res_id = 0;
 		if ( icons.size() > 0 ) {
 			icon = icons.get(0);
-			icon_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
 		}
 
 		// find out if it has sub nodes
-		boolean expandable = ( getNumChildMindmapNodes() > 0 );
+		isExpandable = ( getNumChildMindmapNodes() > 0 );
 	}
 	
 //	public MindmapNode(String text, String icon_name, int icon_res_id, boolean isExpandable, Node node) {

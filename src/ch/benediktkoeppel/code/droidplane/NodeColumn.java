@@ -139,6 +139,42 @@ public class NodeColumn extends ListView {
     	return columnWidth;
     }
     
+    /**
+     * Fetches the MindmapNode at the given position
+     * @param position the position from which the MindmapNode should be returned
+     * @return MindmapNode
+     */
+    public MindmapNode getNodeAtPosition(int position) {
+    	return mindmapNodes.get(position);
+    }
+    
+    
+
+
+	// Sets the color on the node at the specified position
+	public void setItemColor(int position) {
+		
+		// deselect all nodes
+		for (int i = 0; i < mindmapNodes.size(); i++) {
+			mindmapNodes.get(i).setSelected(false);
+		}
+		
+		// then select node at position
+		mindmapNodes.get(position).setSelected(true);
+		
+		// then notify about the GUI change
+		adapter.notifyDataSetChanged();
+	}
+	
+	// Clears the item color on all nodes
+	public void clearAllItemColor() {
+		for (int i = 0; i < mindmapNodes.size(); i++) {
+			mindmapNodes.get(i).setSelected(false);
+		}
+		
+		// then notify about the GUI change
+		adapter.notifyDataSetChanged();
+	}
 
 	
 
@@ -197,9 +233,11 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 			icon.setContentDescription(node.icon_name);
 			
 			TextView text = (TextView) view.findViewById(R.id.label);
+			text.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
 			text.setText(node.text);
 			
 			TextView expandable = (TextView) view.findViewById(R.id.expandable);
+			expandable.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
 			if ( node.isExpandable ) {
 				expandable.setText("+");
 			} else {
@@ -229,30 +267,5 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 		return view;
 	}
 	
-
-	// Sets the color on the node at the specified position
-	public void setItemColor(int position) {
-		
-		// deselect all nodes
-		for (int i = 0; i < mindmapNodes.size(); i++) {
-			mindmapNodes.get(i).setSelected(false);
-		}
-		
-		// then select node at position
-		mindmapNodes.get(position).setSelected(true);
-		
-		// then notify about the GUI change
-		this.notifyDataSetChanged();
-	}
-	
-	// Clears the item color on all nodes
-	public void clearAllItemColor() {
-		for (int i = 0; i < mindmapNodes.size(); i++) {
-			mindmapNodes.get(i).setSelected(false);
-		}
-		
-		// then notify about the GUI change
-		this.notifyDataSetChanged();
-	}
 	
 }
