@@ -39,18 +39,47 @@ public class NodeColumn extends LinearLayout {
 	 */
 	private static HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<ListView, NodeColumn>();
 	
-	// the parent node (i.e. the node that is parent to everything we display in this column)
+	/**
+	 * the parent node (i.e. the node that is parent to everything we display in this column)
+	 */
 	private Node parent;
 	
-	// the list of all MindmapNodes which we display in this column
+	/**
+	 * the list of all MindmapNodes which we display in this column
+	 */
 	private ArrayList<MindmapNode> mindmapNodes;
 	
-	// the adapter for this column
+	/**
+	 * the adapter for this column
+	 */
 	MindmapNodeAdapter adapter;
 	
-	// the actual ListView
+	/**
+	 * the actual ListView that we'll display
+	 */
 	ListView listView;
+	
+	/**
+	 * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always throw a IllegalArgumentException.
+	 * @deprecated
+	 * @param context
+	 */
+	public NodeColumn(Context context) {
+		super(context);
+		if ( !isInEditMode() ) {
+			throw new IllegalArgumentException(
+					"The constructor public NodeColumn(Context context) may only be called by graphical layout tools, i.e. when View#isInEditMode() is true. In production, use the constructor public NodeColumn(Context context, Node parent).");
+		}
+	}
 
+	/**
+	 * Creates a new NodeColumn for a parent node. This NodeColumn is a
+	 * LinearLayout, which contains a ListView, which displays all child nodes
+	 * of the parent node.
+	 * 
+	 * @param context
+	 * @param parent
+	 */
 	public NodeColumn(Context context, Node parent) {
 		super(context);
 		
@@ -105,12 +134,17 @@ public class NodeColumn extends LinearLayout {
     	this.addView(listView);
 	}
 	
+	/**
+	 * Finds the NodeColumn which contains the given listView.
+	 * @param listView
+	 * @return the node column which contains listView
+	 */
 	public static NodeColumn getNodeColumnFromListView(ListView listView) {
 		return listViewToNodeColumn.get(listView);
 	}
 
 	/**
-	 * GUI Helper to detach this ListView from its parent
+	 * GUI Helper to detach this LinearView from its parent
 	 */
 	public void removeFromParent() {
 		if ( this.getParent() != null ) {
@@ -176,6 +210,9 @@ public class NodeColumn extends LinearLayout {
     	return columnWidth;
     }
     
+    /**
+     * Resizes the column to its optimal column width
+     */
     public void resizeColumnWidth() {
     	setWidth(getOptimalColumnWidth());
     }

@@ -7,21 +7,53 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import android.content.Context;
 
 
-
+/**
+ * A MindMapNode is a special type of DOM Node. A DOM Node can be converted to a
+ * MindMapNode if it has type ELEMENT, and tag "node".
+ */
 public class MindmapNode {
 	
+	/**
+	 * the Text of the node (TEXT attribute).
+	 */
 	public String text;
+	
+	/**
+	 * the name of the icon
+	 */
 	public String icon_name;
+	
+	/**
+	 * the Android resource ID of the icon
+	 */
 	public int icon_res_id;
+	
+	/**
+	 * whether the node is expandable, i.e. whether it has child nodes
+	 */
 	public boolean isExpandable;
-	public Node node;
+	
+	/**
+	 * the XML DOM node from which this MindMapNode is derived
+	 */
+	private Node node;
+	
+	/**
+	 * whether the node is selected or not, will be set after it was clicked by the user
+	 */
 	public boolean selected;
 	
+	
+	/**
+	 * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". 
+	 * Throws a {@link ClassCastException} if the Node can not be converted to a MindmapNode. 
+	 * @param node
+	 */
 	public MindmapNode(Node node) {
 		
+		// convert the XML Node to a XML Element
 		Element tmp_element;
 		if ( isMindmapNode(node) ) {
 			tmp_element = (Element)node;
@@ -29,6 +61,7 @@ public class MindmapNode {
 			throw new ClassCastException("Can not convert Node to MindmapNode");
 		}
 		
+		// store the Node
 		this.node = node;
 			
 		// extract the string (TEXT attribute) of the nodes
@@ -49,20 +82,32 @@ public class MindmapNode {
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 	}
 	
+	/**
+	 * Returns the XML Node of which this MindmapNode was derived
+	 * @return
+	 */
 	public Node getNode() {
 		return this.node;
 	}
 	
+	/**
+	 * Selects or deselects this node
+	 * @param selected
+	 */
 	public void setSelected(boolean selected) {
 		this.selected = selected;
 	}
 
+	/**
+	 * Returns whether this node is selected
+	 */
 	public boolean getIsSelected() {
 		return this.selected;
 	}
 	
 	/**
-	 * Checks whether a given node can be converted to a Mindmap node, i.e. whether it has type ELEMENT_NODE and tag "node"
+	 * Checks whether a given node can be converted to a Mindmap node, i.e.
+	 * whether it has type ELEMENT_NODE and tag "node"
 	 * @param node
 	 * @return
 	 */
@@ -79,6 +124,12 @@ public class MindmapNode {
 	}
 
 
+	/**
+	 * Extracts the list of icons from a node and returns the names of the icons
+	 * as ArrayList.
+	 * 
+	 * @return list of names of the icons
+	 */
 	private ArrayList<String> getIcons() {
 		
 		ArrayList<String> icons = new ArrayList<String>();
@@ -97,13 +148,16 @@ public class MindmapNode {
 		}
 		
 		return icons;
-		
 	}
 	
-	
-	
-
-	// Mindmap icons have names such as 'button-ok', but resources have to have names with pattern [a-z0-9_.]
+	/**
+	 * Mindmap icons have names such as 'button-ok', but resources have to have
+	 * names with pattern [a-z0-9_.]. This method translates the Mindmap icon
+	 * names to Android resource names.
+	 * 
+	 * @param iconName the icon name as it is specified in the XML
+	 * @return the name of the corresponding android resource icon
+	 */
 	private String getDrawableNameFromMindmapIcon(String iconName) {
 		Locale locale = MainApplication.getStaticApplicationContext().getResources().getConfiguration().locale;
 		String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
@@ -113,8 +167,10 @@ public class MindmapNode {
 	
 	
 
-	// returns the number of child Mindmap nodes 
-	// "Mindmap node" = XML node && ELEMENT_NODE && "node" tag
+	/**
+	 * returns the number of child Mindmap nodes 
+	 * @return
+	 */
 	public int getNumChildMindmapNodes() {
 		
 		int numMindmapNodes = 0;
@@ -129,10 +185,5 @@ public class MindmapNode {
 		}
 		
 		return numMindmapNodes;
-		
 	}
-	
-	
-	
-	
 }

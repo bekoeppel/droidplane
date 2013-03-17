@@ -8,22 +8,36 @@ import org.acra.*;
 import org.acra.annotation.*;
 import org.w3c.dom.Document;
 
+/**
+ * The DroidPlane main application. It stores the loaded Uri and document, so
+ * that we can recreate the MainActivity after a screen rotation.
+ */
 @ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 	
+	/**
+	 * Android Logging TAG
+	 */
 	public static final String TAG = "DroidPlane";
 	
-	// TODO: why the hell is this all sitting in here??? should go to an instance variable of the MainActivity I guess
-	
-	// the document which is used in MainActivity
+	/**
+	 * the XML DOM document, the mind map
+	 */
 	public Document document;
 
+	/**
+	 * The currently loaded Uri
+	 */
 	private Uri uri;
 	
-	// HorizontalMindmapView that contains all NodeColumns
+	/**
+	 * HorizontalMindmapView that contains all NodeColumns
+	 */
 	public HorizontalMindmapView horizontalMindmapView;
 
-	// the application context
+	/**
+	 * the application context
+	 */
 	private static Context context;
 	
 	
@@ -39,14 +53,26 @@ public class MainApplication extends Application {
 		MainApplication.context = getApplicationContext();
 	}
 
+	/**
+	 * Returns the Uri which is currently loaded in document.
+	 * @return Uri
+	 */
 	public Uri getUri() {
 		return this.uri;
 	}
 
+	/**
+	 * Set the Uri after loading a new document.
+	 * @param uri
+	 */
 	public void setUri(Uri uri) {
 		this.uri = uri;
 	}
 	
+	/**
+	 * Helper to return the application context, even for static methods.
+	 * @return
+	 */
 	public static Context getStaticApplicationContext() {
 		return MainApplication.context;
 	}
