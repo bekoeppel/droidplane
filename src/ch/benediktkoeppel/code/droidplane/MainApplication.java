@@ -1,31 +1,45 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import java.util.ArrayList;
-import java.util.Stack;
-
 import android.app.Application;
+import android.content.Context;
 import android.net.Uri;
-import android.widget.ListView;
 
 import org.acra.*;
 import org.acra.annotation.*;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
+/**
+ * The DroidPlane main application. It stores the loaded Uri and document, so
+ * that we can recreate the MainActivity after a screen rotation.
+ */
 @ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 	
-	public ArrayList<ListView> listViews;
+	/**
+	 * Android Logging TAG
+	 */
+	public static final String TAG = "DroidPlane";
 	
-	// the document which is used in MainActivity
+	/**
+	 * the XML DOM document, the mind map
+	 */
 	public Document document;
-	
-	// the parent stack which is used in the MainActivity
-	// the latest parent node (all visible nodes are child of this currentParent) is parents.peek()
-	public Stack<Node> parents;
 
+	/**
+	 * The currently loaded Uri
+	 */
 	private Uri uri;
+	
+	/**
+	 * HorizontalMindmapView that contains all NodeColumns
+	 */
+	public HorizontalMindmapView horizontalMindmapView;
 
+	/**
+	 * the application context
+	 */
+	private static Context context;
+	
 	
 
 	@Override
@@ -34,14 +48,33 @@ public class MainApplication extends Application {
 
 		// initialize ACRA crash reports
 		ACRA.init(this);
+		
+		// save the context
+		MainApplication.context = getApplicationContext();
 	}
 
+	/**
+	 * Returns the Uri which is currently loaded in document.
+	 * @return Uri
+	 */
 	public Uri getUri() {
 		return this.uri;
 	}
 
+	/**
+	 * Set the Uri after loading a new document.
+	 * @param uri
+	 */
 	public void setUri(Uri uri) {
 		this.uri = uri;
+	}
+	
+	/**
+	 * Helper to return the application context, even for static methods.
+	 * @return
+	 */
+	public static Context getStaticApplicationContext() {
+		return MainApplication.context;
 	}
 
 	
