@@ -30,6 +30,8 @@ import com.google.analytics.tracking.android.EasyTracker;
 // TODO: stop using DOM Nodes, and switch to MindmapNodes
 // TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
+// TODO: allow us to open multiple files and display their root nodes and file names in the leftmost column. 
+// TODO: long-click on a root node shows a "close file" or "close this mindmap" menu
 // TODO: add a progress bar when opening a file (or a spinner or so)
 // TODO: can we get built-in icons as SVG?
 // TODO: properly parse rich text nodes
