@@ -255,6 +255,37 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
     	application.horizontalMindmapView.upOrClose();
     }
+
+	/*
+	 * (non-Javadoc) Handler of all menu events Home button: navigate one level
+	 * up, and exit the application if the home button is pressed at the root
+	 * node Menu Up: navigate one level up, and stay at the root node
+	 * 
+	 * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
+	 */
+	@Override
+	public boolean onOptionsItemSelected(android.view.MenuItem item) {
+
+		switch (item.getItemId()) {
+
+		// "Up" menu action
+		case R.id.up:
+			application.horizontalMindmapView.up();
+			break;
+
+		// "Top" menu action
+		case R.id.top:
+			application.horizontalMindmapView.top();
+			break;
+
+		// App button (top left corner)
+		case android.R.id.home:
+			application.horizontalMindmapView.up();
+			break;
+		}
+
+		return true;
+	}
     
 
 
