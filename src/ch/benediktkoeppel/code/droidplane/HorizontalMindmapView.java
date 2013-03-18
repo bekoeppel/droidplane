@@ -14,10 +14,13 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 
-public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener {
+public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 	
 	/**
 	 * HorizontalScrollView can only have one view, so we need to add a
@@ -36,11 +39,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * Gesture detector
 	 */
 	private GestureDetector gestureDetector;
+
+	private HorizontalMindmapViewGestureDetector horizontalMindmapViewGestureDetector;
 	
 	/**
 	 * constants to determine the minimum swipe distance and speed
 	 */
-	private static final int SWIPE_MIN_DISTANCE = 5;
 	private static final int SWIPE_THRESHOLD_VELOCITY = 300;
 	
 	/**
@@ -69,7 +73,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     	this.addView(linearLayout);
     	
     	// add a new gesture controller
-    	gestureDetector = new GestureDetector(getContext(), new HorizontalMindmapViewGestureDetector());
+    	horizontalMindmapViewGestureDetector = new HorizontalMindmapViewGestureDetector();
+    	gestureDetector = new GestureDetector(getContext(), horizontalMindmapViewGestureDetector);
     	    	
     	// register HorizontalMindmapView to receive all touch events on itself
     	setOnTouchListener(this);
@@ -80,9 +85,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * @param nodeColumn the NodeColumn to add to the HorizontalMindmapView
 	 */
 	public void addColumn(NodeColumn nodeColumn) {
+		
+		// add the column to the layout
 		nodeColumns.add(nodeColumn);
 		linearLayout.addView(nodeColumn, linearLayout.getChildCount());
 		Log.d(MainApplication.TAG, "linearLayout now has " + linearLayout.getChildCount() + " items");
+		
+		// register as onItemClickListener
+		nodeColumn.setOnItemClickListener(this);
 	}
 	
 	/**
@@ -148,7 +158,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			// remove it from the nodeColumns list
 			nodeColumns.remove(nodeColumns.size()-1);
 			
-			// then deselect all nodes on the now newly rightmost column
+			// then deselect all nodes on the now newly rightmost column and let the column redraw
 			nodeColumns.get(nodeColumns.size()-1).deselectAllNodes();
 			
 			// a column was removed, so we return true
@@ -189,12 +199,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			// MindmapNode should have a proper getPlainText() method.
 			// we need to check if this node is an ELEMENT_NODE, and if it has tag "node"
 			if ( parent.getNodeType()==Node.ELEMENT_NODE && ((Element)parent).getTagName().equals("node") ) {
-				return ((Element)parent).getAttribute("TEXT");
+				String title = ((Element)parent).getAttribute("TEXT");
+				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returns " + title);
+				return title;
 			}
 			
 			// the parent node did not have the "node" tag, or was not an
 			// ELEMENT_NODE. In either case, we don't know it's title.
 			else {
+				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returned \"\" because the parent is no Mindmap Node");
 				return "";
 			}
 			
@@ -202,6 +215,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		// there were no columns
 		else {
+			Log.d(MainApplication.TAG, "getTitleOfRightmostParent returned \"\" because nodeColumns is empty");
 			return "";
 		}
 	}
@@ -234,6 +248,159 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		}
 	}
 
+	/**
+	 * navigates to the top of the Mindmap
+	 */
+	public void top() {
+
+		// remove all ListView layouts in linearLayout parent_list_view
+		removeAllColumns();
+
+		// go down into the root node
+		down(MainApplication.getInstance().document.getDocumentElement());
+	}
+
+	/**
+	 * navigates back up one level in the Mindmap, if possible (otherwise does
+	 * nothing)
+	 */
+	public void up() {
+		up(false);
+	}
+
+	/**
+	 * navigates back up one level in the Mindmap. If we already display the
+	 * root node, the application will finish
+	 */
+	public void upOrClose() {
+		up(true);
+	}
+
+	/**
+	 * navigates back up one level in the Mindmap, if possible. If force is
+	 * true, the application closes if we can't go further up
+	 * 
+	 * @param force
+	 */
+	public void up(boolean force) {
+
+		boolean wasColumnRemoved = removeRightmostColumn();
+
+		// close the application if no column was removed, and the force switch
+		// was on
+		if (!wasColumnRemoved && force) {
+			MainApplication.getMainActivityInstance().finish();
+		}
+
+		// enable the up navigation with the Home (app) button (top left corner)
+		enableHomeButtonIfEnoughColumns();
+
+		// get the title of the parent of the rightmost column (i.e. the
+		// selected node in the 2nd-rightmost column)
+		setApplicationTitle();
+
+	}
+
+	/**
+	 * open up Node node, and display all its child nodes
+	 * 
+	 * @param node
+	 */
+	public void down(Node node) {
+
+		// add a new column for this node and add it to the
+		// HorizontalMindmapView
+		NodeColumn nodeColumn = new NodeColumn(getContext(), node);
+		addColumn(nodeColumn);
+
+		// then scroll all the way to the right
+		scrollToRight();
+
+		// enable the up navigation with the Home (app) button (top left corner)
+		enableHomeButtonIfEnoughColumns();
+
+		// get the title of the parent of the rightmost column (i.e. the
+		// selected node in the 2nd-rightmost column)
+		setApplicationTitle();
+
+	}
+
+	/**
+	 * Sets the application title to the name of the parent node of the
+	 * rightmost column, which is the most recently clicked node.
+	 */
+	void setApplicationTitle() {
+		// get the title of the parent of the rightmost column (i.e. the
+		// selected node in the 2nd-rightmost column)
+		// set the application title to this nodeTitle. If the nodeTitle is
+		// empty, we set the default Application title
+		String nodeTitle = getTitleOfRightmostParent();
+		Log.d(MainApplication.TAG, "nodeTitle = " + nodeTitle);
+		if (nodeTitle.equals("")) {
+			Log.d(MainApplication.TAG, "Setting application title to default string: " + getResources().getString(R.string.app_name));
+			MainApplication.getMainActivityInstance().setTitle(R.string.app_name);
+		} else {
+			Log.d(MainApplication.TAG,"Setting application title to node name: " + nodeTitle);
+			MainApplication.getMainActivityInstance().setTitle(nodeTitle);
+		}
+	}
+
+	/**
+	 * Enables the Home button in the application if we have enough columns,
+	 * i.e. if "Up" will remove a column.
+	 */
+	void enableHomeButtonIfEnoughColumns() {
+		// if we only have one column (i.e. this is the root node), then we
+		// disable the home button
+		int numberOfColumns = getNumberOfColumns();
+		if (numberOfColumns >= 2) {
+			MainApplication.getMainActivityInstance().enableHomeButton();
+		} else {
+			MainApplication.getMainActivityInstance().disableHomeButton();
+		}
+	}
+	
+
+	
+	/* (non-Javadoc)
+	 * Handler when one of the ListItem's item is clicked
+	 * Find the node which was clicked, and redraw the screen with this node as new parent
+	 * if the clicked node has no child, then we stop here
+	 * @see android.widget.AdapterView.OnItemClickListener#onItemClick(android.widget.AdapterView, android.view.View, int, long)
+	 */
+	@Override
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		
+		// the clicked column
+		// parent is the ListView in which the user clicked. Because
+		// NodeColumn does not extend ListView (it only wraps a ListView), we
+		// have to find out which NodeColumn it was. We can do so because
+		// NodeColumn.getNodeColumnFromListView uses a static HashMap to do the
+		// translation.
+		NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
+		
+		// remove all columns right of the column which was clicked
+		removeAllColumnsRightOf(clickedNodeColumn);
+		
+		// then get the clicked node
+		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
+		
+		// if the clicked node has child nodes, we set it to selected and drill down
+		if ( clickedNode.getNumChildMindmapNodes() > 0 ) {
+			
+			// give it a special color
+			clickedNodeColumn.setItemColor(position);
+			
+			// and drill down
+			down(clickedNode.getNode());
+		}
+		
+		// otherwise (no children) then we just update the application title to the new parent node
+		else {
+			setApplicationTitle();
+		}
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * Will be called whenever the HorizontalScrollView is
@@ -363,54 +530,33 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * The HorizontalMindmapViewGestureDetector should detect the onFling event.
 	 * However, it never receives the onDown event, so when it gets the onFling
 	 * the event1 is empty, and we can't detect the fling properly.
-	 * 
-	 * TODO: should the HorizontalMindmapView parse the onDown and feed forward
-	 * it ot the GestureDetector?
 	 */
 	class HorizontalMindmapViewGestureDetector extends SimpleOnGestureListener {
 		
-	    /**
-		 * This was meant as a hack, because onFling sometimes receives event1
-		 * == null. In this case, we could use the lastOnDownEvent as event1.
-		 * Somehow it doesn't event get the onDown event however.
-		 */
-	    private MotionEvent lastOnDownEvent;
-
 		@Override
 	    public boolean onDown(MotionEvent e) {
-			if (e == null) {
-				Log.e(MainApplication.TAG, "MotionEvent e is null");
-			} else {
-				lastOnDownEvent = e;
-			}
 	        return true;
 	    }
 
+		/*
+		 * (non-Javadoc) onFling is called whenever a Fling (a fast swipe) event
+		 * is detected. However, for some reason, our onDown method is never
+		 * called, and the onFling method never gets a valid event1 (it's always
+		 * null). So instead of relying on event1 and event2 (and determine the
+		 * distance the finger moved), we only consider the velocity of the
+		 * fling. This is not as accurate as it could be, but it works.
+		 * 
+		 * @see
+		 * android.view.GestureDetector.SimpleOnGestureListener#onFling(android
+		 * .view.MotionEvent, android.view.MotionEvent, float, float)
+		 */
 		@Override
-		// TODO cleanup
 		public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
 			
-			// TODO: do we really need this? 
 			try {
 				
 				// how much we are horizontally scrolled
 				int scrollX = getScrollX();
-
-				// fix event1 if it is null
-				if (event1 == null) {
-					if (lastOnDownEvent == null) {
-						Log.d(MainApplication.TAG, "Event1 and lastOnDownEvent are null");
-						return false;
-					}
-					Log.d(MainApplication.TAG, "Event1 is null, set to lastOnDownEvent");
-					event1 = lastOnDownEvent;
-				}
-				if (event2 == null) {
-					Log.e(MainApplication.TAG, "Event2 is null");
-				}
-				
-				float distance = event1.getX() - event2.getX();
-				Log.d(MainApplication.TAG, "Moved distance = " + distance);
 				Log.d(MainApplication.TAG, "Velocity = " + velocityX);
 				
 				// get the leftmost column that is still (partially) visible
@@ -420,28 +566,28 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 				int numVisiblePixelsOnColumn = getVisiblePixelOfLeftmostColumn();
 				
 				// if we have moved at least the SWIPE_MIN_DISTANCE to the right and at faster than SWIPE_THRESHOLD_VELOCITY
-				if (distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+				if (velocityX < 0 && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
 					
 					// scroll to the target column
-					smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
+					smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
 					
-					Log.d(MainApplication.TAG, "processing the Fling to Right gesture");
+					Log.d(MainApplication.TAG, "processed the Fling to Right gesture");
 					return true;
 				}
 				
 				// the same as above but from to the left
-				else if ( -distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+				else if ( velocityX > 0 && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
 	
 					// scroll to the target column
-					smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
+					// scrolls in the wrong direction
+					smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
 					
-					Log.d(MainApplication.TAG, "processing the Fling to Left gesture");
+					Log.d(MainApplication.TAG, "processed the Fling to Left gesture");
 					return true;
 				}
 				
 				// we did not process this gesture
 				else {
-					
 					Log.d(MainApplication.TAG, "Fling was no real fling");
 					return false;
 				}

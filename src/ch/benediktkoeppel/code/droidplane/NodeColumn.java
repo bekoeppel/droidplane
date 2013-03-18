@@ -24,7 +24,7 @@ import android.util.Log;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends
- * LinearLayout, and then embedds a ListView. This is because we want to have a
+ * LinearLayout, and then embeds a ListView. This is because we want to have a
  * fine border around the ListView and we can only achieve this by having it
  * wrapped in a LinearLayout with a padding.
  */
@@ -168,9 +168,13 @@ public class NodeColumn extends LinearLayout {
 	 * Deselects all nodes of this column
 	 */
 	public void deselectAllNodes() {
+		// deselect all nodes
 		for (MindmapNode mindmapNode : mindmapNodes) {
 			mindmapNode.setSelected(false);
 		}
+		
+		// then notify about the GUI change
+		adapter.notifyDataSetChanged();
 	}
 	
 	/**

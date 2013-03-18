@@ -9,7 +9,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.acra.ACRA;
-import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 import android.annotation.SuppressLint;
@@ -24,16 +23,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
-// TODO: ignore .backup folder in res/raw and remove it from all revisions
-// TODO: when going Up or pushing some parent node, the last column stays selected
 // TODO: stop using DOM Nodes, and switch to MindmapNodes
 // TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
@@ -51,7 +44,7 @@ import com.google.analytics.tracking.android.EasyTracker;
  * can happen when the screen is rotated, and we want to continue wherever we
  * were before the screen rotate.
  */
-public class MainActivity extends Activity implements OnItemClickListener {
+public class MainActivity extends Activity {
 	
 	MainApplication application;
 	
@@ -74,6 +67,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
         setContentView(R.layout.activity_main);
         
         application = (MainApplication)getApplication();
+        MainApplication.setMainActivityInstance(this);
         
         // initialize android stuff
         // EasyTracker
@@ -81,7 +75,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
     	EasyTracker.getTracker().sendView("MainActivity");
 
     	// enable the Android home button
-        enableHomeButton();
+    	enableHomeButton();
     	
     	// intents (how we are called)
         Intent intent = getIntent();
@@ -141,7 +135,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	        	Log.d(MainApplication.TAG, "started from app launcher intent");
 	        	
 	        	// display the default Mindmap "example.mm", from the resources
-		    	mm = this.getResources().openRawResource(R.raw.example);
+		    	mm = getApplicationContext().getResources().openRawResource(R.raw.example);
 	        }
 	        
 	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
@@ -178,7 +172,7 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			
 			
 			// navigate down into the root node
-			down(application.document.getDocumentElement());
+			application.horizontalMindmapView.down(application.document.getDocumentElement());
 		}
 		
 		// otherwise, we can display the existing HorizontalMindmapView again
@@ -196,14 +190,22 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			
 			// and then scroll to the right
 			application.horizontalMindmapView.scrollToRight();
+			
+	    	// enable the up navigation with the Home (app) button (top left corner)
+			application.horizontalMindmapView.enableHomeButtonIfEnoughColumns();
+
+			// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
+			application.horizontalMindmapView.setApplicationTitle();
 		}
     }
+	
+	
+	
 
 	/**
 	 * enables the home button if the Android version allows it
 	 */
-	@SuppressLint("NewApi")
-	private void enableHomeButton() {
+	@SuppressLint("NewApi") void enableHomeButton() {
 		// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
     	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
 	    	ActionBar bar = getActionBar();
@@ -214,14 +216,14 @@ public class MainActivity extends Activity implements OnItemClickListener {
 	/**
 	 * disables the home button if the Android version allows it
 	 */
-	@SuppressLint("NewApi")
-	private void disableHomeButton() {
+	@SuppressLint("NewApi") void disableHomeButton() {
 		// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
     	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
 	    	ActionBar bar = getActionBar();
 	    	bar.setDisplayHomeAsUpEnabled(false);
     	}
 	}
+
 	
 
     /* (non-Javadoc)
@@ -241,136 +243,8 @@ public class MainActivity extends Activity implements OnItemClickListener {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
         return true;
-
-	}
-       
-    /**
-     * navigates to the top of the Mindmap
-     */
-    public void top() {
-    	
-    	// remove all ListView layouts in linearLayout parent_list_view
-    	application.horizontalMindmapView.removeAllColumns();
-    	
-    	// go down into the root node
-    	down(application.document.getDocumentElement());
-    }
-    
-    /**
-     * navigates back up one level in the Mindmap, if possible (otherwise does nothing)
-     */
-    public void up() {
-    	up(false);
-    }
-
-	/**
-	 * navigates back up one level in the Mindmap. If we already display the root node, the application will finish
-	 */
-	public void upOrClose() {
-		up(true);
-	}
-    
-	/**
-	 * navigates back up one level in the Mindmap, if possible. If force is true, the application closes if we can't go further up
-	 * @param force
-	 */
-	public void up(boolean force) {
-		
-		boolean wasColumnRemoved = application.horizontalMindmapView.removeRightmostColumn();
-		
-		// close the application if no column was removed, and the force switch was on
-		if (!wasColumnRemoved && force ) {
-			finish();
-		}
-		
-    	// enable the up navigation with the Home (app) button (top left corner)
-		enableHomeButtonIfEnoughColumns();
-
-		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-		setApplicationTitle();
-
-	}
-	
-    /**
-     * open up Node node, and display all its child nodes
-     * @param node
-     */
-    public void down(Node node) {
-		
-		// add a new column for this node and add it to the HorizontalMindmapView
-    	NodeColumn nodeColumn = new NodeColumn(getApplicationContext(), node);
-		nodeColumn.setOnItemClickListener(this);
-		application.horizontalMindmapView.addColumn(nodeColumn);
-		
-		// then scroll all the way to the right
-		application.horizontalMindmapView.scrollToRight();
-		
-    	// enable the up navigation with the Home (app) button (top left corner)
-		enableHomeButtonIfEnoughColumns();
-
-		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-		setApplicationTitle();
-
-    }
-
-	/**
-	 * Sets the application title to the name of the parent node of the rightmost column, which is the most recently clicked node.
-	 */
-	private void setApplicationTitle() {
-		// get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-		// set the application title to this nodeTitle. If the nodeTitle is empty, we set the default Application title
-		String nodeTitle = application.horizontalMindmapView.getTitleOfRightmostParent();
-		if ( nodeTitle.equals("") ) {
-			setTitle(R.string.app_name);
-		} else {
-			setTitle(nodeTitle);
-		}
 	}
 
-	/**
-	 * Enables the Home button in the application if we have enough columns, i.e. if "Up" will remove a column.
-	 */
-	private void enableHomeButtonIfEnoughColumns() {
-		// if we only have one column (i.e. this is the root node), then we disable the home button
-		int numberOfColumns = application.horizontalMindmapView.getNumberOfColumns();
-		if ( numberOfColumns >= 2 ) {
-    		enableHomeButton();
-    	} else {
-    		disableHomeButton();
-    	}
-	}
-	
-
-    
-    /* (non-Javadoc)
-     * Handler of all menu events
-     * Home button: navigate one level up, and exit the application if the home button is pressed at the root node
-     * Menu Up: navigate one level up, and stay at the root node
-     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-     */
-    @Override
-    public boolean onOptionsItemSelected(android.view.MenuItem item) {
-    	
-    	switch (item.getItemId()) {
-    	
-    	// "Up" menu action
-    	case R.id.up:
-    		up();
-    		break;
-    		
-		// "Top" menu action
-    	case R.id.top:
-    		top();
-    		break;
-    		
-		// App button (top left corner)
-    	case android.R.id.home:
-    		up();
-        	break;
-    	}
-    	
-    	return true;
-    }
     
     /* (non-Javadoc)
      * Handler for the back button
@@ -379,44 +253,10 @@ public class MainActivity extends Activity implements OnItemClickListener {
      */
     @Override
     public void onBackPressed() {
-    	upOrClose();
+    	application.horizontalMindmapView.upOrClose();
     }
     
-	/* (non-Javadoc)
-	 * Handler when one of the ListItem's item is clicked
-	 * Find the node which was clicked, and redraw the screen with this node as new parent
-	 * if the clicked node has no child, then we stop here
-	 * @see android.widget.AdapterView.OnItemClickListener#onItemClick(android.widget.AdapterView, android.view.View, int, long)
-	 */
-	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		
-		// the clicked column
-		// TODO: parent is the ListView in which the user clicked. Because
-		// NodeColumn does not extend ListView (it only wrapps a ListView), we
-		// have to find out which NodeColumn it was. We can do so because
-		// NodeColumn.getNodeColumnFromListView uses a static HashMap to do the
-		// translation.
-		NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
-		
-		// remove all columns right of the column which was clicked
-		application.horizontalMindmapView.removeAllColumnsRightOf(clickedNodeColumn);
-		
-		// then get the clicked node
-		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
-		
-		// if the clicked node has child nodes, we set it to selected and drill down
-		if ( clickedNode.getNumChildMindmapNodes() > 0 ) {
-			
-			// give it a special color
-			clickedNodeColumn.setItemColor(position);
-			
-			// and drill down
-			down(clickedNode.getNode());
-		}
 
-	}	
-	
 
 	// Handler when an item is long clicked
 	// TODO do this!

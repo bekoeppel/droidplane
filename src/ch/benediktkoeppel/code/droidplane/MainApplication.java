@@ -40,6 +40,16 @@ public class MainApplication extends Application {
 	 */
 	private static Context context;
 	
+	/**
+	 * the main application instance
+	 */
+	private static MainApplication instance;
+
+	/**
+	 * the main activity instance
+	 */
+	private static MainActivity mainActivityInstance;
+	
 	
 
 	@Override
@@ -51,6 +61,9 @@ public class MainApplication extends Application {
 		
 		// save the context
 		MainApplication.context = getApplicationContext();
+		
+		// save the instance
+		MainApplication.instance = this;
 	}
 
 	/**
@@ -77,6 +90,25 @@ public class MainApplication extends Application {
 		return MainApplication.context;
 	}
 
+	/**
+	 * Get the main application instance
+	 * @return the main application
+	 */
+	public static MainApplication getInstance() {
+		return MainApplication.instance;
+	}
+	
+	/**
+	 * Stores the MainActivity instance
+	 * @param mainActivityInstance
+	 */
+	public static void setMainActivityInstance(MainActivity mainActivityInstance) {
+		MainApplication.mainActivityInstance = mainActivityInstance;
+	}
+	
+	public static MainActivity getMainActivityInstance() {
+		return MainApplication.mainActivityInstance;
+	}
 	
 	
 }
