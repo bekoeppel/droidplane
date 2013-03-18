@@ -23,8 +23,13 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector.OnGestureListener;
 import android.view.MenuInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
+import android.view.View.OnTouchListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
@@ -52,9 +57,10 @@ import com.google.analytics.tracking.android.EasyTracker;
  * can happen when the screen is rotated, and we want to continue wherever we
  * were before the screen rotate.
  */
-public class MainActivity extends Activity implements OnItemClickListener {
+public class MainActivity extends Activity implements OnItemClickListener, OnGestureListener, OnTouchListener {
 	
 	MainApplication application;
+	private MotionEvent lastOnDownEvent;
 	
 	@Override
 	public void onStart() {
@@ -104,6 +110,10 @@ public class MainActivity extends Activity implements OnItemClickListener {
 			
 			// create a new HorizontalMindmapView
 			application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
+			application.horizontalMindmapView.setGestureDetector(new GestureDetector(getApplicationContext(), this));
+			application.horizontalMindmapView.setOnTouchListener(this);
+			
+    	
 	        
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
@@ -461,6 +471,182 @@ public class MainActivity extends Activity implements OnItemClickListener {
         alert.show();
 	}
 
+
+
+	/*
+	 * (non-Javadoc)
+	 * Will be called whenever the HorizontalScrollView is
+	 * touched. We have to capture the move left and right events here, and snap
+	 * to the appropriate column borders.
+	 * 
+	 * @see android.view.View.OnTouchListener#onTouch(android.view.View,
+	 * android.view.MotionEvent)
+	 */
+	@Override
+	public boolean onTouch(View view, MotionEvent event) {
+		
+		// first, we let the gestureDetector examine the event. It will process
+		// the event if it was a gesture, i.e. if it was fast enough to trigger
+		// a Fling. If it handled the event, we don't process it further.
+		// This gesture can be triggered if the user moves the finger fast
+		// enough. He does not necessarily have to move so far that the next
+		// column is mostly visible.
+		if ( application.horizontalMindmapView.gestureDetector == null ) {
+			Log.d(MainApplication.TAG, "GestureDetector is null, not detecting gestures");
+		}
+		
+		if ( application.horizontalMindmapView.gestureDetector != null && application.horizontalMindmapView.gestureDetector.onTouchEvent(event) ) {
+			Log.d(MainApplication.TAG, "Touch event was processed by HorizontalMindmapView (gesture)");
+			return true;
+		}
+		
+		// If it was not a gesture (i.e. the user moved his finger too slow), we
+		// simply snap to the next closest column border.
+		else if ( event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL ) {
+			
+			// now we need to find out where the HorizontalMindmapView is horizontally scrolled
+			int scrollX = application.horizontalMindmapView.getScrollX();
+			Log.d(MainApplication.TAG, "HorizontalMindmapView is scrolled horizontally to " + scrollX);
+		
+			// get the leftmost column that is still (partially) visible
+			NodeColumn leftmostVisibleColumn = application.horizontalMindmapView.getLeftmostVisibleColumn();
+			
+			// get the number of visible pixels of this column
+			int numVisiblePixelsOnColumn = application.horizontalMindmapView.getVisiblePixelOfLeftmostColumn();
+			
+			// if we couldn't find a column, we could not process this event. I'm not sure how this might ever happen
+			if ( leftmostVisibleColumn == null ) {
+				Log.e(MainApplication.TAG, "No leftmost visible column was detected. Not sure how this could happen!");
+				return false;
+			}
+			
+			// and then determine if the leftmost visible column shows more than 50% of its full width
+			// if it shows more than 50%, then we scroll to the left, so that we can see it fully
+			if ( numVisiblePixelsOnColumn < leftmostVisibleColumn.getWidth()/2 ) {
+				Log.d(MainApplication.TAG, "Scrolling to the left, so that we can see the column fully");
+				application.horizontalMindmapView.smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
+			}
+			
+			// if it shows less than 50%, then we scroll to the right, so that is not visible anymore 
+			else {
+				Log.d(MainApplication.TAG, "Scrolling to the right, so that the column is not visible anymore");
+				application.horizontalMindmapView.smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
+			}
+			
+			// we have processed this event
+			Log.d(MainApplication.TAG, "Touch event was processed by HorizontalMindmapView (no gesture)");
+			return true;
+			
+		}
+		
+		// if we did not process the event ourself we let the caller know
+		else {
+			Log.d(MainApplication.TAG, "Touch event was not processed by HorizontalMindmapView");
+			return false;
+		}
+	}
+	
+	@Override
+	// TODO cleanup
+	public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
+		
+		// TODO: do we really need this? event1 == null is no problem
+		try {
+			
+			// how much we are horizontally scrolled
+			int scrollX = application.horizontalMindmapView.getScrollX();
+
+			
+			if (event1 == null) {
+				if (lastOnDownEvent == null) {
+					Log.d(MainApplication.TAG, "Event1 and lastOnDownEvent are null");
+					return false;
+				}
+				Log.d(MainApplication.TAG, "Event1 is null, set to lastOnDownEvent");
+				event1 = lastOnDownEvent;
+			}
+			if (event2 == null) {
+				Log.e(MainApplication.TAG, "Event2 is null");
+			}
+			
+			float distance = event1.getX() - event2.getX();
+			Log.d(MainApplication.TAG, "Moved distance = " + distance);
+			Log.d(MainApplication.TAG, "Velocity = " + velocityX);
+			
+			// get the leftmost column that is still (partially) visible
+			NodeColumn leftmostVisibleColumn = application.horizontalMindmapView.getLeftmostVisibleColumn();
+			
+			// get the number of visible pixels of this column
+			int numVisiblePixelsOnColumn = application.horizontalMindmapView.getVisiblePixelOfLeftmostColumn();
+
+			
+			// if we have moved at least the SWIPE_MIN_DISTANCE to the right and at faster than SWIPE_THRESHOLD_VELOCITY
+			if (distance > application.horizontalMindmapView.SWIPE_MIN_DISTANCE && Math.abs(velocityX) > application.horizontalMindmapView.SWIPE_THRESHOLD_VELOCITY) {
+				
+				// TODO: process the event
+				application.horizontalMindmapView.smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
+				
+				
+				Log.d(MainApplication.TAG, "processing the Fling to Right gesture");
+				return true;
+			}
+			
+			// the same as above but from to the left
+			else if ( -distance > application.horizontalMindmapView.SWIPE_MIN_DISTANCE && Math.abs(velocityX) > application.horizontalMindmapView.SWIPE_THRESHOLD_VELOCITY) {
+
+				// TODO: process the event
+				application.horizontalMindmapView.smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
+				
+				Log.d(MainApplication.TAG, "processing the Fling to Left gesture");
+				return true;
+			}
+			
+			// we did not process this gesture
+			else {
+				
+				Log.d(MainApplication.TAG, "Fling was no real fling");
+				return false;
+			}
+			
+		} catch (Exception e) {
+			Log.d(MainApplication.TAG, "A whole lot of stuff could have gone wrong here");
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	@Override
+	public boolean onDown(MotionEvent e) {
+		lastOnDownEvent = e;
+		return true;
+	}
+
+
+	@Override
+	public void onLongPress(MotionEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
+			float distanceY) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void onShowPress(MotionEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean onSingleTapUp(MotionEvent e) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	
 
 
 }

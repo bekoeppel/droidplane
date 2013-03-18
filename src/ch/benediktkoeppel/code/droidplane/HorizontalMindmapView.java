@@ -18,7 +18,7 @@ import android.view.View.OnTouchListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
-public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener {
+public class HorizontalMindmapView extends HorizontalScrollView {
 	
 	/**
 	 * HorizontalScrollView can only have one view, so we need to add a
@@ -36,13 +36,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	/**
 	 * Gesture detector
 	 */
-	private GestureDetector gestureDetector;
+	GestureDetector gestureDetector;
+
+	private OnTouchListener onTouchListener;
 	
 	/**
 	 * constants to determine the minimum swipe distance and speed
 	 */
-	private static final int SWIPE_MIN_DISTANCE = 5;
-	private static final int SWIPE_THRESHOLD_VELOCITY = 300;
+	static final int SWIPE_MIN_DISTANCE = 5;
+	static final int SWIPE_THRESHOLD_VELOCITY = 300;
 	
 
 	
@@ -74,13 +76,21 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     	this.addView(linearLayout);
     	
     	// add a new gesture controller
-    	gestureDetector = new GestureDetector(getContext(), new HorizontalMindmapViewGestureDetector());
+    	//gestureDetector = new GestureDetector(getContext(), new HorizontalMindmapViewGestureDetector());
     	    	
     	// register HorizontalMindmapView to receive all touch events on itself
-    	setOnTouchListener(this);
+//    	setOnTouchListener(this);
     	
 
 	}
+	
+	public void setGestureDetector(GestureDetector gestureDetector) {
+		this.gestureDetector = gestureDetector;
+	}
+	
+//	public void setOnTouchListener(View.OnTouchListener onTouchListener) {
+//		this.onTouchListener = onTouchListener;
+//	}
 	
 	/**
 	 * Add a new NodeColumn to the HorizontalMindmapView
@@ -240,81 +250,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			removeRightmostColumn();
 		}
 	}
-
-	/*
-	 * (non-Javadoc)
-	 * Will be called whenever the HorizontalScrollView is
-	 * touched. We have to capture the move left and right events here, and snap
-	 * to the appropriate column borders.
-	 * 
-	 * @see android.view.View.OnTouchListener#onTouch(android.view.View,
-	 * android.view.MotionEvent)
-	 */
-	@Override
-	public boolean onTouch(View view, MotionEvent event) {
-		
-		// first, we let the gestureDetector examine the event. It will process
-		// the event if it was a gesture, i.e. if it was fast enough to trigger
-		// a Fling. If it handled the event, we don't process it further.
-		// This gesture can be triggered if the user moves the finger fast
-		// enough. He does not necessarily have to move so far that the next
-		// column is mostly visible.
-		if ( gestureDetector.onTouchEvent(event) ) {
-			Log.d(MainApplication.TAG, "Touch event was processed by HorizontalMindmapView (gesture)");
-			return true;
-		}
-		
-		// If it was not a gesture (i.e. the user moved his finger too slow), we
-		// simply snap to the next closest column border.
-		else if ( event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL ) {
-			
-			// now we need to find out where the HorizontalMindmapView is horizontally scrolled
-			int scrollX = getScrollX();
-			Log.d(MainApplication.TAG, "HorizontalMindmapView is scrolled horizontally to " + scrollX);
-		
-			// get the leftmost column that is still (partially) visible
-			NodeColumn leftmostVisibleColumn = getLeftmostVisibleColumn();
-			
-			// get the number of visible pixels of this column
-			int numVisiblePixelsOnColumn = getVisiblePixelOfLeftmostColumn();
-			
-			// if we couldn't find a column, we could not process this event. I'm not sure how this might ever happen
-			if ( leftmostVisibleColumn == null ) {
-				Log.e(MainApplication.TAG, "No leftmost visible column was detected. Not sure how this could happen!");
-				return false;
-			}
-			
-			// and then determine if the leftmost visible column shows more than 50% of its full width
-			// if it shows more than 50%, then we scroll to the left, so that we can see it fully
-			if ( numVisiblePixelsOnColumn < leftmostVisibleColumn.getWidth()/2 ) {
-				Log.d(MainApplication.TAG, "Scrolling to the left, so that we can see the column fully");
-				smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
-			}
-			
-			// if it shows less than 50%, then we scroll to the right, so that is not visible anymore 
-			else {
-				Log.d(MainApplication.TAG, "Scrolling to the right, so that the column is not visible anymore");
-				smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
-			}
-			
-			// we have processed this event
-			Log.d(MainApplication.TAG, "Touch event was processed by HorizontalMindmapView (no gesture)");
-			return true;
-			
-		}
-		
-		// if we did not process the event ourself we let the caller know
-		else {
-			Log.d(MainApplication.TAG, "Touch event was not processed by HorizontalMindmapView");
-			return false;
-		}
-	}
 	
 	/**
 	 * Get the column at the left edge of the screen.
 	 * @return NodeColumn
 	 */
-	private NodeColumn getLeftmostVisibleColumn() {
+	NodeColumn getLeftmostVisibleColumn() {
 
 		// how much we are horizontally scrolled
 		int scrollX = getScrollX();
@@ -342,7 +283,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * @return
 	 */
 	// TODO: this is ugly, DRY from getLeftmostVisibleColumn() !
-	private int getVisiblePixelOfLeftmostColumn() {
+	int getVisiblePixelOfLeftmostColumn() {
 		
 		// how much we are horizontally scrolled
 		int scrollX = getScrollX();
@@ -413,93 +354,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	
 	
 
-	class HorizontalMindmapViewGestureDetector extends SimpleOnGestureListener {
-		
-	    private MotionEvent lastOnDownEvent;
 
-		@Override
-	    public boolean onDown(MotionEvent e) {
-			if (e == null) {
-				Log.e(MainApplication.TAG, "MotionEvent e is null");
-			} else {
-				lastOnDownEvent = e;
-			}
-	        return true;
-	    }
-
-		@Override
-		// TODO cleanup
-		public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
-			
-			// TODO: do we really need this? event1 == null is no problem
-			try {
-				
-				// how much we are horizontally scrolled
-				int scrollX = getScrollX();
-
-				
-				if (event1 == null) {
-					if (lastOnDownEvent == null) {
-						Log.d(MainApplication.TAG, "Event1 and lastOnDownEvent are null");
-						return false;
-					}
-					Log.d(MainApplication.TAG, "Event1 is null, set to lastOnDownEvent");
-					event1 = lastOnDownEvent;
-				}
-				if (event2 == null) {
-					Log.e(MainApplication.TAG, "Event2 is null");
-				}
-				
-				float distance = event1.getX() - event2.getX();
-				Log.d(MainApplication.TAG, "Moved distance = " + distance);
-				Log.d(MainApplication.TAG, "Velocity = " + velocityX);
-				
-				// get the leftmost column that is still (partially) visible
-				NodeColumn leftmostVisibleColumn = getLeftmostVisibleColumn();
-				
-				// get the number of visible pixels of this column
-				int numVisiblePixelsOnColumn = getVisiblePixelOfLeftmostColumn();
-
-				
-				// if we have moved at least the SWIPE_MIN_DISTANCE to the right and at faster than SWIPE_THRESHOLD_VELOCITY
-				if (distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-					
-					// TODO: process the event
-					smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
-					
-					
-					Log.d(MainApplication.TAG, "processing the Fling to Right gesture");
-					return true;
-				}
-				
-				// the same as above but from to the left
-				else if ( -distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-	
-					// TODO: process the event
-					smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
-					
-					Log.d(MainApplication.TAG, "processing the Fling to Left gesture");
-					return true;
-				}
-				
-				// we did not process this gesture
-				else {
-					
-					Log.d(MainApplication.TAG, "Fling was no real fling");
-					return false;
-				}
-				
-			} catch (Exception e) {
-				Log.d(MainApplication.TAG, "A whole lot of stuff could have gone wrong here");
-				e.printStackTrace();
-				return false;
-			}
-		}
-		
-		
-		
-	}
-	
 
 
 	
