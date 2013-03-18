@@ -9,12 +9,11 @@ import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
-import android.view.GestureDetector.OnGestureListener;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
@@ -43,10 +42,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 */
 	private static final int SWIPE_MIN_DISTANCE = 5;
 	private static final int SWIPE_THRESHOLD_VELOCITY = 300;
-	
-
-	
-	
 	
 	/**
 	 * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define
@@ -78,8 +73,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     	    	
     	// register HorizontalMindmapView to receive all touch events on itself
     	setOnTouchListener(this);
-    	
-
 	}
 	
 	/**
@@ -366,55 +359,21 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		return numVisiblePixelsOnColumn;
 	}
 	
-//	// Darn snap, you ain't gonna need it.
-//	/**
-//	 * Get the number of visible pixels of a column
-//	 * @param nodeColumn
-//	 * @return visible pixel count
-//	 */
-//	// TODO: clean up
-//	private int getVisiblePixelOfColumn(NodeColumn nodeColumn) {
-//		
-//		// screen width
-//		int screenWidth = getWidth();
-//		
-//		// scroll position
-//		int scrollX = getScrollX();
-//		
-//		// find the index of the nodeColumn
-//		int indexOfNodeColumn = nodeColumns.indexOf(nodeColumn);
-//		
-//		// get the width of the column
-//		int columnWidth = nodeColumn.getWidth();
-//		
-//		// find out how many pixels are left of this column
-//		int pixelLeftOfColumn = 0;
-//		for (int i = 0; i < indexOfNodeColumn; i++) {
-//			pixelLeftOfColumn += nodeColumns.get(i).getWidth();
-//		}
-//		
-//		// TODO: clean up, I'm sure this could be stated in a much simpler way.
-//		// if the pixels left of the column are bigger than scrollX+width, the column is far off the right screen
-//		if ( pixelLeftOfColumn < screenWidth + scrollX ) {
-//			return 0;
-//		}
-//		
-//		// if pixelLeftOfColumn+columnWidth is less than scrollX, the column is far off the left screen
-//		else if ( pixelLeftOfColumn+columnWidth < scrollX) {
-//			return 0;
-//		}
-//		
-//		// here's the tricky part. If the 
-//		else {
-//			
-//		}
-//				
-//	}
-	
-	
-
+	/**
+	 * The HorizontalMindmapViewGestureDetector should detect the onFling event.
+	 * However, it never receives the onDown event, so when it gets the onFling
+	 * the event1 is empty, and we can't detect the fling properly.
+	 * 
+	 * TODO: should the HorizontalMindmapView parse the onDown and feed forward
+	 * it ot the GestureDetector?
+	 */
 	class HorizontalMindmapViewGestureDetector extends SimpleOnGestureListener {
 		
+	    /**
+		 * This was meant as a hack, because onFling sometimes receives event1
+		 * == null. In this case, we could use the lastOnDownEvent as event1.
+		 * Somehow it doesn't event get the onDown event however.
+		 */
 	    private MotionEvent lastOnDownEvent;
 
 		@Override
@@ -431,13 +390,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		// TODO cleanup
 		public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
 			
-			// TODO: do we really need this? event1 == null is no problem
+			// TODO: do we really need this? 
 			try {
 				
 				// how much we are horizontally scrolled
 				int scrollX = getScrollX();
 
-				
+				// fix event1 if it is null
 				if (event1 == null) {
 					if (lastOnDownEvent == null) {
 						Log.d(MainApplication.TAG, "Event1 and lastOnDownEvent are null");
@@ -459,14 +418,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 				
 				// get the number of visible pixels of this column
 				int numVisiblePixelsOnColumn = getVisiblePixelOfLeftmostColumn();
-
 				
 				// if we have moved at least the SWIPE_MIN_DISTANCE to the right and at faster than SWIPE_THRESHOLD_VELOCITY
 				if (distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
 					
-					// TODO: process the event
+					// scroll to the target column
 					smoothScrollTo(scrollX + numVisiblePixelsOnColumn - leftmostVisibleColumn.getWidth(), 0);
-					
 					
 					Log.d(MainApplication.TAG, "processing the Fling to Right gesture");
 					return true;
@@ -475,7 +432,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 				// the same as above but from to the left
 				else if ( -distance > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
 	
-					// TODO: process the event
+					// scroll to the target column
 					smoothScrollTo(scrollX + numVisiblePixelsOnColumn, 0);
 					
 					Log.d(MainApplication.TAG, "processing the Fling to Left gesture");
@@ -495,34 +452,5 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 				return false;
 			}
 		}
-		
-		
-		
 	}
-	
-
-
-	
-
-	
 }
-
-		
-//				// right to left
-//				if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE
-//						&& Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-//					int featureWidth = getMeasuredWidth();						
-//					mActiveFeature = (mActiveFeature < (mItems.size() - 1)) ? mActiveFeature + 1
-//							: mItems.size() - 1;
-//					smoothScrollTo(mActiveFeature * featureWidth, 0);
-//					return true;
-//				}
-//				// left to right
-//				else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE
-//						&& Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-//					int featureWidth = getMeasuredWidth();
-//					mActiveFeature = (mActiveFeature > 0) ? mActiveFeature - 1
-//							: 0;
-//					smoothScrollTo(mActiveFeature * featureWidth, 0);
-//					return true;
-//				}
