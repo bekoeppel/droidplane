@@ -6,7 +6,8 @@ import org.xml.sax.helpers.DefaultHandler;
 
 
 /**
- * The NodeCounterHandler is a SAX handler that counts the "<node.../>" tags.
+ * The NodeCounterHandler is a simple SAX handler that counts the "<node.../>"
+ * tags. It does not generate any MindmapNodes.
  */
 class NodeCounterHandler extends DefaultHandler {
 	
@@ -38,7 +39,6 @@ class NodeCounterHandler extends DefaultHandler {
 	 */
 	@Override	
 	public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException { 
-//		Log.d(MainApplication.TAG, "NodeCounterHandler got startElement for " + localName);
 		if (localName.equalsIgnoreCase("node")) {
 			nodeCount++;
 		}

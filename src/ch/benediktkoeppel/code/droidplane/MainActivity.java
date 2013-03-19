@@ -26,8 +26,10 @@ import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
+// TODO: add a background thread, that goes through the whole document and truncates branches (by setting a MindmapNode's childMindmapNode list to null) after the node hasn't been used for some time, and populates the descendants of the currently viewed node automatically. For debugging purposes, nodes which have their child nodes already loaded could be displayed in a different color. This way, we see how the background thread goes around and populates and truncates branches.
+
+// TODO: preload branches (a few levels), truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 // TODO: Based on the node count, decide whether we can open this document as DOM or as lazy loading SAX/Mindmap tree. Let the user know if the document is too large to load completely (with a popup)
-// TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
 // TODO: allow us to open multiple files and display their root nodes and file names in the leftmost column. 
 // TODO: long-click on a root node shows a "close file" or "close this mindmap" menu
@@ -99,6 +101,9 @@ public class MainActivity extends Activity {
 			if ( raf != null ) {
 				Log.d(MainApplication.TAG, "Working with a RandomAccessFile");
 				
+				// TODO: this is inefficient. In order to find the root node
+				// (loadDocument), we need to go through the whole file anyway,
+				// so we can count the subnodes there if we really want.
 				// fetch the number of mind map nodes
 				int nodeCount = 0;
 				try {
@@ -108,11 +113,13 @@ public class MainActivity extends Activity {
 				}
 		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
 		        
+		        // TODO: maybe if something with the random access file goes wrong, we should default back to DOM?
 		        // reset the random access file to position 0
 		        try {
 					raf.seek(0);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					ACRA.getErrorReporter().putCustomData("Exception", "IOException");
+					ACRA.getErrorReporter().putCustomData("Comment", "On seeking (to 0) on the RandomAccessFile");
 					e.printStackTrace();
 				}
 		        
@@ -120,13 +127,15 @@ public class MainActivity extends Activity {
 		        Log.d(MainApplication.TAG, "RandomAccessFile fetched, now starting to load document");
 		        application.mindmap.loadDocument(raf);
 		        Log.d(MainApplication.TAG, "Finished to load Mindmap");
+		        
+		        // reset the random access file to position 0 again
 		        try {
 					raf.seek(0L);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					ACRA.getErrorReporter().putCustomData("Exception", "IOException");
+					ACRA.getErrorReporter().putCustomData("Comment", "On seeking (to 0) on the RandomAccessFile");
 					e.printStackTrace();
 				}
-
 			}
 			
 			// we could not get a RandomAccessFile, we have to work with the
@@ -137,6 +146,12 @@ public class MainActivity extends Activity {
 				
 				InputStream mm = determineInputStream(intent, action, type);
 				
+				// TODO: here we can think about the sense or non-sense of
+				// counting the nodes. Maybe it's good to know the number
+				// upfront, because loading the whole DOM document takes a long
+				// time. We'll have to see how much the difference is, i.e. if
+				// it's worth traversing the document once just to get the
+				// number of nodes.
 		        // fetch the number of mind map nodes before reading the whole document into RAM
 		        int nodeCount = 0;
 				try {
@@ -160,11 +175,13 @@ public class MainActivity extends Activity {
 			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
 			
 			// navigate down into the root node
-			// TODO: catch the problem of an empty XML, or more general: test with all sorts of bogus files and add some meaningful errors
+			// TODO: test what happens if we have an empty XML file, or if we
+			// have a file with other problems. We should handle this and let
+			// the user know.
 			application.horizontalMindmapView.down(application.mindmap.getRootNode());
 		}
 		
-		// otherwise, we can display the existing HorizontalMindmapView again
+		// the application was not reset, so we can display the existing HorizontalMindmapView again
 		else {
 			
 	        // add the HorizontalMindmapView to the Layout Wrapper
@@ -188,8 +205,12 @@ public class MainActivity extends Activity {
 		}
     }
 	
+	// TODO: determineRandomAccessFile and determineInputStream share a lot of
+	// code, this violates DRY!
 	/**
-	 * Tries to open a RandomAccessFile based on the intent, action and type. Returns null if something goes wrong.
+	 * Tries to open a RandomAccessFile based on the intent, action and type.
+	 * Returns null if something goes wrong.
+	 * 
 	 * @param intent
 	 * @param action
 	 * @param type
@@ -197,6 +218,7 @@ public class MainActivity extends Activity {
 	 */
 	private RandomAccessFile determineRandomAccessFile(Intent intent, String action, String type) {
 		
+		// TODO: who closes the file? Will have to do it somewhere in the finish stuff.
 		RandomAccessFile raf = null;
 		
         // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
@@ -344,8 +366,6 @@ public class MainActivity extends Activity {
     	}
 	}
 
-	
-
     /* (non-Javadoc)
      * Creates the options menu
      * @see android.app.Activity#onCreateOptionsMenu(android.view.Menu)
@@ -365,7 +385,6 @@ public class MainActivity extends Activity {
         return true;
 	}
 
-    
     /* (non-Javadoc)
      * Handler for the back button
      * Navigate one level up, and stay at the root node
@@ -406,11 +425,10 @@ public class MainActivity extends Activity {
 
 		return true;
 	}
-    
 
-
-	// Handler when an item is long clicked
-	// TODO do this!
+	// TODO: implement the itemLongClick handler, so that we can show a context
+	// menu with more options (all icons, follow links, edit node, copy node,
+	// etc.)
 //	@Override
 //	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 //		

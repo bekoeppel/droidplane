@@ -43,8 +43,13 @@ public class MainApplication extends Application {
 	 */
 	public Mindmap mindmap;
 	
-	
-
+	/*
+	 * (non-Javadoc)
+	 * When the application is created, we set up ACRA (crash reporting) and
+	 * store the application instance so that we can fetch the application and
+	 * its context later in static methods.
+	 * @see android.app.Application#onCreate()
+	 */
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -83,6 +88,10 @@ public class MainApplication extends Application {
 		MainApplication.mainActivityInstance = mainActivityInstance;
 	}
 	
+	/**
+	 * Retrieves the instance of the main activity
+	 * @return
+	 */
 	public static MainActivity getMainActivityInstance() {
 		return MainApplication.mainActivityInstance;
 	}

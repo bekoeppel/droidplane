@@ -3,9 +3,6 @@ package ch.benediktkoeppel.code.droidplane;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-//import org.w3c.dom.Node;
-//import org.w3c.dom.NodeList;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
@@ -263,8 +260,6 @@ public class NodeColumn extends LinearLayout {
 	public void setOnItemClickListener(OnItemClickListener listener) {
 		listView.setOnItemClickListener(listener);
 	}
-	
-
 }
 
 
