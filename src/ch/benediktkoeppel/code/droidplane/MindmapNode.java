@@ -48,14 +48,37 @@ public class MindmapNode {
 	public boolean selected;
 	
 	/**
+	 * determines whether this node is based on a DOM Node, or created by the SAX parser
+	 */
+	public boolean isDOMNode;
+	
+	// TODO: we need a flag whether it is a DOM node or a SAX node
+	// TOOD: if it is a SAX node, we need a pointer to a inputsource and a seek, where we can continue to load more nodes (subnodes)
+	
+	/**
 	 * The list of child MindmapNodes. We support lazy loading.
 	 */
 	ArrayList<MindmapNode> childMindmapNodes;
+	
+	/**
+	 * Call this when creating a SAX node
+	 * TODO: more documentation
+	 */
+	public MindmapNode() {
+		isExpandable = false;
+		text = "";
+		icon_name = "";
+		icon_res_id = 0;
+		node = null;
+		selected = false;
+		isDOMNode = false;
+	}
 	
 	
 	/**
 	 * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". 
 	 * Throws a {@link ClassCastException} if the Node can not be converted to a MindmapNode. 
+	 * TODO: documentation: only call this when creating a new node from a DOM node
 	 * @param node
 	 */
 	public MindmapNode(Node node) {
@@ -87,6 +110,9 @@ public class MindmapNode {
 
 		// find out if it has sub nodes
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
+		
+		// this is based on a DOM node
+		isDOMNode = true;
 	}
 	
 	/**
@@ -206,19 +232,30 @@ public class MindmapNode {
 		// if we haven't loaded the childMindmapNodes before
 		if ( childMindmapNodes == null ) {
 			
-			// fetch all child DOM Nodes, convert them to MindmapNodes
-			childMindmapNodes = new ArrayList<MindmapNode>();
-			NodeList childNodes = node.getChildNodes();
-			for (int i = 0; i < childNodes.getLength(); i++) {
-				Node tmpNode = childNodes.item(i);
+			// determine whether this is a DOM or a SAX node
+			// it's a DOM node
+			if ( isDOMNode == true ) {
 				
-				if ( isMindmapNode(tmpNode) ) {
-					MindmapNode mindmapNode = new MindmapNode(tmpNode);
-					childMindmapNodes.add(mindmapNode);
+				// fetch all child DOM Nodes, convert them to MindmapNodes
+				childMindmapNodes = new ArrayList<MindmapNode>();
+				NodeList childNodes = node.getChildNodes();
+				for (int i = 0; i < childNodes.getLength(); i++) {
+					Node tmpNode = childNodes.item(i);
+					
+					if ( isMindmapNode(tmpNode) ) {
+						MindmapNode mindmapNode = new MindmapNode(tmpNode);
+						childMindmapNodes.add(mindmapNode);
+					}
 				}
+				Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
+				return childMindmapNodes;
+			} 
+			
+			// it's a SAX node
+			else {
+				// TODO: we need to take the startseek of this node, and read the random access file again from that seek, and extract another level of nodes
+				return new ArrayList<MindmapNode>();
 			}
-			Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
-			return childMindmapNodes;
 		}
 		
 		// we already did that before, so return the previous result
@@ -226,5 +263,8 @@ public class MindmapNode {
 			Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
 			return childMindmapNodes;
 		}
+
+		// TODO: we should have a possiblity to truncate nodes after some times, i.e. discard their childMinamapNodes list if we don't use the node anymore.
+
 	}
 }

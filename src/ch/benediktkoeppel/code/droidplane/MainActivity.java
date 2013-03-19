@@ -101,22 +101,22 @@ public class MainActivity extends Activity {
 				
 				// TODO
 				
-				// fetch the number of mind map nodes
-				int nodeCount = 0;
-				try {
-					nodeCount = Mindmap.getNodeCount(raf);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
-		        
-		        // reset the random access file to position 0
-		        try {
-					raf.seek(0);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+//				// fetch the number of mind map nodes
+//				int nodeCount = 0;
+//				try {
+//					nodeCount = Mindmap.getNodeCount(raf);
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}
+//		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
+//		        
+//		        // reset the random access file to position 0
+//		        try {
+//					raf.seek(0);
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
 		        
 		        // load the mindmap
 		        Log.d(MainApplication.TAG, "RandomAccessFile fetched, now starting to load document");
