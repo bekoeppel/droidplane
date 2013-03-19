@@ -36,6 +36,12 @@ public class MainApplication extends Application {
 	public HorizontalMindmapView horizontalMindmapView;
 
 	/**
+	 * The root node of the document.
+	 * TODO: do we really need to store the rootNode? can get it straight from document
+	 */
+	public MindmapNode rootNode;
+
+	/**
 	 * the application context
 	 */
 	private static Context context;

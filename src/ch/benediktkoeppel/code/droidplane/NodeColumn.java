@@ -3,8 +3,8 @@ package ch.benediktkoeppel.code.droidplane;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+//import org.w3c.dom.Node;
+//import org.w3c.dom.NodeList;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -42,7 +42,7 @@ public class NodeColumn extends LinearLayout {
 	/**
 	 * the parent node (i.e. the node that is parent to everything we display in this column)
 	 */
-	private Node parent;
+	private MindmapNode parent;
 	
 	/**
 	 * the list of all MindmapNodes which we display in this column
@@ -80,21 +80,12 @@ public class NodeColumn extends LinearLayout {
 	 * @param context
 	 * @param parent
 	 */
-	public NodeColumn(Context context, Node parent) {
+	public NodeColumn(Context context, MindmapNode parent) {
 		super(context);
 		
 		// extract all <node.../> elements from the parent node, and add them to the mindmapNodes list
-		mindmapNodes = new ArrayList<MindmapNode>();
-		NodeList tmp_children = parent.getChildNodes();
-		for (int i = 0; i < tmp_children.getLength(); i++) {
-			Node tmp_node = tmp_children.item(i);
-			
-			if ( MindmapNode.isMindmapNode(tmp_node) ) {
-				MindmapNode mindmapNode = new MindmapNode(tmp_node);
-    			mindmapNodes.add(mindmapNode);
-			}
-		}
-		
+		mindmapNodes = parent.getChildNodes();
+
 		// store the parent node
 		this.parent = parent;
 		
@@ -181,7 +172,7 @@ public class NodeColumn extends LinearLayout {
 	 * Returns the parent node of this column.
 	 * @return the parent node of this colunn
 	 */
-	public Node getParentNode() {
+	public MindmapNode getParentNode() {
 		return parent;
 	}
 	

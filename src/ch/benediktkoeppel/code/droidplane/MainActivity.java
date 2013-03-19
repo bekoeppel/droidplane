@@ -27,7 +27,6 @@ import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
-// TODO: stop using DOM Nodes, and switch to MindmapNodes
 // TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
 // TODO: allow us to open multiple files and display their root nodes and file names in the leftmost column. 
@@ -174,7 +173,9 @@ public class MainActivity extends Activity {
 			
 			
 			// navigate down into the root node
-			application.horizontalMindmapView.down(application.document.getDocumentElement());
+			// TODO: this is an ugly hack
+			application.rootNode = new MindmapNode(application.document.getDocumentElement().getElementsByTagName("node").item(0));
+			application.horizontalMindmapView.down(application.rootNode);
 		}
 		
 		// otherwise, we can display the existing HorizontalMindmapView again
