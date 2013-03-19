@@ -1,5 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -38,7 +39,7 @@ public class MindmapNode {
 	public boolean isExpandable;
 	
 	/**
-	 * the XML DOM node from which this MindMapNode is derived
+	 * the XML DOM node from which this MindMapNode is derived. This is only defined if we use a DOM parser.
 	 */
 	private Node node;
 	
@@ -52,7 +53,14 @@ public class MindmapNode {
 	 */
 	public boolean isDOMNode;
 	
-	// TODO: we need a flag whether it is a DOM node or a SAX node
+	/**
+	 * the random access file if we're reading with the SAX parser. This is only defined if we use a SAX parser.
+	 */
+	public RandomAccessFile randomAccessFile; 
+	
+	// locator position where the node started
+	public int line;
+	public int column;
 	// TOOD: if it is a SAX node, we need a pointer to a inputsource and a seek, where we can continue to load more nodes (subnodes)
 	
 	/**

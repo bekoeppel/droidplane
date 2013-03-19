@@ -16,6 +16,7 @@ import org.acra.ACRA;
 import org.w3c.dom.Document;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
+import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
@@ -100,9 +101,21 @@ public class Mindmap {
 		
 		private RandomAccessFile randomAccessFile;
 
+		/*
+		 * (non-Javadoc) the SAX parser is calling close() when it has finished
+		 * the parsing. We don't want that. To close the file, we provide
+		 * another method close(boolean force).
+		 * 
+		 * @see java.io.Reader#close()
+		 */
 		@Override
 		public void close() throws IOException {
-			Log.d(MainApplication.TAG, "RandomAccessFileReader close() called");
+			Log.d(MainApplication.TAG, "RandomAccessFileReader close() called - ignoring");
+			//randomAccessFile.close();
+		}
+		
+		public void close(boolean force) throws IOException {
+			Log.d(MainApplication.TAG, "RandomAccessFileReader close(force=true) called - closing");
 			randomAccessFile.close();
 		}
 
@@ -124,15 +137,14 @@ public class Mindmap {
 				// the input file has US-ASCII encoding, and we transfer all characters into the buffer
 				new String(byteBuffer, "US-ASCII").getChars(0, numBytesRead, buffer, 0);
 
-				// return the number of bytes read TODO
+				// return the number of bytes read
 				return numBytesRead;
 			}
 		}
 		
 		public RandomAccessFileReader(RandomAccessFile randomAccessFile) {
 			this.randomAccessFile = randomAccessFile;
-		}
-		
+		}		
 	}
 	
 	/**
@@ -187,6 +199,11 @@ public class Mindmap {
 		 */
 		private MindmapNode tmpMindmapNode;
 		
+		/**
+		 * 
+		 */
+		private Locator locator;
+		
 		private int nodeLevel;
 		
 		/**
@@ -204,19 +221,28 @@ public class Mindmap {
 			nodeLevel = 0;
 		}
 		
+		// TODO: constructor should take a startLine and startColumn, and we don't parse any tag if it is not at least >= these start locators
+		// TODO: maybe start with a InputStream and rewind/reopen always when we would do a seek (and remove the additional permission again!!!)
+		
 		@Override
-		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException { 
+		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException {
+			
+			// TODO: skip if the locator is less then the startLocation specified
 			
 			// we are only interested in node tags
 			if (localName.equalsIgnoreCase("node")) {
 				
-				Log.d(MainApplication.TAG, "Found starting node tag at nodeLevel " + nodeLevel);
+//				Log.d(MainApplication.TAG, "Found starting node tag at nodeLevel " + nodeLevel);
 				
 				// if we are at level 0 (not within another node)
 				if ( nodeLevel == 0 ) {
 					
 					// we found a new interesting node, so we generate a new MindmapNode
 					tmpMindmapNode = new MindmapNode();
+					
+					// store its line and column in the file
+					tmpMindmapNode.line = locator.getLineNumber();
+					tmpMindmapNode.column = locator.getColumnNumber();
 					
 					// extract the attributes
 					for (int i = 0; i < atts.getLength(); i++) {
@@ -238,8 +264,6 @@ public class Mindmap {
 				// in either case, we are going into a node, so the nodeLevel increases
 				nodeLevel++;
 				
-				// node.node will not be possible TODO!
-
 			} else {
 				// TODO: will need to parse icons!
 				// get icons (these are sub-attributes, that's a problem) but we can do it later
@@ -261,6 +285,13 @@ public class Mindmap {
 				}
 			}
 		}
+		
+
+		@Override
+		public void setDocumentLocator(Locator locator) {
+			this.locator = locator;
+		}
+
 	}
 	
 	
