@@ -8,6 +8,7 @@
     <string name="yes">Yes</string>
     <string name="ok">OK</string>
     <string name="filenotfound">Sorry, I could not find the file you wanted to open!</string>
+    <string name="ioerror">Sorry, an error occurred when reading your mind map!</string>
     <string name="noicon">no icon</string>
     <string name="novalidfile">Please start DroidPlane by opening a *.mm file"</string>
 </resources>

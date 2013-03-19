@@ -2,6 +2,7 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -10,6 +11,9 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.acra.ACRA;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
@@ -35,6 +39,37 @@ public class Mindmap {
 	 * The root node of the document.
 	 */
 	private MindmapNode rootNode;
+	
+	/**
+	 * Counts the number of Mindmap nodes in the inputStream, without loading
+	 * the whole document as DOM tree. This is useful to determine the size of
+	 * the mind map before even trying (and spending a lot of time) to load it.
+	 * @param inputStream
+	 * @return
+	 * @throws XmlPullParserException 
+	 * @throws IOException 
+	 */
+	public static int getNodeCount(InputStream inputStream) throws XmlPullParserException, IOException {
+		
+		int nodeCount = 0;
+		
+		XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
+		pullParserFactory.setNamespaceAware(false);
+		
+		XmlPullParser parser = pullParserFactory.newPullParser();
+		
+		parser.setInput(new InputStreamReader(inputStream));
+
+		int eventType = parser.getEventType();
+		while (eventType != XmlPullParser.END_DOCUMENT) {
+			if ( eventType == XmlPullParser.START_TAG && parser.getName().equalsIgnoreCase("node") ) {
+				nodeCount++;
+			}
+            eventType = parser.next();
+		}
+		
+		return nodeCount;
+	}
 
 	/**
 	 * Returns the Uri which is currently loaded in document.
@@ -51,6 +86,8 @@ public class Mindmap {
 	public void setUri(Uri uri) {
 		this.uri = uri;
 	}
+	
+	// TODO: support loading the document from a RandomAccessFile with a SAX parser
 	
 	/**
 	 * Loads a mind map (*.mm) XML document into its internal DOM tree

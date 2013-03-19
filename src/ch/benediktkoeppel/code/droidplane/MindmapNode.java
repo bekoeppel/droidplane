@@ -176,10 +176,11 @@ public class MindmapNode {
 
 	/**
 	 * returns the number of child Mindmap nodes 
+	 * TODO: support lazy loading from getChildMindmapNodes().size()
 	 * @return
 	 */
 	public int getNumChildMindmapNodes() {
-		
+				
 		int numMindmapNodes = 0;
 		
 		NodeList childNodes = node.getChildNodes();
