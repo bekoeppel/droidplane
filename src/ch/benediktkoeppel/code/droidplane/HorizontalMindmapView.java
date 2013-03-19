@@ -237,7 +237,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		removeAllColumns();
 
 		// go down into the root node
-		down(MainApplication.getInstance().rootNode);
+		down(MainApplication.getInstance().mindmap.getRootNode());
 	}
 
 	/**

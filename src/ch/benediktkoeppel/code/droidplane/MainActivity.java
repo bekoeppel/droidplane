@@ -1,15 +1,9 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.acra.ACRA;
-import org.xml.sax.SAXException;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
@@ -83,22 +77,18 @@ public class MainActivity extends Activity {
         String action = intent.getAction();
         String type = intent.getType();
         
-        // start measuring the document load time
-		long loadDocumentStartTime = System.currentTimeMillis();
-		
 		// if the application was reset, or the document has changed, we need to re-initialize everything
-		// TODO: factor this stuff out. we really should have a loadDocument(InputStream) method somewhere
-		if ( application.document == null || application.getUri() != intent.getData() ) {
+		if ( application.mindmap == null || application.mindmap.getUri() != intent.getData() ) {
 			
-			// Mindmap stuff
-			InputStream mm = null;
-			// XML document builder. The document itself is in the MainApplication
-			DocumentBuilderFactory docBuilderFactory;
-			DocumentBuilder docBuilder;
+			// create a new Mindmap
+			application.mindmap = new Mindmap();
 			
 			// create a new HorizontalMindmapView
 			application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
 	        
+			// prepare loading of the Mindmap file
+			InputStream mm = null;
+			
 	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
 	        // started from ACTION_EDIT/VIEW intent
 	        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
@@ -127,55 +117,26 @@ public class MainActivity extends Activity {
 				// store the Uri. Next time the MainActivity is started, we'll
 				// check whether the Uri has changed (-> load new document) or
 				// remained the same (-> reuse previous document)
-	        	application.setUri(uri);
+	        	application.mindmap.setUri(uri);
 	        } 
 	        
 	        // started from the launcher
 	        else {
-	        	
 	        	Log.d(MainApplication.TAG, "started from app launcher intent");
 	        	
 	        	// display the default Mindmap "example.mm", from the resources
 		    	mm = getApplicationContext().getResources().openRawResource(R.raw.example);
 	        }
 	        
+	        // load the mindmap
 	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-	        
-	        // load the Mindmap from the InputStream
-	        docBuilderFactory = DocumentBuilderFactory.newInstance();
-			try {
-				docBuilder = docBuilderFactory.newDocumentBuilder();
-				application.document = docBuilder.parse(mm);
-			} catch (ParserConfigurationException e) {
-				ACRA.getErrorReporter().putCustomData("Exception", "ParserConfigurationException");
-				e.printStackTrace();
-				return;
-			} catch (SAXException e) {
-				ACRA.getErrorReporter().putCustomData("Exception", "SAXException");
-				e.printStackTrace();
-				return;
-			} catch (IOException e) {
-				ACRA.getErrorReporter().putCustomData("Exception", "IOException");
-				e.printStackTrace();
-				return;
-			}
-			
-			long loadDocumentEndTime = System.currentTimeMillis();
-		    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
-			Log.d(MainApplication.TAG, "Document loaded");
-		    
-			long numNodes = application.document.getElementsByTagName("node").getLength();
-			EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
-			
+	        application.mindmap.loadDocument(mm);
 
 	        // add the HorizontalMindmapView to the Layout Wrapper
 			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
 			
-			
 			// navigate down into the root node
-			// TODO: this is an ugly hack
-			application.rootNode = new MindmapNode(application.document.getDocumentElement().getElementsByTagName("node").item(0));
-			application.horizontalMindmapView.down(application.rootNode);
+			application.horizontalMindmapView.down(application.mindmap.getRootNode());
 		}
 		
 		// otherwise, we can display the existing HorizontalMindmapView again

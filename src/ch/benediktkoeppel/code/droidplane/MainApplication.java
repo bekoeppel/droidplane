@@ -1,12 +1,10 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import org.acra.ACRA;
+import org.acra.annotation.ReportsCrashes;
+
 import android.app.Application;
 import android.content.Context;
-import android.net.Uri;
-
-import org.acra.*;
-import org.acra.annotation.*;
-import org.w3c.dom.Document;
 
 /**
  * The DroidPlane main application. It stores the loaded Uri and document, so
@@ -21,25 +19,9 @@ public class MainApplication extends Application {
 	public static final String TAG = "DroidPlane";
 	
 	/**
-	 * the XML DOM document, the mind map
-	 */
-	public Document document;
-
-	/**
-	 * The currently loaded Uri
-	 */
-	private Uri uri;
-	
-	/**
 	 * HorizontalMindmapView that contains all NodeColumns
 	 */
 	public HorizontalMindmapView horizontalMindmapView;
-
-	/**
-	 * The root node of the document.
-	 * TODO: do we really need to store the rootNode? can get it straight from document
-	 */
-	public MindmapNode rootNode;
 
 	/**
 	 * the application context
@@ -56,6 +38,11 @@ public class MainApplication extends Application {
 	 */
 	private static MainActivity mainActivityInstance;
 	
+	/**
+	 * A reference to the Mindmap document
+	 */
+	public Mindmap mindmap;
+	
 	
 
 	@Override
@@ -70,22 +57,6 @@ public class MainApplication extends Application {
 		
 		// save the instance
 		MainApplication.instance = this;
-	}
-
-	/**
-	 * Returns the Uri which is currently loaded in document.
-	 * @return Uri
-	 */
-	public Uri getUri() {
-		return this.uri;
-	}
-
-	/**
-	 * Set the Uri after loading a new document.
-	 * @param uri
-	 */
-	public void setUri(Uri uri) {
-		this.uri = uri;
 	}
 	
 	/**
