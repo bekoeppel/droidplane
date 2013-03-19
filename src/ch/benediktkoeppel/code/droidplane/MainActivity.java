@@ -126,8 +126,6 @@ public class MainActivity extends Activity {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-		        application.mindmap.loadDocument(raf);
-		        Log.d(MainApplication.TAG, "Finished to load Mindmap the 2nd time");
 
 			}
 			

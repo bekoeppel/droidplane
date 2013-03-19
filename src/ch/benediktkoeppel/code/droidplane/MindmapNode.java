@@ -1,12 +1,22 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+
+import ch.benediktkoeppel.code.droidplane.LazyLoaderHandler.SAXEndNodeFoundException;
 
 import android.util.Log;
 
@@ -56,12 +66,14 @@ public class MindmapNode {
 	/**
 	 * the random access file if we're reading with the SAX parser. This is only defined if we use a SAX parser.
 	 */
-	public RandomAccessFile randomAccessFile; 
+	public RandomAccessFile raf; 
 	
 	// locator position where the node started
-	public int line;
-	public int column;
+	public int startLine;
+	public int startColumn;
 	// TOOD: if it is a SAX node, we need a pointer to a inputsource and a seek, where we can continue to load more nodes (subnodes)
+	
+	public Integer numChildNodes;
 	
 	/**
 	 * The list of child MindmapNodes. We support lazy loading.
@@ -80,6 +92,7 @@ public class MindmapNode {
 		node = null;
 		selected = false;
 		isDOMNode = false;
+		numChildNodes = null;
 	}
 	
 	
@@ -214,19 +227,31 @@ public class MindmapNode {
 	 * @return
 	 */
 	public int getNumChildMindmapNodes() {
-				
-		int numMindmapNodes = 0;
-		
-		NodeList childNodes = node.getChildNodes();
-		for (int i = 0; i < childNodes.getLength(); i++) {
-			
-			Node n = childNodes.item(i);
-			if ( isMindmapNode(n) ) {
-				numMindmapNodes++;
+
+		// TODO: have to differentiate whethe rwe're a DOM or a SAX node
+		if (isDOMNode) {
+
+			int numMindmapNodes = 0;
+
+			NodeList childNodes = node.getChildNodes();
+			for (int i = 0; i < childNodes.getLength(); i++) {
+
+				Node n = childNodes.item(i);
+				if (isMindmapNode(n)) {
+					numMindmapNodes++;
+				}
 			}
+
+			return numMindmapNodes;
+		} else {
+			if ( numChildNodes != null ) {
+				return numChildNodes;
+			} else {
+				Log.e(MainApplication.TAG, "numChildNodes was null, this shouldn't happen!");
+				return 0;
+			}
+			
 		}
-		
-		return numMindmapNodes;
 	}
 	
 	/**
@@ -255,14 +280,66 @@ public class MindmapNode {
 						childMindmapNodes.add(mindmapNode);
 					}
 				}
-				Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
+				Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes from DOM document");
 				return childMindmapNodes;
 			} 
 			
 			// it's a SAX node
 			else {
-				// TODO: we need to take the startseek of this node, and read the random access file again from that seek, and extract another level of nodes
-				return new ArrayList<MindmapNode>();
+				
+				Log.d(MainApplication.TAG, "Fetching childMindmapNodes from Lazy SAX");
+				
+				// fetch the next level of child nodes with the SAX parser
+				childMindmapNodes = new ArrayList<MindmapNode>();
+				
+				// rewind the randomAccessFile
+				try {
+					raf.seek(0);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					return new ArrayList<MindmapNode>();
+				}
+				
+				// prepare the SAX parser
+				SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+				SAXParser parser = null;
+				XMLReader reader = null;
+				try {
+					parser = saxParserFactory.newSAXParser();
+					reader = parser.getXMLReader();
+				} catch (ParserConfigurationException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (SAXEndNodeFoundException e) {
+					/* empty */
+					// TODO
+				} catch (SAXException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				// use the lazy SAX parser, but instruct it to skip everything before this node tag. We want to load the 1st sub-node level
+				LazyLoaderHandler lazyLoaderHandler = new LazyLoaderHandler(raf, startLine, startColumn, 1);
+				reader.setContentHandler(lazyLoaderHandler);
+				InputSource rafi = new InputSource(new RandomAccessFileReader(raf));
+				rafi.setEncoding("UTF8");
+				try {
+					reader.parse(rafi);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (SAXException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				// retrieve the list of mindmap nodes
+				childMindmapNodes = lazyLoaderHandler.getMindmapNodes();
+
+				// returning the lazy loaded sub nodes
+				Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
+				return childMindmapNodes;
 			}
 		}
 		

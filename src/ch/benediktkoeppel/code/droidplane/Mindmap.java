@@ -3,7 +3,6 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.io.Reader;
 import java.util.ArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -14,15 +13,14 @@ import javax.xml.parsers.SAXParserFactory;
 
 import org.acra.ACRA;
 import org.w3c.dom.Document;
-import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
-import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.DefaultHandler;
 
 import android.net.Uri;
 import android.util.Log;
+
+import ch.benediktkoeppel.code.droidplane.LazyLoaderHandler.SAXEndNodeFoundException;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
@@ -92,206 +90,6 @@ public class Mindmap {
 		
 		// return the node count
 		return nodeCounterHandler.getNodeCount();
-	}
-	
-	/**
-	 * TODO: documentation in the whole file!
-	 */
-	static class RandomAccessFileReader extends Reader {
-		
-		private RandomAccessFile randomAccessFile;
-
-		/*
-		 * (non-Javadoc) the SAX parser is calling close() when it has finished
-		 * the parsing. We don't want that. To close the file, we provide
-		 * another method close(boolean force).
-		 * 
-		 * @see java.io.Reader#close()
-		 */
-		@Override
-		public void close() throws IOException {
-			Log.d(MainApplication.TAG, "RandomAccessFileReader close() called - ignoring");
-			//randomAccessFile.close();
-		}
-		
-		public void close(boolean force) throws IOException {
-			Log.d(MainApplication.TAG, "RandomAccessFileReader close(force=true) called - closing");
-			randomAccessFile.close();
-		}
-
-		@Override
-		public int read(char[] buffer, int byteOffset, int byteCount) throws IOException {
-			
-			// first read into a byteBuffer
-			byte[] byteBuffer = new byte[byteCount];
-			int numBytesRead = randomAccessFile.read(byteBuffer, byteOffset, byteCount);
-
-			// check if we have reached the end of the file
-			if (numBytesRead == -1) {
-				return -1;
-			}
-			
-			// translate the read bytes into characters
-			else {
-				
-				// the input file has US-ASCII encoding, and we transfer all characters into the buffer
-				new String(byteBuffer, "US-ASCII").getChars(0, numBytesRead, buffer, 0);
-
-				// return the number of bytes read
-				return numBytesRead;
-			}
-		}
-		
-		public RandomAccessFileReader(RandomAccessFile randomAccessFile) {
-			this.randomAccessFile = randomAccessFile;
-		}		
-	}
-	
-	/**
-	 * The NodeCounterHandler is a SAX handler that counts the "<node.../>" tags.
-	 */
-	static class NodeCounterHandler extends DefaultHandler {
-		
-		/**
-		 * the total count of Node elements
-		 */
-		private int nodeCount;
-		
-		/**
-		 * Returns the count of nodes. First, call parse(...)!
-		 * @return
-		 */
-		public int getNodeCount() {
-			return nodeCount;
-		}
-		
-		/* (non-Javadoc)
-		 * Will be called at the start of the document. We reset the count to zero.
-		 * @see org.xml.sax.helpers.DefaultHandler#startDocument()
-		 */
-		@Override
-		public void startDocument() throws SAXException {
-			nodeCount = 0;
-		}
-		
-		/* (non-Javadoc)
-		 * Will be called for every element in the mind map. If the tag name is "node", we increment the counter.
-		 * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
-		 */
-		@Override	
-		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException { 
-//			Log.d(MainApplication.TAG, "NodeCounterHandler got startElement for " + localName);
-			if (localName.equalsIgnoreCase("node")) {
-				nodeCount++;
-			}
-		}
-	}
-	
-	static class LazyLoaderHandler extends DefaultHandler {
-		
-		/**
-		 * the list of MindmapNodes we created
-		 */
-		private ArrayList<MindmapNode> mindmapNodes;
-		
-		/**
-		 * we are always just building one MindmapNode at a time
-		 */
-		private MindmapNode tmpMindmapNode;
-		
-		/**
-		 * 
-		 */
-		private Locator locator;
-		
-		private int nodeLevel;
-		
-		/**
-		 * Returns the generated MindmapNodes. 
-		 * TODO: Each MindmapNode will have a "startseek" and "column" set, which should tell us where we found this node in the random access file. Also, the MindmapNode needs to have a method to read one further level of nodes, by starting to read at the seek and read until I don't know where.
-		 * @return
-		 */
-		public ArrayList<MindmapNode> getMindmapNodes() {
-			return mindmapNodes;
-		}
-		
-		@Override
-		public void startDocument() throws SAXException {
-			mindmapNodes = new ArrayList<MindmapNode>();
-			nodeLevel = 0;
-		}
-		
-		// TODO: constructor should take a startLine and startColumn, and we don't parse any tag if it is not at least >= these start locators
-		// TODO: maybe start with a InputStream and rewind/reopen always when we would do a seek (and remove the additional permission again!!!)
-		
-		@Override
-		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException {
-			
-			// TODO: skip if the locator is less then the startLocation specified
-			
-			// we are only interested in node tags
-			if (localName.equalsIgnoreCase("node")) {
-				
-//				Log.d(MainApplication.TAG, "Found starting node tag at nodeLevel " + nodeLevel);
-				
-				// if we are at level 0 (not within another node)
-				if ( nodeLevel == 0 ) {
-					
-					// we found a new interesting node, so we generate a new MindmapNode
-					tmpMindmapNode = new MindmapNode();
-					
-					// store its line and column in the file
-					tmpMindmapNode.line = locator.getLineNumber();
-					tmpMindmapNode.column = locator.getColumnNumber();
-					
-					// extract the attributes
-					for (int i = 0; i < atts.getLength(); i++) {
-						String attrName = atts.getLocalName(i);
-						String attrValue = atts.getValue(i);
-						
-						if ( attrName.equalsIgnoreCase("text") ) {
-							tmpMindmapNode.text = attrValue;
-						}
-					}
-					
-				}
-				
-				// otherwise, we have found a node within another node, so the node is certainly expandable
-				else {
-					tmpMindmapNode.isExpandable = true;
-				}
-				
-				// in either case, we are going into a node, so the nodeLevel increases
-				nodeLevel++;
-				
-			} else {
-				// TODO: will need to parse icons!
-				// get icons (these are sub-attributes, that's a problem) but we can do it later
-			}
-		}
-		
-		@Override
-		public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
-
-			// we are only interested in node tags
-			if (localName.equalsIgnoreCase("node")) {
-				
-				// this is a closing tag, so the nodeLevel decreases
-				nodeLevel--;
-				
-				// if this closed the node at level 0, then we conclude the tmpMindmapNode and push it to the mindmapNodes
-				if ( nodeLevel == 0 ) {
-					mindmapNodes.add(tmpMindmapNode);
-				}
-			}
-		}
-		
-
-		@Override
-		public void setDocumentLocator(Locator locator) {
-			this.locator = locator;
-		}
-
 	}
 	
 	
@@ -369,14 +167,17 @@ public class Mindmap {
 		} catch (ParserConfigurationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (SAXEndNodeFoundException e) {
+			/* empty */
+			// TODO
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 		// the LazyLoaderHandler will load only the highest level of nodes, which means the root node
-		// TODO: can we factor this "loadDocument" out? because it is really just loading the "node" tags with seek=0, nodelevel=0. 
-		LazyLoaderHandler lazyLoaderHandler = new LazyLoaderHandler();
+		// TODO: can we factor this "loadDocument" out? because it is really just loading the "node" tags with seek=0, nodelevel=0. Its the same at MindmapNode#getChildNodes()
+		LazyLoaderHandler lazyLoaderHandler = new LazyLoaderHandler(raf);
 		reader.setContentHandler(lazyLoaderHandler);
 		InputSource rafi = new InputSource(new RandomAccessFileReader(raf));
 		rafi.setEncoding("UTF8");
