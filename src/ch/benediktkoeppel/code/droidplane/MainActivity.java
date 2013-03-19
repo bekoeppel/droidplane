@@ -1,8 +1,11 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.net.URI;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -92,7 +95,8 @@ public class MainActivity extends Activity {
 		if ( application.document == null || application.getUri() != intent.getData() ) {
 			
 			// Mindmap stuff
-			InputStream mm = null;
+//			InputStream mm = null;
+			RandomAccessFile raf = null;
 			// XML document builder. The document itself is in the MainApplication
 			DocumentBuilderFactory docBuilderFactory;
 			DocumentBuilder docBuilder;
@@ -111,7 +115,8 @@ public class MainActivity extends Activity {
 	        	if ( uri != null ) {
 	        		ContentResolver cr = getContentResolver();
 	        		try {
-						mm = cr.openInputStream(uri);
+//						mm = cr.openInputStream(uri);
+						raf = new RandomAccessFile(new File(new URI(uri.toString())), "r");
 					} catch (FileNotFoundException e) {
 	
 				    	abortWithPopup(R.string.filenotfound);
@@ -137,7 +142,7 @@ public class MainActivity extends Activity {
 	        	Log.d(MainApplication.TAG, "started from app launcher intent");
 	        	
 	        	// display the default Mindmap "example.mm", from the resources
-		    	mm = getApplicationContext().getResources().openRawResource(R.raw.example);
+//		    	mm = getApplicationContext().getResources().openRawResource(R.raw.example);
 	        }
 	        
 	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
