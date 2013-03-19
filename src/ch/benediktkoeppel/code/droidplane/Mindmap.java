@@ -2,23 +2,25 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.acra.ACRA;
 import org.w3c.dom.Document;
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-
-import com.google.analytics.tracking.android.EasyTracker;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
 
 import android.net.Uri;
 import android.util.Log;
+
+import com.google.analytics.tracking.android.EasyTracker;
 
 /**
  * Mindmap handles the loading and storing of a mind map document.
@@ -46,31 +48,66 @@ public class Mindmap {
 	 * the mind map before even trying (and spending a lot of time) to load it.
 	 * @param inputStream
 	 * @return
-	 * @throws XmlPullParserException 
-	 * @throws IOException 
+	 * @throws ParserConfigurationException
+	 * @throws SAXException
+	 * @throws IOException
 	 */
-	public static int getNodeCount(InputStream inputStream) throws XmlPullParserException, IOException {
+	public static int getNodeCount(InputStream inputStream) throws ParserConfigurationException, SAXException, IOException {
 		
-		int nodeCount = 0;
+		// prepare the SAX parser
+		SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+		SAXParser parser = saxParserFactory.newSAXParser();
+		XMLReader reader = parser.getXMLReader();
 		
-		XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
-		pullParserFactory.setNamespaceAware(false);
+		// the NodeCounterHandler will be used to count the node tags
+		NodeCounterHandler nodeCounterHandler = new NodeCounterHandler();
+		reader.setContentHandler(nodeCounterHandler);
+		reader.parse(new InputSource(inputStream));
 		
-		XmlPullParser parser = pullParserFactory.newPullParser();
+		// return the node count
+		return nodeCounterHandler.getNodeCount();
+	}
+	
+	/**
+	 * The NodeCounterHandler is a SAX handler that counts the "<node.../>" tags.
+	 */
+	static class NodeCounterHandler extends DefaultHandler {
 		
-		parser.setInput(new InputStreamReader(inputStream));
-
-		int eventType = parser.getEventType();
-		while (eventType != XmlPullParser.END_DOCUMENT) {
-			if ( eventType == XmlPullParser.START_TAG && parser.getName().equalsIgnoreCase("node") ) {
-				nodeCount++;
-			}
-            eventType = parser.next();
+		/**
+		 * the total count of Node elements
+		 */
+		private int nodeCount;
+		
+		/**
+		 * Returns the count of nodes. First, call parse(...)!
+		 * @return
+		 */
+		public int getNodeCount() {
+			return nodeCount;
 		}
 		
-		return nodeCount;
+		/* (non-Javadoc)
+		 * Will be called at the start of the document. We reset the count to zero.
+		 * @see org.xml.sax.helpers.DefaultHandler#startDocument()
+		 */
+		@Override
+		public void startDocument() throws SAXException {
+			nodeCount = 0;
+		}
+		
+		/* (non-Javadoc)
+		 * Will be called for every element in the mind map. If the tag name is "node", we increment the counter.
+		 * @see org.xml.sax.helpers.DefaultHandler#startElement(java.lang.String, java.lang.String, java.lang.String, org.xml.sax.Attributes)
+		 */
+		@Override	
+		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException { 
+			if (localName.equalsIgnoreCase("node")) {
+				nodeCount++;
+			}
+		}
 	}
-
+	
+	
 	/**
 	 * Returns the Uri which is currently loaded in document.
 	 * @return Uri

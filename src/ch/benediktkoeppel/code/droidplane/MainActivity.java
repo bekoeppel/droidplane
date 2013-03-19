@@ -1,11 +1,9 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 
 import org.acra.ACRA;
-import org.xmlpull.v1.XmlPullParserException;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
@@ -23,7 +21,7 @@ import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
-// TODO: write a small SAX parser that just counts the nodes. Based on the node count, decide whether we can open this document as DOM or as lazy loading SAX/Mindmap tree. Let the user know if the document is too large to load completely (with a popup)
+// TODO: Based on the node count, decide whether we can open this document as DOM or as lazy loading SAX/Mindmap tree. Let the user know if the document is too large to load completely (with a popup)
 // TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
 // TODO: allow us to open multiple files and display their root nodes and file names in the leftmost column. 
@@ -101,22 +99,8 @@ public class MainActivity extends Activity {
 			}
 	        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
 	        
-			// try to reset the file back to it's original position. If this is
-			// not possible, we have to close and re-open the file
-	        try {
-				mm.reset();
-			} catch (IOException e) {
-				
-				// trying to close
-				try {
-					mm.close();
-				} catch (IOException e1) {
-					// something went terribly wrong with this input stream, let's forget about it
-				}
-				
-				// reopen
-				mm = determineInputStream(intent, action, type);
-			}
+	        // reset the input stream
+	        mm = resetOrReopenInputStream(mm, intent, action, type);
 	        
 	        // load the mindmap
 	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
@@ -127,6 +111,7 @@ public class MainActivity extends Activity {
 			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
 			
 			// navigate down into the root node
+			// TODO: catch the problem of an empty XML, or more general: test with all sorts of bogus files and add some meaningful errors
 			application.horizontalMindmapView.down(application.mindmap.getRootNode());
 		}
 		
@@ -209,7 +194,36 @@ public class MainActivity extends Activity {
         return inputStream;
 	}
 	
-	
+	/**
+	 * Tries to reset the mind map input stream. If that's not possible, it reopens the stream.
+	 * @param inputStream
+	 * @param intent
+	 * @param action
+	 * @param type
+	 * @return
+	 */
+	private InputStream resetOrReopenInputStream(InputStream inputStream, Intent intent, String action, String type) {
+		
+		// try to reset the file back to it's original position. If this is
+		// not possible, we have to close and re-open the file
+		try {
+			inputStream.reset();
+		} catch (Exception e) {
+			
+			// trying to close
+			try {
+				inputStream.close();
+			} catch (Exception e1) { 
+				// something went terribly wrong with this input stream, let's forget about it
+			}
+			
+			// reopen
+			inputStream = determineInputStream(intent, action, type);
+		}
+		
+		// returns the reset/reopened input stream
+		return inputStream;
+	}
 	
 
 	/**
