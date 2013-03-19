@@ -1,7 +1,12 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.acra.ACRA;
 
@@ -88,26 +93,66 @@ public class MainActivity extends Activity {
 			application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
 	        
 			// prepare loading of the Mindmap file
-			InputStream mm = determineInputStream(intent, action, type);
-			
-	        // fetch the number of mind map nodes before reading the whole document into RAM
-	        int nodeCount = 0;
-			try {
-				nodeCount = Mindmap.getNodeCount(mm);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
-	        
-	        // reset the input stream
-	        mm = resetOrReopenInputStream(mm, intent, action, type);
-	        
-	        // load the mindmap
-	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-	        application.mindmap.loadDocument(mm);
-	        Log.d(MainApplication.TAG, "Finished to load Mindmap");
+			RandomAccessFile raf = determineRandomAccessFile(intent, action, type);
 
-	        // add the HorizontalMindmapView to the Layout Wrapper
+			// use the RandomAccessFile if it was possible to open it. Lazy loading will work
+			if ( raf != null ) {
+				Log.d(MainApplication.TAG, "Working with a RandomAccessFile");
+				
+				// TODO
+				
+				// fetch the number of mind map nodes
+				int nodeCount = 0;
+				try {
+					nodeCount = Mindmap.getNodeCount(raf);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
+		        
+		        // reset the random access file to position 0
+		        try {
+					raf.seek(0);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		        
+		        // load the mindmap
+		        Log.d(MainApplication.TAG, "RandomAccessFile fetched, now starting to load document");
+		        application.mindmap.loadDocument(raf);
+		        Log.d(MainApplication.TAG, "Finished to load Mindmap");
+
+			}
+			
+			// we could not get a RandomAccessFile, we have to work with the
+			// InputStream. This means that we need to load the whole document
+			// at the start into a DOM document.
+			else {
+				Log.d(MainApplication.TAG, "Working with an InputStream");
+				
+				InputStream mm = determineInputStream(intent, action, type);
+				
+		        // fetch the number of mind map nodes before reading the whole document into RAM
+		        int nodeCount = 0;
+				try {
+					nodeCount = Mindmap.getNodeCount(mm);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
+		        
+		        // reset the input stream
+		        mm = resetOrReopenInputStream(mm, intent, action, type);
+		        
+		        // load the mindmap
+		        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
+		        application.mindmap.loadDocument(mm);
+		        Log.d(MainApplication.TAG, "Finished to load Mindmap");
+	
+			}
+
+			// add the HorizontalMindmapView to the Layout Wrapper
 			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
 			
 			// navigate down into the root node
@@ -138,6 +183,53 @@ public class MainActivity extends Activity {
 			application.horizontalMindmapView.setApplicationTitle();
 		}
     }
+	
+	/**
+	 * Tries to open a RandomAccessFile based on the intent, action and type. Returns null if something goes wrong.
+	 * @param intent
+	 * @param action
+	 * @param type
+	 * @return
+	 */
+	private RandomAccessFile determineRandomAccessFile(Intent intent, String action, String type) {
+		
+		RandomAccessFile raf = null;
+		
+        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
+        // started from ACTION_EDIT/VIEW intent
+        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
+        	
+        	Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
+        	
+        	// get the URI to the target document (the Mindmap we are opening) and open the InputStream
+        	Uri uri = intent.getData();
+        	if ( uri != null ) {
+        		Log.d(MainApplication.TAG, "Loading Uri " + uri);
+        		try {
+        			raf = new RandomAccessFile(new File(new URI(uri.toString())), "r");
+				} catch (FileNotFoundException e) {
+					return null;
+				} catch (URISyntaxException e) {
+					return null;
+				}
+        	} else {
+				return null;
+        	}
+        	
+			// store the Uri. Next time the MainActivity is started, we'll
+			// check whether the Uri has changed (-> load new document) or
+			// remained the same (-> reuse previous document)
+        	application.mindmap.setUri(uri);
+        } 
+        
+        // started from the launcher. We can't open a raw resource as random access file
+        else {
+        	Log.d(MainApplication.TAG, "started from app launcher intent");
+        	raf = null;
+        }
+        
+        return raf;
+	}
 	
 	
 	/**

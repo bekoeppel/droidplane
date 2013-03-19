@@ -2,6 +2,8 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.io.Reader;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -68,6 +70,67 @@ public class Mindmap {
 		return nodeCounterHandler.getNodeCount();
 	}
 	
+
+	public static int getNodeCount(RandomAccessFile raf) throws ParserConfigurationException, SAXException, IOException {
+		
+		// prepare the SAX parser
+		SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+		SAXParser parser = saxParserFactory.newSAXParser();
+		XMLReader reader = parser.getXMLReader();
+		
+		// the NodeCounterHandler will be used to count the node tags
+		NodeCounterHandler nodeCounterHandler = new NodeCounterHandler();
+		reader.setContentHandler(nodeCounterHandler);
+		InputSource rafi = new InputSource(new RandomAccessFileReader(raf));
+		rafi.setEncoding("UTF8");
+		reader.parse(rafi);
+		
+		// return the node count
+		return nodeCounterHandler.getNodeCount();
+	}
+	
+	/**
+	 * TODO: documentation in the whole file!
+	 */
+	static class RandomAccessFileReader extends Reader {
+		
+		private RandomAccessFile randomAccessFile;
+
+		@Override
+		public void close() throws IOException {
+			Log.d(MainApplication.TAG, "RandomAccessFileReader close() called");
+			randomAccessFile.close();
+		}
+
+		@Override
+		public int read(char[] buffer, int byteOffset, int byteCount) throws IOException {
+			
+			// first read into a byteBuffer
+			byte[] byteBuffer = new byte[byteCount];
+			int numBytesRead = randomAccessFile.read(byteBuffer, byteOffset, byteCount);
+
+			// check if we have reached the end of the file
+			if (numBytesRead == -1) {
+				return -1;
+			}
+			
+			// translate the read bytes into characters
+			else {
+				
+				// the input file has US-ASCII encoding, and we transfer all characters into the buffer
+				new String(byteBuffer, "US-ASCII").getChars(0, numBytesRead, buffer, 0);
+
+				// return the number of bytes read TODO
+				return numBytesRead;
+			}
+		}
+		
+		public RandomAccessFileReader(RandomAccessFile randomAccessFile) {
+			this.randomAccessFile = randomAccessFile;
+		}
+		
+	}
+	
 	/**
 	 * The NodeCounterHandler is a SAX handler that counts the "<node.../>" tags.
 	 */
@@ -101,6 +164,7 @@ public class Mindmap {
 		 */
 		@Override	
 		public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException { 
+			Log.d(MainApplication.TAG, "NodeCounterHandler got startElement for " + localName);
 			if (localName.equalsIgnoreCase("node")) {
 				nodeCount++;
 			}
@@ -174,5 +238,6 @@ public class Mindmap {
 	public MindmapNode getRootNode() {
 		return rootNode;
 	}
+
 
 }
