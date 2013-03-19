@@ -339,7 +339,7 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 		    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
 		    		backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
 		    	} else {
-		    		backgroundColor = getContext().getResources().getColor(android.R.color.background_dark);
+		    		backgroundColor = getContext().getResources().getColor(android.R.color.darker_gray);
 		    	}
 				
 				view.setBackgroundColor(backgroundColor);	

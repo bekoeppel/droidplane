@@ -27,6 +27,8 @@ import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
+// TODO: think about a strategy to strip out Log.v and Log.d messages for releases
+
 // TODO: stop using DOM Nodes, and switch to MindmapNodes
 // TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
