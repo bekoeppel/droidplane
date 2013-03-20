@@ -55,6 +55,8 @@ public class NodeColumn extends LinearLayout {
 	 * the actual ListView that we'll display
 	 */
 	ListView listView;
+
+	private boolean isPreloading;
 	
 	/**
 	 * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always throw a IllegalArgumentException.
@@ -81,7 +83,7 @@ public class NodeColumn extends LinearLayout {
 		super(context);
 		
 		// extract all <node.../> elements from the parent node, and add them to the mindmapNodes list
-		mindmapNodes = parent.getChildNodes();
+		mindmapNodes = parent.getChildNodes(true);
 
 		// store the parent node
 		this.parent = parent;
@@ -259,6 +261,33 @@ public class NodeColumn extends LinearLayout {
 	 */
 	public void setOnItemClickListener(OnItemClickListener listener) {
 		listView.setOnItemClickListener(listener);
+	}
+	
+	/**
+	 * Preloads the child nodes of this node column's child nodes, i.e. the
+	 * grand children. Note that this method should be called in a background
+	 * thread!
+	 * 
+	 * TODO: this is a fine idea, but it blocks the RandomAccessFile or multiple
+	 * threads access the RandomAccessFile. As it looks right now, only one SAX
+	 * parser can read from the file at any time, so if we click a node we have
+	 * to abort the background preloading.
+	 */
+	public void preloadGrandChildNodes() {
+		
+		if (isPreloading) {
+			Log.d(MainApplication.TAG, "NodeColumn is already preloading data");
+		} else {
+
+			try {
+				isPreloading = true;
+				for (int i = 0; i < mindmapNodes.size(); i++) {
+					mindmapNodes.get(i).getChildNodes(false);
+				}
+			} finally {
+				isPreloading = false;
+			}
+		}
 	}
 }
 

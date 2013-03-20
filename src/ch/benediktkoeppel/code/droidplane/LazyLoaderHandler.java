@@ -8,6 +8,8 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import android.util.Log;
+
 
 /**
  * The LazyLoaderHandler is a SAX handler that only loads one level of node
@@ -62,6 +64,12 @@ class LazyLoaderHandler extends DefaultHandler {
 	 * node N0, we start at this node N0 and set the targetLevel = 1.
 	 */
 	private int targetLevel;
+	
+	/**
+	 * When abort() is called, isAborted will be set to true, so that the next
+	 * startElement or endElement can throw a SAXAbortRequestedException.
+	 */
+	private boolean isAborted = false;
 	
 	/**
 	 * this is the randomAccessFile we're reading from. We need this to set it
@@ -142,6 +150,12 @@ class LazyLoaderHandler extends DefaultHandler {
 	@Override
 	public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException {
 		
+		// if the reading was aborted, throw a SAXAbortRequestedException
+		if ( isAborted ) {
+			Log.d(MainApplication.TAG, "Aborting LazyLoaderHandler now");
+			throw new SAXAbortRequestedException();
+		}
+		
 		// if we haven't reached the start position yet, we skip this startElement
 		if ( !isAfterStartPosition() ) {
 			return;
@@ -210,6 +224,12 @@ class LazyLoaderHandler extends DefaultHandler {
 	@Override
 	public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
 		
+		// if the reading was aborted, throw a SAXAbortRequestedException
+		if ( isAborted ) {
+			Log.d(MainApplication.TAG, "Aborting LazyLoaderHandler now");
+			throw new SAXAbortRequestedException();
+		}
+		
 		// if we haven't reached the start position yet, we skip this endElement
 		if ( !isAfterStartPosition() ) {
 			return;
@@ -257,11 +277,27 @@ class LazyLoaderHandler extends DefaultHandler {
 	}
 	
 	/**
+	 * Allows us to abort the parsing of a document by throwing a SAXAbortRequestedException.
+	 * @throws SAXAbortRequestedException 
+	 */
+	public void abort() {
+		this.isAborted = true;
+		Log.d(MainApplication.TAG, "Aborting LazyLoaderHandler");
+	}
+	
+	/**
 	 * The SAXEndNodeFoundException signals that we have found the end of a node
 	 * and don't want to continue to read the file.
 	 */
 	class SAXEndNodeFoundException extends SAXException {
 		private static final long serialVersionUID = 7974532653077143185L;
+	}
+	
+	/**
+	 * If abort() is called, a SAXAbortRequestedException is thrown.
+	 */
+	class SAXAbortRequestedException extends SAXException {
+		private static final long serialVersionUID = -8374298386276952764L;
 	}
 
 }

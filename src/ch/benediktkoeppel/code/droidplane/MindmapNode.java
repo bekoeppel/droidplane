@@ -16,6 +16,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
+import ch.benediktkoeppel.code.droidplane.LazyLoaderHandler.SAXAbortRequestedException;
 import ch.benediktkoeppel.code.droidplane.LazyLoaderHandler.SAXEndNodeFoundException;
 
 import android.util.Log;
@@ -92,9 +93,6 @@ public class MindmapNode {
 	 */
 	private boolean selected;
 	
-	// locator position where the node started
-	
-
 	/**
 	 * startLine and startColumn define the location in the XML file, where this
 	 * node tag started. They are only defined if this node is SAX based. The
@@ -121,6 +119,12 @@ public class MindmapNode {
 	 * implement editing functionality?
 	 */
 	ArrayList<MindmapNode> childMindmapNodes;
+	
+	static boolean isPreloading = false;
+	static LazyLoaderHandler lazyLoaderHandler; 
+	static SAXParser parser;
+	static XMLReader reader;
+
 	
 	/**
 	 * Constructor when creating a SAX based node. All instance fields will be
@@ -307,12 +311,13 @@ public class MindmapNode {
 	 * MindmapNode is SAX based, the sub nodes are read from the input file
 	 * using the {@link LazyLoaderHandler}. In both cases, sub nodes are only
 	 * fetched once, afterwards a cached ArrayList is served.
+	 * @param isForegroundThread defines whether getChildNodes was called from the foreground thread or background thread
 	 * @return ArrayList of this MindmapNode's child nodes
 	 */
 
 	// TODO: we should have a possiblity to truncate nodes after some times, i.e. discard their childMinamapNodes list if we don't use the node anymore.
 
-	public ArrayList<MindmapNode> getChildNodes() {
+	public ArrayList<MindmapNode> getChildNodes(boolean isForegroundThread) {
 		
 		// if we haven't loaded the childMindmapNodes before
 		if ( childMindmapNodes == null ) {
@@ -339,7 +344,12 @@ public class MindmapNode {
 			// it's a SAX node
 			else {
 				
-				Log.d(MainApplication.TAG, "Fetching childMindmapNodes from Lazy SAX");
+				// if this request is for the foreground thread, and someone is preloading nodes (i.e. on the background thread), we'll have to stop him
+				if ( isForegroundThread && isPreloading ) {
+					lazyLoaderHandler.abort();
+				}
+				
+				Log.d(MainApplication.TAG, text + ": Fetching childMindmapNodes from Lazy SAX");
 				
 				// fetch the next level of child nodes with the SAX parser
 				childMindmapNodes = new ArrayList<MindmapNode>();
@@ -357,8 +367,6 @@ public class MindmapNode {
 				
 				// prepare the SAX parser
 				SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
-				SAXParser parser = null;
-				XMLReader reader = null;
 				try {
 					parser = saxParserFactory.newSAXParser();
 					reader = parser.getXMLReader();
@@ -372,7 +380,7 @@ public class MindmapNode {
 
 				// use the lazy SAX parser, but instruct it to skip everything before this node tag. We want to load the 1st sub-node level.
 				// TODO: add support to load multiple levels of subnodes.
-				LazyLoaderHandler lazyLoaderHandler = new LazyLoaderHandler(raf, startLine, startColumn, 1);
+				lazyLoaderHandler = new LazyLoaderHandler(raf, startLine, startColumn, 1);
 				reader.setContentHandler(lazyLoaderHandler);
 				InputSource rafi = new InputSource(new RandomAccessFileReader(raf));
 				rafi.setEncoding("UTF8");
@@ -381,6 +389,11 @@ public class MindmapNode {
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				} catch (SAXAbortRequestedException e) {
+					// This means that someone (else) called abort() on this
+					// handler. We couldn't finish loading all child nodes, so
+					// the stuff is invalid.
+					return new ArrayList<MindmapNode>();
 				} catch (SAXEndNodeFoundException e) {
 					/* empty */
 					// as explained in Mindmap#loadDocument(RandomAccessFile),
@@ -389,6 +402,9 @@ public class MindmapNode {
 				} catch (SAXException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				} finally {
+					parser = null;
+					reader = null;
 				}
 				
 				// retrieve the list of mindmap nodes and cache them in childMindmapNodes
