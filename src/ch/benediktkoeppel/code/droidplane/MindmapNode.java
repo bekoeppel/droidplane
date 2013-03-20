@@ -346,7 +346,15 @@ public class MindmapNode {
 				
 				// if this request is for the foreground thread, and someone is preloading nodes (i.e. on the background thread), we'll have to stop him
 				if ( isForegroundThread && isPreloading ) {
+					Log.d(MainApplication.TAG, "isForegroundThread && isPreloading => aborting SAX");
 					lazyLoaderHandler.abort();
+				} else if ( isForegroundThread && !isPreloading ) {
+					Log.d(MainApplication.TAG, "isForegroundThread && !isPreloading => OK just continuing");
+				} else if ( !isForegroundThread && isPreloading ) {
+					Log.d(MainApplication.TAG, "!isForegroundThread && isPreloading => aborting getChildNodes");
+					return new ArrayList<MindmapNode>();
+				} else if ( !isForegroundThread && !isPreloading ) {
+					Log.d(MainApplication.TAG, "!isForegroundThread && !isPreloading => OK");
 				}
 				
 				Log.d(MainApplication.TAG, text + ": Fetching childMindmapNodes from Lazy SAX");

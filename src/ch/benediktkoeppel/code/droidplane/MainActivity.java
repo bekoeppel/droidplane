@@ -105,23 +105,23 @@ public class MainActivity extends Activity {
 				// (loadDocument), we need to go through the whole file anyway,
 				// so we can count the subnodes there if we really want.
 				// fetch the number of mind map nodes
-				int nodeCount = 0;
-				try {
-					nodeCount = Mindmap.getNodeCount(raf);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
-		        
-		        // TODO: maybe if something with the random access file goes wrong, we should default back to DOM?
-		        // reset the random access file to position 0
-		        try {
-					raf.seek(0);
-				} catch (IOException e) {
-					ACRA.getErrorReporter().putCustomData("Exception", "IOException");
-					ACRA.getErrorReporter().putCustomData("Comment", "On seeking (to 0) on the RandomAccessFile");
-					e.printStackTrace();
-				}
+//				int nodeCount = 0;
+//				try {
+//					nodeCount = Mindmap.getNodeCount(raf);
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}
+//		        Log.d(MainApplication.TAG, "Mindmap will have " + nodeCount + " nodes");
+//		        
+//		        // TODO: maybe if something with the random access file goes wrong, we should default back to DOM?
+//		        // reset the random access file to position 0
+//		        try {
+//					raf.seek(0);
+//				} catch (IOException e) {
+//					ACRA.getErrorReporter().putCustomData("Exception", "IOException");
+//					ACRA.getErrorReporter().putCustomData("Comment", "On seeking (to 0) on the RandomAccessFile");
+//					e.printStackTrace();
+//				}
 		        
 		        // load the mindmap
 		        Log.d(MainApplication.TAG, "RandomAccessFile fetched, now starting to load document");

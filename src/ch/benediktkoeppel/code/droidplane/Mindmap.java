@@ -219,13 +219,6 @@ public class Mindmap {
 			// knows that something went wrong. The MainActivity could then
 			// switch to the InputStream based implementation.
 			e.printStackTrace();
-		} catch (SAXEndNodeFoundException e) {
-			/* empty */
-			// the SAXEndNodeFoundException is not a real exception. It
-			// merely tells us that our Lazy handler has found the end of the
-			// interesting node and decided to stop the parsing there (for
-			// efficiency). So we consume this Exception here silently.
-			// TODO: for some strange reason, the exception is not muted here, or it is raised somewhere else.
 		} catch (SAXException e) {
 			// TODO: we should pass this out somewhere, so that the MainActivity
 			// knows that something went wrong. The MainActivity could then
@@ -243,6 +236,12 @@ public class Mindmap {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (SAXEndNodeFoundException e) {
+			/* empty */
+			// the SAXEndNodeFoundException is not a real exception. It
+			// merely tells us that our Lazy handler has found the end of the
+			// interesting node and decided to stop the parsing there (for
+			// efficiency). So we consume this Exception here silently.
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

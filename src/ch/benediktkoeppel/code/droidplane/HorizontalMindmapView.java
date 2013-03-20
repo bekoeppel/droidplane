@@ -90,21 +90,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		// register as onItemClickListener
 		nodeColumn.setOnItemClickListener(this);
-		
-		class RefreshGrandChildRunnable extends Thread {
-			NodeColumn nodeColumn;
-			
-			public RefreshGrandChildRunnable(NodeColumn nodeColumn){
-				this.nodeColumn = nodeColumn;
-			}
-			
-			public void run() {
-				nodeColumn.preloadGrandChildNodes();
-				Log.d(MainApplication.TAG, "Refreshed grandchild nodes of " + nodeColumn.getParentNode().text);
-			}
-		}
-		RefreshGrandChildRunnable refresher = new RefreshGrandChildRunnable(nodeColumn);
-		refresher.start();
 	}
 	
 	/**
@@ -366,7 +351,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-		Log.d(MainApplication.TAG, "Processing onItemClick");
+		Log.e(MainApplication.TAG, "Processing onItemClick");
 		
 		// the clicked column
 		// parent is the ListView in which the user clicked. Because
@@ -397,7 +382,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			setApplicationTitle();
 		}
 		
-		Log.d(MainApplication.TAG, "Processing onItemClick done");
+		Log.e(MainApplication.TAG, "Processing onItemClick done");
 	}
 	
 	/*

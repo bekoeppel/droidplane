@@ -122,6 +122,22 @@ public class NodeColumn extends LinearLayout {
     	
     	// add the listView to the linearView
     	this.addView(listView);
+
+		
+		class RefreshGrandChildRunnable extends Thread {
+			NodeColumn nodeColumn;
+			
+			public RefreshGrandChildRunnable(NodeColumn nodeColumn){
+				this.nodeColumn = nodeColumn;
+			}
+			
+			public void run() {
+				nodeColumn.preloadGrandChildNodes();
+				Log.d(MainApplication.TAG, "Refreshed grandchild nodes of " + nodeColumn.getParentNode().text);
+			}
+		}
+		RefreshGrandChildRunnable refresher = new RefreshGrandChildRunnable(this);
+		refresher.start();
 	}
 	
 	/**
