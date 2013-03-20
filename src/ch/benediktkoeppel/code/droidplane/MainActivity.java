@@ -318,14 +318,18 @@ public class MainActivity extends Activity {
 		// context menu was loaded, i.e. the index of the item in our
 		// mindmapNodes list
 		
-		
 		Log.d(MainApplication.TAG, "position = " + contextMenuInfo.position );
 		
 		Log.d(MainApplication.TAG, "nextContextMenuMindmapNode = " + nextContextMenuMindmapNode.text);
 		
 		// TODO: if MindmapNode would be some kind of View, we could convert contextMenuInfo.targetView back to the MindmapNode here
-		//MindmapNode mindmapNode = (MindmapNode)contextMenuInfo.targetView;
-//		
+		MindmapNode mindmapNode = (MindmapNode)contextMenuInfo.targetView;
+		Log.d(MainApplication.TAG, "mindmapNode.text = " + mindmapNode.text);
+		
+		
+
+		
+		//		
 //		int menuItemIndex = item.getItemId();
 //		
 //		

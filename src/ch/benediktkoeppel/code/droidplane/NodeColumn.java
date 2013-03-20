@@ -96,7 +96,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 			Node tmp_node = tmp_children.item(i);
 			
 			if ( MindmapNode.isMindmapNode(tmp_node) ) {
-				MindmapNode mindmapNode = new MindmapNode(tmp_node);
+				MindmapNode mindmapNode = new MindmapNode(getContext(), tmp_node);
     			mindmapNodes.add(mindmapNode);
 			}
 		}
@@ -361,14 +361,16 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 		
 		// if convertView was specified, we will use this. Otherwise, we create
 		// a new view based on the R.layout.mindmap_node_list_item layout.
-		View view = convertView;
+		
+		// TODO: instead of loading a XML, we can generate the whole view in the MindmapNode.
+		MindmapNode view = (MindmapNode)convertView;
 		if ( view == null ) {
-			LayoutInflater layoutInflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-			view = layoutInflater.inflate(R.layout.mindmap_node_list_item, null);
+			view = mindmapNodes.get(position);
+			view.inflate(getContext(), R.layout.mindmap_node_list_item, null);
 		}
 		
-		// get the node for which we generate the view
 		MindmapNode node = mindmapNodes.get(position);
+		// get the node for which we generate the view
 		if ( node != null) {
 			
 			// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)

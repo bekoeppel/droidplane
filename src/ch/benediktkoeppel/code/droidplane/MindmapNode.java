@@ -7,11 +7,14 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.content.Context;
+import android.util.AttributeSet;
 import android.view.ContextMenu;
-import android.view.MenuItem;
-import android.view.SubMenu;
-import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.LinearLayout;
 
 
 
@@ -19,7 +22,7 @@ import android.view.ContextMenu.ContextMenuInfo;
  * A MindMapNode is a special type of DOM Node. A DOM Node can be converted to a
  * MindMapNode if it has type ELEMENT, and tag "node".
  */
-public class MindmapNode {
+public class MindmapNode extends LinearLayout {
 	
 	/**
 	 * the Text of the node (TEXT attribute).
@@ -49,15 +52,36 @@ public class MindmapNode {
 	/**
 	 * whether the node is selected or not, will be set after it was clicked by the user
 	 */
-	public boolean selected;
+	public boolean selected;	
 	
+	/**
+	 * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always throw a IllegalArgumentException.
+	 * @deprecated
+	 * @param context
+	 */
+	public MindmapNode(Context context) {
+		super(context);
+		if ( !isInEditMode() ) {
+			throw new IllegalArgumentException(
+					"The constructor public MindmapNode(Context context) may only be called by graphical layout tools, i.e. when View#isInEditMode() is true. In production, use the constructor public MindmapNode(Context context, Node node).");
+		}
+	}
 	
+	public MindmapNode(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		// TODO Auto-generated constructor stub
+	}
+
+
+
 	/**
 	 * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". 
 	 * Throws a {@link ClassCastException} if the Node can not be converted to a MindmapNode. 
 	 * @param node
 	 */
-	public MindmapNode(Node node) {
+	public MindmapNode(Context context, Node node) {
+		
+		super(context);
 		
 		// convert the XML Node to a XML Element
 		Element tmp_element;
