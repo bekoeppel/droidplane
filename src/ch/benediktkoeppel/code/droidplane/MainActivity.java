@@ -23,6 +23,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.AdapterView;
 import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
@@ -51,6 +53,7 @@ import com.google.analytics.tracking.android.EasyTracker;
 public class MainActivity extends Activity {
 	
 	MainApplication application;
+	private MindmapNode nextContextMenuMindmapNode;
 	
 	@Override
 	public void onStart() {
@@ -291,30 +294,60 @@ public class MainActivity extends Activity {
 		return true;
 	}
     
+	
+	// TODO: this is a very ugly workaround. I can't figure out which MindmapNode generated the context menu, so
+	public void setNextContextMenuMindmapNode(MindmapNode mindmapNode) {
+		this.nextContextMenuMindmapNode = mindmapNode;
+	}
 
-
-	// Handler when an item is long clicked
-	// TODO do this!
-//	@Override
-//	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * It looks like the onContextItemSelected has to be overwritten in a class
+	 * extending Activity. It was not possible to have this callback in the
+	 * NodeColumn. As a result, we have to find out here again where the event happened
+	 * 
+	 * @see android.app.Activity#onContextItemSelected(android.view.MenuItem)
+	 */
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		
+		AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
+		
+		// contextMenuInfo.position is the position in the ListView where the
+		// context menu was loaded, i.e. the index of the item in our
+		// mindmapNodes list
+		
+		
+		Log.d(MainApplication.TAG, "position = " + contextMenuInfo.position );
+		
+		Log.d(MainApplication.TAG, "nextContextMenuMindmapNode = " + nextContextMenuMindmapNode.text);
+		
+		// TODO: if MindmapNode would be some kind of View, we could convert contextMenuInfo.targetView back to the MindmapNode here
+		//MindmapNode mindmapNode = (MindmapNode)contextMenuInfo.targetView;
 //		
-//		Node pushedNode = currentListedNodes.get(position);
+//		int menuItemIndex = item.getItemId();
 //		
-//		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//        builder.setMessage("Not yet implemented");
-//        builder.setCancelable(true);
-//        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-//        	public void onClick(DialogInterface dialog, int which) {
-//        		return;
-//        	}
-//        });
+//		
+//		public boolean onContextItemSelected(MenuItem item) {
+//		    // Here's how you can get the correct item in onContextItemSelected()
+//		    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
+//		    Object item = getListAdapter().getItem(info.position);
+//		
+		
+		
+		
+		
+//	  AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
+//	  int menuItemIndex = item.getItemId();
+//	  String[] menuItems = getResources().getStringArray(R.array.menu);
+//	  String menuItemName = menuItems[menuItemIndex];
+//	  String listItemName = Countries[info.position];
 //
-//        AlertDialog alert = builder.create();
-//        alert.show();
-//		
-//		return true;
-//		
-//	}
+//	  TextView text = (TextView)findViewById(R.id.footer);
+//	  text.setText(String.format("Selected %s for item %s", menuItemName, listItemName));
+	  return true;
+	}
 	
 	/**
 	 * Shows a popup with an error message and then closes the application

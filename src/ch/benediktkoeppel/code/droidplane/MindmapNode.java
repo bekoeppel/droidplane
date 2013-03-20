@@ -7,6 +7,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.view.ContextMenu;
+import android.view.MenuItem;
+import android.view.SubMenu;
+import android.view.View;
+import android.view.ContextMenu.ContextMenuInfo;
+
 
 
 /**
@@ -165,8 +171,6 @@ public class MindmapNode {
 		return name;
 	}
 	
-	
-
 	/**
 	 * returns the number of child Mindmap nodes 
 	 * @return
@@ -185,5 +189,49 @@ public class MindmapNode {
 		}
 		
 		return numMindmapNodes;
+	}
+	
+	/**
+	 * The NodeColumn forwards the CreateContextMenu event to the appropriate
+	 * MindmapNode, which can then generate the context menu as it likes. Note
+	 * that the MindmapNode itself is not registered as the listener for such
+	 * events per se, because the NodeColumn first has to decide for which
+	 * MindmapNode the event applies.
+	 * 
+	 * TODO: is this really true? Or could we set a onCreateContextMenu listener
+	 * for a ListItem?
+	 * 
+	 * @param menu
+	 * @param v
+	 * @param menuInfo
+	 */
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		
+		MainApplication.getMainActivityInstance().setNextContextMenuMindmapNode(this);
+		
+		
+		// build the menu
+		menu.setHeaderTitle(text);
+		menu.setHeaderIcon(icon_res_id);
+		
+		// add a submenu showing all icons
+//		SubMenu iconMenu = menu.addSubMenu("All icons");
+//		ArrayList<String> icons = getIcons();
+//		for (int i = 0; i < icons.size(); i++) {
+//			String icon = icons.get(i);
+//			MenuItem iconMenuItem = iconMenu.add(icon);
+//			int iconMenuItemResId = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+//			iconMenuItem.setIcon(MainApplication.getStaticApplicationContext().getResources().getDrawable(iconMenuItemResId));
+//		}
+		
+		MenuItem item = menu.add("nope");
+		
+		
+		menu.add("nope");
+//		menu.ad
+		
+		
+		// set the item selected listener to this
+		
 	}
 }

@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -16,11 +18,12 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
-public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
+public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener/*, OnItemLongClickListener*/ {
 	
 	/**
 	 * HorizontalScrollView can only have one view, so we need to add a
@@ -91,8 +94,9 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		linearLayout.addView(nodeColumn, linearLayout.getChildCount());
 		Log.d(MainApplication.TAG, "linearLayout now has " + linearLayout.getChildCount() + " items");
 		
-		// register as onItemClickListener
+		// register as onItemClickListener and onItemLongClickListener
 		nodeColumn.setOnItemClickListener(this);
+//		nodeColumn.setOnItemLongClickListener(this);
 	}
 	
 	/**
@@ -400,6 +404,35 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			setApplicationTitle();
 		}
 	}
+	
+
+
+//
+//	// Handler when an item is long clicked
+//	// TODO do this!
+//	@Override
+//	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+//		
+//		// get the clicked column
+//		NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
+//
+//		// then get the clicked node
+//		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
+//		
+//		AlertDialog.Builder builder = new AlertDialog.Builder(MainApplication.getMainActivityInstance());
+//        builder.setMessage(clickedNode.text);
+//        builder.setCancelable(true);
+//        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+//        	public void onClick(DialogInterface dialog, int which) {
+//        		return;
+//        	}
+//        });
+//
+//        AlertDialog alert = builder.create();
+//        alert.show();
+//		
+//		return true;
+//	}
 	
 	/*
 	 * (non-Javadoc)

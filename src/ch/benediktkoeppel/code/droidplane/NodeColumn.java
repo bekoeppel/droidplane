@@ -10,9 +10,15 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Build;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnCreateContextMenuListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -28,7 +34,7 @@ import android.util.Log;
  * fine border around the ListView and we can only achieve this by having it
  * wrapped in a LinearLayout with a padding.
  */
-public class NodeColumn extends LinearLayout {
+public class NodeColumn extends LinearLayout implements OnCreateContextMenuListener {
 	
 	/**
 	 * This translates ListViews to NodeColumns. We need this because the
@@ -129,6 +135,10 @@ public class NodeColumn extends LinearLayout {
     	
     	// store the ListView to NodeColumn mapping in listViewToNodeColumn
     	listViewToNodeColumn.put(listView, this);
+    	
+		// call NodeColumn's onCreateContextMenu when a context menu for one of
+		// the listView items should be generated.
+    	listView.setOnCreateContextMenuListener(this);
     	
     	// add the listView to the linearView
     	this.addView(listView);
@@ -272,6 +282,52 @@ public class NodeColumn extends LinearLayout {
 	public void setOnItemClickListener(OnItemClickListener listener) {
 		listView.setOnItemClickListener(listener);
 	}
+//	
+//	/**
+//	 * Simliarly to
+//	 * {@link NodeColumn#setOnItemClickListener(OnItemClickListener)}, this is a
+//	 * wrapper for ListView's setOnItemLongClickListener.
+//	 * @param listener
+//	 */
+//	public void setOnItemLongClickListener(OnItemLongClickListener listener) {
+//		listView.setOnItemLongClickListener(listener);
+//	}
+
+	/* (non-Javadoc)
+	 * This is called when a context menu for one of the list items is generated.
+	 * @see android.view.View.OnCreateContextMenuListener#onCreateContextMenu(android.view.ContextMenu, android.view.View, android.view.ContextMenu.ContextMenuInfo)
+	 */
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		
+		// get the menu information
+		AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo)menuInfo;
+		
+		// get the clicked node
+		MindmapNode clickedNode = mindmapNodes.get(contextMenuInfo.position);
+		
+		// forward the event to the clicked node
+		clickedNode.onCreateContextMenu(menu, v, menuInfo);
+		
+	}
+	
+		
+//		
+//		
+//		
+//		@Override
+//		public void onCreateContextMenu(ContextMenu menu, View v,
+//		    ContextMenuInfo menuInfo) {
+//		  if (v.getId()==R.id.list) {
+//		    AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)menuInfo;
+//		    menu.setHeaderTitle(Countries[info.position]);
+//		    String[] menuItems = getResources().getStringArray(R.array.menu);
+//		    for (int i = 0; i<menuItems.length; i++) {
+//		      menu.add(Menu.NONE, i, i, menuItems[i]);
+//		    }
+//		  }
+//		}
+//	}
 	
 
 }
@@ -298,6 +354,7 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 	 * @param ViewGroup parent: not sure, is this the NodeColumn for which the Adapter is generating views?
 	 * @see android.widget.ArrayAdapter#getView(int, android.view.View, android.view.ViewGroup)
 	 */
+	// TODO: if MindmapNode would extend View, we could just simply get a MindmapNode here as view (and the MindmapNode itself could take care of the formatting)
 	@SuppressLint("InlinedApi")
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
