@@ -9,10 +9,17 @@ import org.w3c.dom.NodeList;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.Build;
+import android.util.TypedValue;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 
 
@@ -114,9 +121,59 @@ public class MindmapNode extends LinearLayout {
 		
 		// load the layout from the XML file
 		// TODO: somehow the height of the item is wrong
-        inflate(context, R.layout.mindmap_node_list_item, this);
+        MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
+        refreshView();
 		
 	}
+	
+	
+	public void refreshView() {
+		
+		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
+		ImageView iconView = (ImageView)findViewById(R.id.icon);
+		iconView.setImageResource(icon_res_id);
+		iconView.setContentDescription(icon_name);
+		
+		TextView textView = (TextView) findViewById(R.id.label);
+		textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
+		textView.setText(text);
+		
+		ImageView expandable = (ImageView) findViewById(R.id.expandable);
+		if ( isExpandable ) {
+			if ( getIsSelected() ) {
+				expandable.setImageResource(R.drawable.minus_alt);
+			} else {
+				expandable.setImageResource(R.drawable.plus_alt);
+			}
+		}
+		
+		// if the node is selected and has child nodes, give it a special background
+		if ( getIsSelected() && getNumChildMindmapNodes() > 0 ) {
+			int backgroundColor;
+			
+			// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
+	    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+	    		backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
+	    	} else {
+	    		backgroundColor = getContext().getResources().getColor(android.R.color.darker_gray);
+	    	}
+			
+			setBackgroundColor(backgroundColor);	
+		} else {
+			setBackgroundColor(0);
+		}	
+		
+		// set the layout parameter
+		// TODO: this should not be necessary. The problem is that the inflate
+		// (in the constructor) loads the XML as child of this LinearView, so
+		// the MindmapNode-LinearView wraps the root LinearView from the
+		// mindmap_node_list_item XML file.
+		setLayoutParams(new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, AbsListView.LayoutParams.WRAP_CONTENT));
+		setGravity(Gravity.LEFT | Gravity.CENTER);
+//		int paddingPx = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());
+//		setPadding(paddingPx, paddingPx, 0, paddingPx);
+	}
+	
 	
 	
 	

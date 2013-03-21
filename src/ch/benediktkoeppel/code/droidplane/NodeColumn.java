@@ -10,23 +10,19 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Build;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnCreateContextMenuListener;
 import android.view.ViewGroup;
-import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.AdapterView.OnItemClickListener;
-
-import android.util.Log;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends
@@ -359,57 +355,16 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		
-		// if convertView was specified, we will use this. Otherwise, we create
-		// a new view based on the R.layout.mindmap_node_list_item layout.
-		
-		// TODO: instead of loading a XML, we can generate the whole view in the MindmapNode.
-		// TODO: why do we need to open the same node twice, once as view and once as node, and then pass stuff around the node? should all go in the initializer or somewhere, and allow us to update the view somehow
+		// if convertView was specified, we cast it to a MindmapNode and then refresh it's design
+		// otherwise, we load the MindmapNode from the specified position in the column, and display it
 		MindmapNode view = (MindmapNode)convertView;
 		if ( view == null ) {
 			view = mindmapNodes.get(position);
 		}
 		
-		MindmapNode node = mindmapNodes.get(position);
-		// get the node for which we generate the view
-		if ( node != null) {
-			
-			// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
-			ImageView icon = (ImageView) view.findViewById(R.id.icon);
-			icon.setImageResource(node.icon_res_id);
-			icon.setContentDescription(node.icon_name);
-			
-			TextView text = (TextView) view.findViewById(R.id.label);
-			text.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
-			text.setText(node.text);
-			
-			TextView expandable = (TextView) view.findViewById(R.id.expandable);
-			expandable.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
-			if ( node.isExpandable ) {
-				expandable.setText("+");
-			} else {
-				expandable.setText("");
-			}
-			
-			// if the node is selected and has child nodes, give it a special background
-			if ( node.getIsSelected() && node.getNumChildMindmapNodes() > 0 ) {
-				int backgroundColor;
-				
-				// menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
-		    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-		    		backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
-		    	} else {
-		    		backgroundColor = getContext().getResources().getColor(android.R.color.darker_gray);
-		    	}
-				
-				view.setBackgroundColor(backgroundColor);	
-			} else {
-				view.setBackgroundColor(0);
-			}
-			
-		}
-		
-		Log.d(MainApplication.TAG, "Created a ListView item view");
-		
+		// tell the node to refresh it's view
+		view.refreshView();
+
 		return view;
 	}
 	
