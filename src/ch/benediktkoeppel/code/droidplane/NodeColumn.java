@@ -363,10 +363,10 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 		// a new view based on the R.layout.mindmap_node_list_item layout.
 		
 		// TODO: instead of loading a XML, we can generate the whole view in the MindmapNode.
+		// TODO: why do we need to open the same node twice, once as view and once as node, and then pass stuff around the node? should all go in the initializer or somewhere, and allow us to update the view somehow
 		MindmapNode view = (MindmapNode)convertView;
 		if ( view == null ) {
 			view = mindmapNodes.get(position);
-			view.inflate(getContext(), R.layout.mindmap_node_list_item, null);
 		}
 		
 		MindmapNode node = mindmapNodes.get(position);

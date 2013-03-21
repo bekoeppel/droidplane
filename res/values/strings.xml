@@ -10,4 +10,6 @@
     <string name="filenotfound">Sorry, I could not find the file you wanted to open!</string>
     <string name="noicon">no icon</string>
     <string name="novalidfile">Please start DroidPlane by opening a *.mm file"</string>
+    <string name="copynodetext">Copy Node Text</string>
+    <string name="openlink">Open Link</string>
 </resources>

@@ -15,6 +15,8 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -309,6 +311,7 @@ public class MainActivity extends Activity {
 	 * 
 	 * @see android.app.Activity#onContextItemSelected(android.view.MenuItem)
 	 */
+	@SuppressLint("NewApi")
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
 		
@@ -318,13 +321,40 @@ public class MainActivity extends Activity {
 		// context menu was loaded, i.e. the index of the item in our
 		// mindmapNodes list
 		
-		Log.d(MainApplication.TAG, "position = " + contextMenuInfo.position );
-		
-		Log.d(MainApplication.TAG, "nextContextMenuMindmapNode = " + nextContextMenuMindmapNode.text);
-		
-		// TODO: if MindmapNode would be some kind of View, we could convert contextMenuInfo.targetView back to the MindmapNode here
+		// MindmapNode extends LinearView, so we can cast targetView back to MindmapNode
 		MindmapNode mindmapNode = (MindmapNode)contextMenuInfo.targetView;
 		Log.d(MainApplication.TAG, "mindmapNode.text = " + mindmapNode.text);
+		
+		Log.d(MainApplication.TAG, "contextMenuInfo.position = " + contextMenuInfo.position);
+		Log.d(MainApplication.TAG, "item.getTitle() = " + item.getTitle());
+		
+		switch (item.getItemId()) {
+
+		// copy node text to clipboard
+		case R.id.contextcopy:
+			Log.d(MainApplication.TAG, "Copying text to clipboard");
+			ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+			
+	    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+				ClipData clipData = ClipData.newPlainText("node", mindmapNode.text);
+				clipboardManager.setPrimaryClip(clipData);
+	    	} else {
+	    		clipboardManager.setText(mindmapNode.text);
+	    	}
+			
+			break;
+			
+		// open the URI specified in the "LINK" tag
+		case R.id.contextopenlink:
+			Log.d(MainApplication.TAG, "Opening node link " + mindmapNode.link);
+			Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+			openUriIntent.setData(mindmapNode.link);
+			startActivity(openUriIntent);
+
+		default:
+			break;
+		}
+		
 		
 		
 

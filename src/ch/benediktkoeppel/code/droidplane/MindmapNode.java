@@ -8,11 +8,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import android.content.Context;
-import android.util.AttributeSet;
+import android.net.Uri;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 
@@ -45,6 +43,11 @@ public class MindmapNode extends LinearLayout {
 	public boolean isExpandable;
 	
 	/**
+	 * if the node has a LINK attribute, it will be stored in Uri link
+	 */
+	public Uri link;
+	
+	/**
 	 * the XML DOM node from which this MindMapNode is derived
 	 */
 	private Node node;
@@ -66,13 +69,6 @@ public class MindmapNode extends LinearLayout {
 					"The constructor public MindmapNode(Context context) may only be called by graphical layout tools, i.e. when View#isInEditMode() is true. In production, use the constructor public MindmapNode(Context context, Node node).");
 		}
 	}
-	
-	public MindmapNode(Context context, AttributeSet attrs) {
-		super(context, attrs);
-		// TODO Auto-generated constructor stub
-	}
-
-
 
 	/**
 	 * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". 
@@ -97,6 +93,11 @@ public class MindmapNode extends LinearLayout {
 		// extract the string (TEXT attribute) of the nodes
 		// TODO: how do we handle rich text nodes?
 		text = tmp_element.getAttribute("TEXT");
+		
+		String linkAttribute = tmp_element.getAttribute("LINK");
+		if ( !linkAttribute.equals("") ) {
+			link = Uri.parse(linkAttribute);
+		}
 
 		// extract icons
 		// TODO: how do we handle multiple icons?
@@ -110,7 +111,14 @@ public class MindmapNode extends LinearLayout {
 
 		// find out if it has sub nodes
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
+		
+		// load the layout from the XML file
+		// TODO: somehow the height of the item is wrong
+        inflate(context, R.layout.mindmap_node_list_item, this);
+		
 	}
+	
+	
 	
 	/**
 	 * Returns the XML Node of which this MindmapNode was derived
@@ -239,6 +247,7 @@ public class MindmapNode extends LinearLayout {
 		menu.setHeaderIcon(icon_res_id);
 		
 		// add a submenu showing all icons
+		// Context menus do not support icons.
 //		SubMenu iconMenu = menu.addSubMenu("All icons");
 //		ArrayList<String> icons = getIcons();
 //		for (int i = 0; i < icons.size(); i++) {
@@ -247,15 +256,16 @@ public class MindmapNode extends LinearLayout {
 //			int iconMenuItemResId = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
 //			iconMenuItem.setIcon(MainApplication.getStaticApplicationContext().getResources().getDrawable(iconMenuItemResId));
 //		}
+
+		// allow copying the node text
+		menu.add(0, R.id.contextcopy, 0, R.string.copynodetext);
+
+		// TODO: add menu to open link, if the node has a hyperlink
+		if ( link != null ) {
+			menu.add(0, R.id.contextopenlink, 0, R.string.openlink);
+		}
 		
-		MenuItem item = menu.add("nope");
 		
-		
-		menu.add("nope");
-//		menu.ad
-		
-		
-		// set the item selected listener to this
 		
 	}
 }
