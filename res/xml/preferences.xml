@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <CheckBoxPreference
+        android:key="pref_force_landscape"
+        android:title="@string/pref_force_landscape"
+        android:summary="@string/pref_force_landscape_summary"
+        android:defaultValue="false" />
+</PreferenceScreen>

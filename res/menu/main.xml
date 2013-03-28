@@ -8,6 +8,9 @@
     <item android:id="@+id/top"
         android:title="@string/gototop"
         android:showAsAction="ifRoom" />
+    <item android:id="@+id/settings"
+        android:title="@string/settings"
+        android:showAsAction="never" />
     <item android:id="@+id/help"
         android:title="@string/help"
         android:showAsAction="never" />

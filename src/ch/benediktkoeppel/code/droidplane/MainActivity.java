@@ -18,9 +18,12 @@ import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.widget.LinearLayout;
@@ -76,6 +79,37 @@ public class MainActivity extends Activity {
         MainApplication.setMainActivityInstance(this);
         
         // initialize android stuff
+        // check whether we have to enforce the landscape view
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        if ( sharedPref.getBoolean("pref_force_landscape", false) ) {
+        	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+        		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+        	} else {
+        		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        	}
+        }
+        SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+        	@Override
+        	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        		
+        		Log.v(MainApplication.TAG, "onSharedPreferenceChanged called for key " + key);
+        		
+                if (key.equals("pref_force_landscape")) {
+                    if ( sharedPreferences.getBoolean("pref_force_landscape", false) ) {
+                    	Log.v(MainApplication.TAG, "setting orientation to SCREEN_ORIENTATION_SENSOR");
+                    	MainApplication.getMainActivityInstance().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+                    } else {
+                    	Log.v(MainApplication.TAG, "setting orientation to SCREEN_ORIENTATION_REVERSE_LANDSCAPE");
+                    	MainApplication.getMainActivityInstance().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+                    }
+                }		
+        	}
+    	};
+    	sharedPref.registerOnSharedPreferenceChangeListener(prefListener);
+    	
+    	
+    	
+        
         // EasyTracker
         EasyTracker.getInstance().setContext(this);
     	EasyTracker.getTracker().sendView("MainActivity");
@@ -289,12 +323,18 @@ public class MainActivity extends Activity {
 			
 		// "Help" menu action
 		case R.id.help:
-			
-			// create a new intent (without URI)
+			// create a new intent (without URI, but force INTENT_START_HELP)
 			Intent helpIntent = new Intent(this, MainActivity.class);
 			helpIntent.putExtra(INTENT_START_HELP, true);
 			startActivity(helpIntent);
-
+			break;
+			
+		// "Settings" menu action
+		case R.id.settings:
+			Intent settingsIntent = new Intent(this, PreferencesActivity.class);
+			startActivity(settingsIntent);
+			break;
+			
 		// App button (top left corner)
 		case android.R.id.home:
 			application.horizontalMindmapView.up();
