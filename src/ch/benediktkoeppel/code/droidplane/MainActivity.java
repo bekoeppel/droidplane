@@ -52,6 +52,8 @@ public class MainActivity extends Activity {
 	
 	MainApplication application;
 	
+	public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
+	
 	@Override
 	public void onStart() {
 		super.onStart();
@@ -91,7 +93,10 @@ public class MainActivity extends Activity {
 		
 		// if the application was reset, or the document has changed, we need to re-initialize everything
 		// TODO: factor this stuff out. we really should have a loadDocument(InputStream) method somewhere
-		if ( application.document == null || (application.getUri()!=intent.getData() && intent.getData()!=null) ) {
+		if ( application.document == null
+				|| (application.getUri()!=intent.getData() && intent.getData()!=null)
+				|| (intent.getBooleanExtra(INTENT_START_HELP,false))
+		) {
 			
 			// Mindmap stuff
 			InputStream mm = null;
@@ -281,6 +286,14 @@ public class MainActivity extends Activity {
 		case R.id.top:
 			application.horizontalMindmapView.top();
 			break;
+			
+		// "Help" menu action
+		case R.id.help:
+			
+			// create a new intent (without URI)
+			Intent helpIntent = new Intent(this, MainActivity.class);
+			helpIntent.putExtra(INTENT_START_HELP, true);
+			startActivity(helpIntent);
 
 		// App button (top left corner)
 		case android.R.id.home:

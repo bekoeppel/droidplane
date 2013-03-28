@@ -15,6 +15,18 @@ import org.w3c.dom.Document;
 @ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 	
+	/*
+	 * TODO: some idiot (yes, me) thought that it was a very clever idea to
+	 * stuff everything into this application. However, now when we open
+	 * multiple documents (i.e. separate activities), then it all breaks
+	 * terribly. We'll have to see how we get all that stuff back into the
+	 * MainActivity.
+	 * But then again we have the problem when the screen rotates. What do we do
+	 * then? Or should we store everything in hashes here in the
+	 * MainApplication, and then give every MainActivity it's own variables back
+	 * out of this hash?
+	 */
+	
 	/**
 	 * Android Logging TAG
 	 */
