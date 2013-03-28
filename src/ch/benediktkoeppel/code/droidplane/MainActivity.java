@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
 		
 		// if the application was reset, or the document has changed, we need to re-initialize everything
 		// TODO: factor this stuff out. we really should have a loadDocument(InputStream) method somewhere
-		if ( application.document == null || application.getUri() != intent.getData() ) {
+		if ( application.document == null || (application.getUri()!=intent.getData() && intent.getData()!=null) ) {
 			
 			// Mindmap stuff
 			InputStream mm = null;
