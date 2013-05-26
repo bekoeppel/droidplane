@@ -27,17 +27,17 @@ import android.widget.LinearLayout;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
-// TODO: think about a strategy to strip out Log.v and Log.d messages for releases
+// TODO (low): think about a strategy to strip out Log.v and Log.d messages for releases
 
-// TODO: stop using DOM Nodes, and switch to MindmapNodes
-// TODO: start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
+// TODO (medium): stop using DOM Nodes, and switch to MindmapNodes
+// TODO (low): start using a SAX parser and build my own MindMap, dynamically build branches when user drills down, truncate branches when they are not used anymore. How will we do Edit Node / Insert Node, if we are using a SAX parser? Maybe we should not go for a SAX parser but find a more efficient DOM parser?
 
-// TODO: allow us to open multiple files and display their root nodes and file names in the leftmost column. 
-// TODO: long-click on a root node shows a "close file" or "close this mindmap" menu
-// TODO: add a progress bar when opening a file (or a spinner or so)
-// TODO: can we get built-in icons as SVG?
-// TODO: properly parse rich text nodes
-// TODO: implement OnItemLongClickListener with a context menu (show all icons, follow link, copy text, and ultimately also edit)
+// TODO (low): allow us to open multiple files and display their root nodes and file names in the leftmost column. 
+// TODO (medium): long-click on a root node shows a "close file" or "close this mindmap" menu
+// TODO (high): add a progress bar when opening a file (or a spinner or so)
+// TODO (low): can we get built-in icons as SVG?
+// TODO (medium): properly parse rich text nodes
+// TODO (high): implement OnItemLongClickListener with a context menu (show all icons, follow link, copy text, and ultimately also edit)
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open
@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
 		long loadDocumentStartTime = System.currentTimeMillis();
 		
 		// if the application was reset, or the document has changed, we need to re-initialize everything
-		// TODO: factor this stuff out. we really should have a loadDocument(InputStream) method somewhere
+		// TODO (high): factor this stuff out. we really should have a loadDocument(InputStream) method somewhere
 		if ( application.document == null
 				|| (application.getUri()!=intent.getData() && intent.getData()!=null)
 				|| (intent.getBooleanExtra(INTENT_START_HELP,false))
@@ -242,12 +242,12 @@ public class MainActivity extends Activity {
     @Override
 	public boolean onCreateOptionsMenu(android.view.Menu menu) {
 
-		// TODO: add "Find" button and menu -> should search underneath the
+		// TODO (low): add "Find" button and menu -> should search underneath the
 		// current node (or with an option, under the root node)
     	
-    	// TODO: menu "Open"
+    	// TODO (medium): menu "Open"
     	
-    	// TODO: settings (to set the number of horizontal and vertical columns)
+    	// TODO (low): settings (to set the number of horizontal and vertical columns)
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
@@ -307,7 +307,7 @@ public class MainActivity extends Activity {
 
 
 	// Handler when an item is long clicked
-	// TODO do this!
+	// TODO (high): implement long-click handler
 //	@Override
 //	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 //		

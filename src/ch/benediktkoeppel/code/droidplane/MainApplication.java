@@ -16,7 +16,7 @@ import org.w3c.dom.Document;
 public class MainApplication extends Application {
 	
 	/*
-	 * TODO: some idiot (yes, me) thought that it was a very clever idea to
+	 * TODO (high): some idiot (yes, me) thought that it was a very clever idea to
 	 * stuff everything into this application. However, now when we open
 	 * multiple documents (i.e. separate activities), then it all breaks
 	 * terribly. We'll have to see how we get all that stuff back into the

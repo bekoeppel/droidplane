@@ -111,7 +111,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			}
 
 			@Override
-			public void run() {
+			public void run() { 
 				horizontalMindmapView.fullScroll(FOCUS_RIGHT);
 			}
 		}
@@ -193,7 +193,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			
 			Node parent = nodeColumns.get(nodeColumns.size()-1).getParentNode();
 			
-			// TODO: this really does not belong here. HorizontalMindmapView
+			// TODO (medium): this really does not belong here. HorizontalMindmapView
 			// should not have to care about Node/Element/MindmapNode stuff.
 			// Instead, we should only have MindmapNodes everywhere, and a
 			// MindmapNode should have a proper getPlainText() method.
@@ -501,7 +501,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * Get the number of pixels that are visible on the leftmost column.
 	 * @return
 	 */
-	// TODO: this is ugly, DRY from getLeftmostVisibleColumn() !
+	// TODO (medium): this is ugly, DRY from getLeftmostVisibleColumn() !
 	private int getVisiblePixelOfLeftmostColumn() {
 		
 		// how much we are horizontally scrolled
