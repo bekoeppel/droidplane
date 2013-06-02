@@ -7,6 +7,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.util.Log;
+
 
 
 /**
@@ -44,6 +46,11 @@ public class MindmapNode {
 	 * whether the node is selected or not, will be set after it was clicked by the user
 	 */
 	public boolean selected;
+	
+	/**
+	 * The list of child MindmapNodes. We support lazy loading.
+	 */
+	ArrayList<MindmapNode> childMindmapNodes;
 	
 	
 	/**
@@ -86,9 +93,9 @@ public class MindmapNode {
 	 * Returns the XML Node of which this MindmapNode was derived
 	 * @return
 	 */
-	public Node getNode() {
-		return this.node;
-	}
+//	public Node getNode() {
+//		return this.node;
+//	}
 	
 	/**
 	 * Selects or deselects this node
@@ -185,5 +192,38 @@ public class MindmapNode {
 		}
 		
 		return numMindmapNodes;
+	}
+	
+	/**
+	 * Generates and returns the child nodes of this MindmapNode.
+	 * getChildNodes() does lazy loading, i.e. it generates the child nodes on
+	 * demand and stores them in childMindmapNodes.
+	 * @return ArrayList of this MindmapNode's child nodes
+	 */
+	public ArrayList<MindmapNode> getChildNodes() {
+		
+		// if we haven't loaded the childMindmapNodes before
+		if ( childMindmapNodes == null ) {
+			
+			// fetch all child DOM Nodes, convert them to MindmapNodes
+			childMindmapNodes = new ArrayList<MindmapNode>();
+			NodeList childNodes = node.getChildNodes();
+			for (int i = 0; i < childNodes.getLength(); i++) {
+				Node tmpNode = childNodes.item(i);
+				
+				if ( isMindmapNode(tmpNode) ) {
+					MindmapNode mindmapNode = new MindmapNode(tmpNode);
+					childMindmapNodes.add(mindmapNode);
+				}
+			}
+			Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
+			return childMindmapNodes;
+		}
+		
+		// we already did that before, so return the previous result
+		else {
+			Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
+			return childMindmapNodes;
+		}
 	}
 }

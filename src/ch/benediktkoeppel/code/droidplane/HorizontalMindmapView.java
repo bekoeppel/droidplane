@@ -2,9 +2,6 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.util.ArrayList;
 
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
 import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
@@ -191,25 +188,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		if ( !nodeColumns.isEmpty() ) {
 			
-			Node parent = nodeColumns.get(nodeColumns.size()-1).getParentNode();
-			
-			// TODO (medium): this really does not belong here. HorizontalMindmapView
-			// should not have to care about Node/Element/MindmapNode stuff.
-			// Instead, we should only have MindmapNodes everywhere, and a
-			// MindmapNode should have a proper getPlainText() method.
-			// we need to check if this node is an ELEMENT_NODE, and if it has tag "node"
-			if ( parent.getNodeType()==Node.ELEMENT_NODE && ((Element)parent).getTagName().equals("node") ) {
-				String title = ((Element)parent).getAttribute("TEXT");
-				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returns " + title);
-				return title;
-			}
-			
-			// the parent node did not have the "node" tag, or was not an
-			// ELEMENT_NODE. In either case, we don't know it's title.
-			else {
-				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returned \"\" because the parent is no Mindmap Node");
-				return "";
-			}
+			MindmapNode parent = nodeColumns.get(nodeColumns.size()-1).getParentNode();
+			return parent.text;
 			
 		}
 		
@@ -257,7 +237,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		removeAllColumns();
 
 		// go down into the root node
-		down(MainApplication.getInstance().document.getDocumentElement());
+		down(MainApplication.getInstance().mindmap.getRootNode());
 	}
 
 	/**
@@ -306,7 +286,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * 
 	 * @param node
 	 */
-	public void down(Node node) {
+	public void down(MindmapNode node) {
 
 		// add a new column for this node and add it to the
 		// HorizontalMindmapView
@@ -392,7 +372,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			clickedNodeColumn.setItemColor(position);
 			
 			// and drill down
-			down(clickedNode.getNode());
+			down(clickedNode);
 		}
 		
 		// otherwise (no children) then we just update the application title to the new parent node
