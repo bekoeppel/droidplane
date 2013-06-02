@@ -72,11 +72,9 @@ public class MindmapNode {
 		this.node = node;
 			
 		// extract the string (TEXT attribute) of the nodes
-		// TODO (medium): how do we handle rich text nodes?
 		text = tmp_element.getAttribute("TEXT");
 
 		// extract icons
-		// TODO (low): how do we handle multiple icons?
 		ArrayList<String> icons = getIcons();
 		String icon="";
 		icon_res_id = 0;

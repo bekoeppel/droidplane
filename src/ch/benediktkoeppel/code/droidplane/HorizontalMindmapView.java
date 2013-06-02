@@ -481,7 +481,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * Get the number of pixels that are visible on the leftmost column.
 	 * @return
 	 */
-	// TODO (medium): this is ugly, DRY from getLeftmostVisibleColumn() !
 	private int getVisiblePixelOfLeftmostColumn() {
 		
 		// how much we are horizontally scrolled
