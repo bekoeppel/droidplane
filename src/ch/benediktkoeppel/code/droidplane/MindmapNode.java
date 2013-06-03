@@ -20,6 +20,7 @@ import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.util.Log;
 
 
 
@@ -62,7 +63,12 @@ public class MindmapNode extends LinearLayout {
 	/**
 	 * whether the node is selected or not, will be set after it was clicked by the user
 	 */
-	public boolean selected;	
+	public boolean selected;
+	
+	/**
+	 * The list of child MindmapNodes. We support lazy loading.
+	 */
+	ArrayList<MindmapNode> childMindmapNodes;
 	
 	/**
 	 * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always throw a IllegalArgumentException.
@@ -98,7 +104,6 @@ public class MindmapNode extends LinearLayout {
 		this.node = node;
 			
 		// extract the string (TEXT attribute) of the nodes
-		// TODO: how do we handle rich text nodes?
 		text = tmp_element.getAttribute("TEXT");
 		
 		String linkAttribute = tmp_element.getAttribute("LINK");
@@ -107,7 +112,6 @@ public class MindmapNode extends LinearLayout {
 		}
 
 		// extract icons
-		// TODO: how do we handle multiple icons?
 		ArrayList<String> icons = getIcons();
 		String icon="";
 		icon_res_id = 0;
@@ -120,7 +124,6 @@ public class MindmapNode extends LinearLayout {
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 		
 		// load the layout from the XML file
-		// TODO: somehow the height of the item is wrong
         MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
         refreshView();
 		
@@ -181,9 +184,9 @@ public class MindmapNode extends LinearLayout {
 	 * Returns the XML Node of which this MindmapNode was derived
 	 * @return
 	 */
-	public Node getNode() {
-		return this.node;
-	}
+//	public Node getNode() {
+//		return this.node;
+//	}
 	
 	/**
 	 * Selects or deselects this node
@@ -287,16 +290,13 @@ public class MindmapNode extends LinearLayout {
 	 * events per se, because the NodeColumn first has to decide for which
 	 * MindmapNode the event applies.
 	 * 
-	 * TODO: is this really true? Or could we set a onCreateContextMenu listener
-	 * for a ListItem?
-	 * 
 	 * @param menu
 	 * @param v
 	 * @param menuInfo
 	 */
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 		
-		MainApplication.getMainActivityInstance().setNextContextMenuMindmapNode(this);
+//		MainApplication.getMainActivityInstance().setNextContextMenuMindmapNode(this);
 		
 		
 		// build the menu
@@ -317,12 +317,43 @@ public class MindmapNode extends LinearLayout {
 		// allow copying the node text
 		menu.add(0, R.id.contextcopy, 0, R.string.copynodetext);
 
-		// TODO: add menu to open link, if the node has a hyperlink
+		// add menu to open link, if the node has a hyperlink
 		if ( link != null ) {
 			menu.add(0, R.id.contextopenlink, 0, R.string.openlink);
 		}
+	}
 		
 		
+	/*
+	 * Generates and returns the child nodes of this MindmapNode.
+	 * getChildNodes() does lazy loading, i.e. it generates the child nodes on
+	 * demand and stores them in childMindmapNodes.
+	 * @return ArrayList of this MindmapNode's child nodes
+	 */
+	public ArrayList<MindmapNode> getChildNodes() {
 		
+		// if we haven't loaded the childMindmapNodes before
+		if ( childMindmapNodes == null ) {
+			
+			// fetch all child DOM Nodes, convert them to MindmapNodes
+			childMindmapNodes = new ArrayList<MindmapNode>();
+			NodeList childNodes = node.getChildNodes();
+			for (int i = 0; i < childNodes.getLength(); i++) {
+				Node tmpNode = childNodes.item(i);
+				
+				if ( isMindmapNode(tmpNode) ) {
+					MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode);
+					childMindmapNodes.add(mindmapNode);
+				}
+			}
+			Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
+			return childMindmapNodes;
+		}
+		
+		// we already did that before, so return the previous result
+		else {
+			Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
+			return childMindmapNodes;
+		}
 	}
 }

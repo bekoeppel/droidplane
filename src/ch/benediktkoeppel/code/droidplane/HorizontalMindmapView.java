@@ -2,12 +2,7 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.util.ArrayList;
 
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -18,7 +13,6 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -115,7 +109,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			}
 
 			@Override
-			public void run() {
+			public void run() { 
 				horizontalMindmapView.fullScroll(FOCUS_RIGHT);
 			}
 		}
@@ -195,25 +189,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		if ( !nodeColumns.isEmpty() ) {
 			
-			Node parent = nodeColumns.get(nodeColumns.size()-1).getParentNode();
-			
-			// TODO: this really does not belong here. HorizontalMindmapView
-			// should not have to care about Node/Element/MindmapNode stuff.
-			// Instead, we should only have MindmapNodes everywhere, and a
-			// MindmapNode should have a proper getPlainText() method.
-			// we need to check if this node is an ELEMENT_NODE, and if it has tag "node"
-			if ( parent.getNodeType()==Node.ELEMENT_NODE && ((Element)parent).getTagName().equals("node") ) {
-				String title = ((Element)parent).getAttribute("TEXT");
-				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returns " + title);
-				return title;
-			}
-			
-			// the parent node did not have the "node" tag, or was not an
-			// ELEMENT_NODE. In either case, we don't know it's title.
-			else {
-				Log.d(MainApplication.TAG, "getTitleOfRightmostParent returned \"\" because the parent is no Mindmap Node");
-				return "";
-			}
+			MindmapNode parent = nodeColumns.get(nodeColumns.size()-1).getParentNode();
+			return parent.text;
 			
 		}
 		
@@ -261,7 +238,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		removeAllColumns();
 
 		// go down into the root node
-		down(MainApplication.getInstance().document.getDocumentElement());
+		down(MainApplication.getInstance().mindmap.getRootNode());
 	}
 
 	/**
@@ -310,7 +287,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * 
 	 * @param node
 	 */
-	public void down(Node node) {
+	public void down(MindmapNode node) {
 
 		// add a new column for this node and add it to the
 		// HorizontalMindmapView
@@ -396,7 +373,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			clickedNodeColumn.setItemColor(position);
 			
 			// and drill down
-			down(clickedNode.getNode());
+			down(clickedNode);
 		}
 		
 		// otherwise (no children) then we just update the application title to the new parent node
@@ -405,34 +382,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		}
 	}
 	
-
-
-//
-//	// Handler when an item is long clicked
-//	// TODO do this!
-//	@Override
-//	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-//		
-//		// get the clicked column
-//		NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
-//
-//		// then get the clicked node
-//		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
-//		
-//		AlertDialog.Builder builder = new AlertDialog.Builder(MainApplication.getMainActivityInstance());
-//        builder.setMessage(clickedNode.text);
-//        builder.setCancelable(true);
-//        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-//        	public void onClick(DialogInterface dialog, int which) {
-//        		return;
-//        	}
-//        });
-//
-//        AlertDialog alert = builder.create();
-//        alert.show();
-//		
-//		return true;
-//	}
 	
 	/*
 	 * (non-Javadoc)
@@ -534,7 +483,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 	 * Get the number of pixels that are visible on the leftmost column.
 	 * @return
 	 */
-	// TODO: this is ugly, DRY from getLeftmostVisibleColumn() !
 	private int getVisiblePixelOfLeftmostColumn() {
 		
 		// how much we are horizontally scrolled

@@ -12,4 +12,5 @@
     <string name="novalidfile">Please start DroidPlane by opening a *.mm file"</string>
     <string name="copynodetext">Copy Node Text</string>
     <string name="openlink">Open Link</string>
+    <string name="help">Help</string>
 </resources>
