@@ -7,15 +7,14 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
-import android.util.TypedValue;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -129,7 +128,7 @@ public class MindmapNode extends LinearLayout {
 		
 	}
 	
-	
+	@SuppressLint("InlinedApi")
 	public void refreshView() {
 		
 		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
@@ -173,20 +172,7 @@ public class MindmapNode extends LinearLayout {
 		// mindmap_node_list_item XML file.
 		setLayoutParams(new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, AbsListView.LayoutParams.WRAP_CONTENT));
 		setGravity(Gravity.LEFT | Gravity.CENTER);
-//		int paddingPx = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics());
-//		setPadding(paddingPx, paddingPx, 0, paddingPx);
 	}
-	
-	
-	
-	
-	/**
-	 * Returns the XML Node of which this MindmapNode was derived
-	 * @return
-	 */
-//	public Node getNode() {
-//		return this.node;
-//	}
 	
 	/**
 	 * Selects or deselects this node
@@ -296,14 +282,11 @@ public class MindmapNode extends LinearLayout {
 	 */
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 		
-//		MainApplication.getMainActivityInstance().setNextContextMenuMindmapNode(this);
-		
-		
 		// build the menu
 		menu.setHeaderTitle(text);
 		menu.setHeaderIcon(icon_res_id);
 		
-		// add a submenu showing all icons
+		// TODO: add a submenu showing all icons
 		// Context menus do not support icons.
 //		SubMenu iconMenu = menu.addSubMenu("All icons");
 //		ArrayList<String> icons = getIcons();

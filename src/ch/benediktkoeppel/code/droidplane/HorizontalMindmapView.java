@@ -90,7 +90,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		// register as onItemClickListener and onItemLongClickListener
 		nodeColumn.setOnItemClickListener(this);
-//		nodeColumn.setOnItemLongClickListener(this);
 	}
 	
 	/**

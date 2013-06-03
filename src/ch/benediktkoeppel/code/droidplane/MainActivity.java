@@ -261,6 +261,7 @@ public class MainActivity extends Activity {
 	 * 
 	 * @see android.app.Activity#onContextItemSelected(android.view.MenuItem)
 	 */
+	@SuppressWarnings("deprecation")
 	@SuppressLint("NewApi")
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
@@ -304,35 +305,8 @@ public class MainActivity extends Activity {
 		default:
 			break;
 		}
-		
 
-		
-		
-//		Node pushedNode = currentListedNodes.get(position);
-
-		
-
-		
-//		
-//		
-//		public boolean onContextItemSelected(MenuItem item) {
-//		    // Here's how you can get the correct item in onContextItemSelected()
-//		    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-//		    Object item = getListAdapter().getItem(info.position);
-//		
-		
-		
-		
-		
-//	  AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
-//	  int menuItemIndex = item.getItemId();
-//	  String[] menuItems = getResources().getStringArray(R.array.menu);
-//	  String menuItemName = menuItems[menuItemIndex];
-//	  String listItemName = Countries[info.position];
-//
-//	  TextView text = (TextView)findViewById(R.id.footer);
-//	  text.setText(String.format("Selected %s for item %s", menuItemName, listItemName));
-	  return true;
+		return true;
 	}
 	
 	/**
