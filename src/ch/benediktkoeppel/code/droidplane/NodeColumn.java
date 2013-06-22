@@ -314,6 +314,12 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		
+//		if ( convertView != null ) {
+//			if ( convertView instanceof MindmapNode ) {
+//				((MindmapNode)convertView).discardView();
+//			}
+//		}
+		
 		// when convertView != null, we should take the convertView and update
 		// it appropriately. Android is optimizing the performance
 		// and thus recycling GUI elements. However, we don't want to recycle
