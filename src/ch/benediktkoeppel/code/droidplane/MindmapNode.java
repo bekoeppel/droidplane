@@ -104,20 +104,29 @@ public class MindmapNode extends LinearLayout {
 			
 		// extract the string (TEXT attribute) of the nodes
 		text = tmp_element.getAttribute("TEXT");
-		
-		String linkAttribute = tmp_element.getAttribute("LINK");
-		if ( !linkAttribute.equals("") ) {
-			link = Uri.parse(linkAttribute);
-		}
 
-		// extract icons
-		ArrayList<String> icons = getIcons();
-		String icon="";
-		icon_res_id = 0;
-		if ( icons.size() > 0 ) {
-			icon = icons.get(0);
-			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
-		}
+        // extract icons
+        ArrayList<String> icons = getIcons();
+        String icon="";
+        icon_res_id = 0;
+        if ( icons.size() > 0 ) {
+            icon = icons.get(0);
+            icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+        }
+
+        String linkAttribute = tmp_element.getAttribute("LINK");
+        if (!linkAttribute.equals("")) {
+            link = Uri.parse(linkAttribute);
+            icon_res_id = MainApplication
+                    .getStaticApplicationContext()
+                    .getResources()
+                    .getIdentifier(
+                            "@drawable/link",
+                            "id",
+                            MainApplication.getStaticApplicationContext()
+                                    .getPackageName());
+        }
+
 
 		// find out if it has sub nodes
 		isExpandable = ( getNumChildMindmapNodes() > 0 );

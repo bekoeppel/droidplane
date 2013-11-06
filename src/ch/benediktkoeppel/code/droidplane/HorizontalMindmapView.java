@@ -3,6 +3,7 @@ package ch.benediktkoeppel.code.droidplane;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -364,7 +365,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 		
 		// then get the clicked node
 		MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
-		
+        if (clickedNode.link != null) {
+            Log.d(MainApplication.TAG, "Opening node link " + clickedNode.link);
+            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+            openUriIntent.setData(clickedNode.link);
+            MainApplication.getMainActivityInstance().startActivity(
+                    openUriIntent);
+        } else
 		// if the clicked node has child nodes, we set it to selected and drill down
 		if ( clickedNode.getNumChildMindmapNodes() > 0 ) {
 			
