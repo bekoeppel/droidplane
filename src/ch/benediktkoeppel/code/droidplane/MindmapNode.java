@@ -123,7 +123,8 @@ public class MindmapNode extends LinearLayout {
         }
 
         String linkAttribute = tmp_element.getAttribute("LINK");
-        if (!linkAttribute.equals("")) {
+        if (!linkAttribute.equals("")
+                && linkAttribute.toLowerCase().startsWith("http")) {
             link = Uri.parse(linkAttribute);
             icon_res_id = MainApplication
                     .getStaticApplicationContext()
