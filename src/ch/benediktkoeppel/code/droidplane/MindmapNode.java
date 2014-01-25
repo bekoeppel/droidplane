@@ -117,12 +117,15 @@ public class MindmapNode extends LinearLayout {
 
         // if no text, search img and richcontent
         if (text == null || "".equals(text)) {
-            text = "";
+            String imgTxt = "";
+            String bodyTxt = "";
             NodeList nodeList = tmp_element.getChildNodes();
             for (int i = 0; i < nodeList.getLength(); i++) {
                 Node n = nodeList.item(i);
                 if (n.getNodeType() == Node.ELEMENT_NODE
                         && "richcontent".equals(n.getNodeName())) {
+                    Element richcontent = (Element) n;
+                    if (richcontent.getAttribute("TYPE").equals("NODE")) {
                     Element e = (Element) n;
                     NodeList imgNodeList = e.getElementsByTagName("img");
                     for (int j = 0; j < imgNodeList.getLength(); j++) {
@@ -130,10 +133,16 @@ public class MindmapNode extends LinearLayout {
                                 .getAttribute("src");
                         String name = new File("/" + src).getName();
                         name = name.substring(0, name.lastIndexOf('.'));
-                        text = name;
+                            imgTxt = name;
+                        }
+                        bodyTxt = getTextNode(richcontent);
                     }
                 }
             }
+            if (bodyTxt.equals(""))
+                text = imgTxt;
+            else
+                text = bodyTxt;
         }
 
 
