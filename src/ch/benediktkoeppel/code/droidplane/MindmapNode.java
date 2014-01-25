@@ -3,6 +3,7 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 import org.w3c.dom.Element;
@@ -114,13 +115,14 @@ public class MindmapNode extends LinearLayout {
         // extract the string (TEXT attribute) of the nodes
         text = tmp_element.getAttribute("TEXT");
 
+        // if no text, search img and richcontent
         if (text == null || "".equals(text)) {
             text = "";
-            NodeList richcontentNodeList = tmp_element
-                    .getElementsByTagName("richcontent");
-            for (int i = 0; i < richcontentNodeList.getLength(); i++) {
-                Node n = richcontentNodeList.item(i);
-                if (n.getNodeType() == Node.ELEMENT_NODE) {
+            NodeList nodeList = tmp_element.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node n = nodeList.item(i);
+                if (n.getNodeType() == Node.ELEMENT_NODE
+                        && "richcontent".equals(n.getNodeName())) {
                     Element e = (Element) n;
                     NodeList imgNodeList = e.getElementsByTagName("img");
                     for (int j = 0; j < imgNodeList.getLength(); j++) {
@@ -168,7 +170,20 @@ public class MindmapNode extends LinearLayout {
                 this);
         refreshView();
 	}
-	
+
+    private String getTextNode(Node node) {
+        if (node.getNodeType() == Node.TEXT_NODE)
+            return node.getNodeValue().trim();
+        else {
+            String text = "";
+            NodeList nodeList = node.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                text += getTextNode(nodeList.item(i));
+            }
+            return text;
+        }
+    }
+
 	@SuppressLint("InlinedApi")
 	public void refreshView() {
 		
