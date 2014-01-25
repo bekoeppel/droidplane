@@ -17,6 +17,9 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Element;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener/*, OnItemLongClickListener*/ {
 	
@@ -380,11 +383,35 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
             openUriIntent.setData(clickedNode.link);
             MainApplication.getMainActivityInstance().startActivity(
                     openUriIntent);
-		}
-		
+        }
 		// otherwise (no children) then we just update the application title to the new parent node
 		else {
 			setApplicationTitle();
+			// change icon unchecked/checked
+            if ("icon_unchecked".equals(clickedNode.icon_name)
+                    || "icon_checked".equals(clickedNode.icon_name)) {
+                Node node = clickedNode.getNode();
+
+                NodeList childNodes = node.getChildNodes();
+                for (int i = 0; i < childNodes.getLength(); i++) {
+                    Node n = childNodes.item(i);
+                    if (n.getNodeType() == Node.ELEMENT_NODE) {
+                        Element e = (Element) n;
+                        if (e.getTagName().equals("icon")
+                                && e.hasAttribute("BUILTIN")) {
+                            String iconName = e.getAttribute("BUILTIN");
+                            if (iconName.equals("unchecked")) {
+                                e.setAttribute("BUILTIN", "checked");
+                                clickedNode.refreshNode();
+                            } else if (iconName.equals("checked")) {
+                                e.setAttribute("BUILTIN", "unchecked");
+                                clickedNode.refreshNode();
+                            }
+                        }
+                    }
+                }
+
+            }
 		}
 	}
 	

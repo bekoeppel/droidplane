@@ -90,20 +90,27 @@ public class MindmapNode extends LinearLayout {
 	public MindmapNode(Context context, Node node) {
 		
 		super(context);
-		
-		// convert the XML Node to a XML Element
-		Element tmp_element;
-		if ( isMindmapNode(node) ) {
-			tmp_element = (Element)node;
-		} else {
-			throw new ClassCastException("Can not convert Node to MindmapNode");
-		}
-		
-		// store the Node
-		this.node = node;
-			
-		// extract the string (TEXT attribute) of the nodes
-		text = tmp_element.getAttribute("TEXT");
+        // store the Node
+        this.node = node;
+        refreshNode();
+	}
+
+    public Node getNode() {
+        return node;
+    }
+
+    public void refreshNode() {
+
+        // convert the XML Node to a XML Element
+        Element tmp_element;
+        if (isMindmapNode(node)) {
+            tmp_element = (Element) node;
+        } else {
+            throw new ClassCastException("Can not convert Node to MindmapNode");
+        }
+
+        // extract the string (TEXT attribute) of the nodes
+        text = tmp_element.getAttribute("TEXT");
 
         // extract icons
         ArrayList<String> icons = getIcons();
@@ -111,6 +118,7 @@ public class MindmapNode extends LinearLayout {
         icon_res_id = 0;
         if ( icons.size() > 0 ) {
             icon = icons.get(0);
+            icon_name = icon;
             icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
         }
 
@@ -128,13 +136,13 @@ public class MindmapNode extends LinearLayout {
         }
 
 
-		// find out if it has sub nodes
-		isExpandable = ( getNumChildMindmapNodes() > 0 );
-		
-		// load the layout from the XML file
-        MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
+        // find out if it has sub nodes
+        isExpandable = (getNumChildMindmapNodes() > 0);
+
+        // load the layout from the XML file
+        MindmapNode.inflate(this.getContext(), R.layout.mindmap_node_list_item,
+                this);
         refreshView();
-		
 	}
 	
 	@SuppressLint("InlinedApi")
