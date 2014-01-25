@@ -1,6 +1,8 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Locale;
 
 import org.w3c.dom.Element;
@@ -111,6 +113,27 @@ public class MindmapNode extends LinearLayout {
 
         // extract the string (TEXT attribute) of the nodes
         text = tmp_element.getAttribute("TEXT");
+
+        if (text == null || "".equals(text)) {
+            text = "";
+            NodeList richcontentNodeList = tmp_element
+                    .getElementsByTagName("richcontent");
+            for (int i = 0; i < richcontentNodeList.getLength(); i++) {
+                Node n = richcontentNodeList.item(i);
+                if (n.getNodeType() == Node.ELEMENT_NODE) {
+                    Element e = (Element) n;
+                    NodeList imgNodeList = e.getElementsByTagName("img");
+                    for (int j = 0; j < imgNodeList.getLength(); j++) {
+                        String src = ((Element) imgNodeList.item(j))
+                                .getAttribute("src");
+                        String name = new File("/" + src).getName();
+                        name = name.substring(0, name.lastIndexOf('.'));
+                        text = name;
+                    }
+                }
+            }
+        }
+
 
         // extract icons
         ArrayList<String> icons = getIcons();
