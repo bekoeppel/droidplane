@@ -39,7 +39,7 @@
                 <data android:host="*" />
                 <data android:pathPattern=".*\\.mm" />
                 <!-- <data android:mimeType="application/x-freemind" /> -->
-                <data android:mimeType="*/*" />
+                <data android:mimeType="*" />
             </intent-filter>
 
             </activity>
