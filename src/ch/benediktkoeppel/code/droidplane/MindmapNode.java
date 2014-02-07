@@ -68,6 +68,11 @@ public class MindmapNode extends LinearLayout {
 	 * The list of child MindmapNodes. We support lazy loading.
 	 */
 	ArrayList<MindmapNode> childMindmapNodes;
+
+	/**
+	 * True, when this MindmapNode has an inflated layout. Otherwise false.
+	 */
+	private Boolean isLayoutInflated = false;
 	
 	/**
 	 * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always throw a IllegalArgumentException.
@@ -123,13 +128,29 @@ public class MindmapNode extends LinearLayout {
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 		
 		// load the layout from the XML file
-        MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
-        refreshView();
+		// TODO: we should not inflate the layout straight away, but only when the MindmapNode is displaye (lazy loading)
+//        MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
+//        refreshView();
 		
+	}
+	
+	/**
+	 * Inflates the layout from the XML file if it is not yet inflated
+	 * @param context
+	 */
+	private void inflateLayout(Context context) {
+		synchronized (isLayoutInflated ) {
+			if (!isLayoutInflated) {
+				MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
+			}
+		}
 	}
 	
 	@SuppressLint("InlinedApi")
 	public void refreshView() {
+		
+		// inflate the layout if we haven't done so yet
+		inflateLayout(getContext());
 		
 		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
 		ImageView iconView = (ImageView)findViewById(R.id.icon);
