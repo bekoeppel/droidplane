@@ -1,6 +1,9 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 import org.w3c.dom.Element;
@@ -95,35 +98,16 @@ public class MindmapNode extends LinearLayout {
 	public MindmapNode(Context context, Node node) {
 		
 		super(context);
-		
-		// convert the XML Node to a XML Element
-		Element tmp_element;
-		if ( isMindmapNode(node) ) {
-			tmp_element = (Element)node;
-		} else {
-			throw new ClassCastException("Can not convert Node to MindmapNode");
-		}
-		
-		// store the Node
-		this.node = node;
-			
-		// extract the string (TEXT attribute) of the nodes
-		text = tmp_element.getAttribute("TEXT");
-		
-		String linkAttribute = tmp_element.getAttribute("LINK");
-		if ( !linkAttribute.equals("") ) {
-			link = Uri.parse(linkAttribute);
-		}
+        // store the Node
+        this.node = node;
+        refreshNode();
+	}
 
-		// extract icons
-		ArrayList<String> icons = getIcons();
-		String icon="";
-		icon_res_id = 0;
-		if ( icons.size() > 0 ) {
-			icon = icons.get(0);
-			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
-		}
+    public Node getNode() {
+        return node;
+    }
 
+<<<<<<< HEAD
 		// find out if it has sub nodes
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 		
@@ -146,6 +130,99 @@ public class MindmapNode extends LinearLayout {
 		}
 	}
 	
+=======
+    public void refreshNode() {
+
+        // convert the XML Node to a XML Element
+        Element tmp_element;
+        if (isMindmapNode(node)) {
+            tmp_element = (Element) node;
+        } else {
+            throw new ClassCastException("Can not convert Node to MindmapNode");
+        }
+
+        // extract the string (TEXT attribute) of the nodes
+        text = tmp_element.getAttribute("TEXT");
+
+        // if no text, search img and richcontent
+        if (text == null || "".equals(text)) {
+            String imgTxt = "";
+            String bodyTxt = "";
+            NodeList nodeList = tmp_element.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node n = nodeList.item(i);
+                if (n.getNodeType() == Node.ELEMENT_NODE
+                        && "richcontent".equals(n.getNodeName())) {
+                    Element richcontent = (Element) n;
+                    if (richcontent.getAttribute("TYPE").equals("NODE")) {
+                    Element e = (Element) n;
+                    NodeList imgNodeList = e.getElementsByTagName("img");
+                    for (int j = 0; j < imgNodeList.getLength(); j++) {
+                        String src = ((Element) imgNodeList.item(j))
+                                .getAttribute("src");
+                        String name = new File("/" + src).getName();
+                        name = name.substring(0, name.lastIndexOf('.'));
+                            imgTxt = name;
+                        }
+                        bodyTxt = getTextNode(richcontent);
+                    }
+                }
+            }
+            if (bodyTxt.equals(""))
+                text = imgTxt;
+            else
+                text = bodyTxt;
+        }
+
+
+        // extract icons
+        ArrayList<String> icons = getIcons();
+        String icon="";
+        icon_res_id = 0;
+        if ( icons.size() > 0 ) {
+            icon = icons.get(0);
+            icon_name = icon;
+            icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+        }
+
+        String linkAttribute = tmp_element.getAttribute("LINK");
+        if (!linkAttribute.equals("")
+                && linkAttribute.toLowerCase().startsWith("http")) {
+            link = Uri.parse(linkAttribute);
+            icon_res_id = MainApplication
+                    .getStaticApplicationContext()
+                    .getResources()
+                    .getIdentifier(
+                            "@drawable/link",
+                            "id",
+                            MainApplication.getStaticApplicationContext()
+                                    .getPackageName());
+        }
+
+
+        // find out if it has sub nodes
+        isExpandable = (getNumChildMindmapNodes() > 0);
+
+        // load the layout from the XML file
+        MindmapNode.inflate(this.getContext(), R.layout.mindmap_node_list_item,
+                this);
+        refreshView();
+	}
+
+    private String getTextNode(Node node) {
+        if (node.getNodeType() == Node.TEXT_NODE)
+            return node.getNodeValue().trim();
+        else {
+            String text = "";
+            NodeList nodeList = node.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                text += getTextNode(nodeList.item(i));
+            }
+            return text;
+        }
+    }
+
+>>>>>>> f6618c63ace1b17d987cc23017e9e21c20a61b78
 	@SuppressLint("InlinedApi")
 	public void refreshView() {
 		

@@ -3,6 +3,7 @@ package ch.benediktkoeppel.code.droidplane;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -16,6 +17,9 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Element;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener/*, OnItemLongClickListener*/ {
 	
@@ -373,8 +377,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			
 			// and drill down
 			down(clickedNode);
-		}
-		
+        } else if (clickedNode.link != null) {
+            Log.d(MainApplication.TAG, "Opening node link " + clickedNode.link);
+            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+            openUriIntent.setData(clickedNode.link);
+            MainApplication.getMainActivityInstance().startActivity(
+                    openUriIntent);
+        }
 		// otherwise (no children) then we just update the application title to the new parent node
 		else {
 			setApplicationTitle();

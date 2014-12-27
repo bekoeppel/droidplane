@@ -374,8 +374,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 			// and drill down
 			down(clickedNode);
 		}
-		
-		// otherwise (no children) then we just update the application title to the new parent node
+
+        // if the clicked node has a link (and is a leaf), open the link
+        else if (clickedNode.link != null) {
+            clickedNode.openLink();
+        }
+
+        // otherwise (no children) then we just update the application title to the new parent node
 		else {
 			setApplicationTitle();
 		}

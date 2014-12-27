@@ -1,26 +1,31 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import java.util.ArrayList;
-import java.util.Locale;
+import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.text.Html;
+import android.util.Log;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Gravity;
+import android.view.View;
+import android.webkit.MimeTypeMap;
+import android.widget.AbsListView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.net.Uri;
-import android.os.Build;
-import android.view.ContextMenu;
-import android.view.ContextMenu.ContextMenuInfo;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.AbsListView;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.util.Log;
-
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Locale;
 
 
 /**
@@ -109,13 +114,23 @@ public class MindmapNode extends LinearLayout {
 			
 		// extract the string (TEXT attribute) of the nodes
 		text = tmp_element.getAttribute("TEXT");
-		
-		String linkAttribute = tmp_element.getAttribute("LINK");
-		if ( !linkAttribute.equals("") ) {
-			link = Uri.parse(linkAttribute);
-		}
 
-		// extract icons
+        // if no text, use richcontent (HTML)
+        if (text == null || text.equals("")) {
+            // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
+            NodeList nodeList = tmp_element.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node n = nodeList.item(i);
+                if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
+                    Element richcontentElement = (Element) n;
+                    if (richcontentElement.getAttribute("TYPE").equals("NODE")) {
+                        text = Html.fromHtml(richcontentElement.getTextContent()).toString();
+                    }
+                }
+            }
+        }
+
+        // extract icons
 		ArrayList<String> icons = getIcons();
 		String icon="";
 		icon_res_id = 0;
@@ -124,7 +139,19 @@ public class MindmapNode extends LinearLayout {
 			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
 		}
 
-		// find out if it has sub nodes
+        // extract link and set link icon if node has a link
+        String linkAttribute = tmp_element.getAttribute("LINK");
+        if ( !linkAttribute.equals("") ) {
+            link = Uri.parse(linkAttribute);
+            icon_res_id = MainApplication
+                    .getStaticApplicationContext()
+                    .getResources()
+                    .getIdentifier("@drawable/link", "id",
+                            MainApplication.getStaticApplicationContext().getPackageName());
+        }
+
+
+        // find out if it has sub nodes
 		isExpandable = ( getNumChildMindmapNodes() > 0 );
 		
 		// load the layout from the XML file
@@ -360,4 +387,68 @@ public class MindmapNode extends LinearLayout {
 			return childMindmapNodes;
 		}
 	}
+
+    /**
+     * Opens the link of this node (if any)
+     */
+    public void openLink() {
+
+        // try opening the link normally with an intent
+        try {
+            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+            openUriIntent.setData(this.link);
+            MainApplication.getMainActivityInstance().startActivity(openUriIntent);
+            return;
+        } catch (ActivityNotFoundException e) {
+            Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
+        }
+
+        // try to open as relative file
+        try {
+            // get path of mindmap file
+            String fileName = "no file";
+            if (this.link.getPath().startsWith("/")) {
+                // absolute filename
+                fileName = this.link.getPath();
+            } else {
+
+                // link is relative to mindmap file
+                String mindmapPath = MainApplication.getInstance().mindmap.getUri().getPath();
+                Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
+                String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
+                Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
+                fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+
+            }
+            File file = new File(fileName);
+            if (!file.exists()) {
+                Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
+                Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
+                return;
+            }
+            if (!file.canRead()) {
+                Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
+                Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
+                return;
+            }
+            Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
+            // http://stackoverflow.com/a/3571239/1067124
+            String extension = "";
+            int i = fileName.lastIndexOf('.');
+            int p = fileName.lastIndexOf('/');
+            if (i > p) {
+                extension = fileName.substring(i+1);
+            }
+            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+
+            Intent intent = new Intent();
+            intent.setAction(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.fromFile(file), mime);
+            MainApplication.getMainActivityInstance().startActivity(intent);
+        } catch (Exception e1) {
+            Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
+            e1.printStackTrace();
+        }
+
+    }
 }
