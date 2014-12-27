@@ -10,6 +10,7 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -17,6 +18,7 @@ import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,8 +45,10 @@ public class MainActivity extends Activity {
 	MainApplication application;
 	
 	public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
-	
-	@Override
+
+    private ProgressDialog progressDialog;
+
+    @Override
 	public void onStart() {
 		super.onStart();
 		EasyTracker.getInstance().activityStart(this);
@@ -83,64 +87,17 @@ public class MainActivity extends Activity {
 				|| (application.mindmap.getUri()!=intent.getData() && intent.getData()!=null)
 				|| (intent.getBooleanExtra(INTENT_START_HELP,false))
 		) {
-			
-			// create a new Mindmap
-			application.mindmap = new Mindmap();
-			
-			// create a new HorizontalMindmapView
-			application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
-	        
-			// prepare loading of the Mindmap file
-			InputStream mm = null;
-			
-	        // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
-	        // started from ACTION_EDIT/VIEW intent
-	        if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
-	        	
-	        	Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
-	        	
-	        	// get the URI to the target document (the Mindmap we are opening) and open the InputStream
-	        	Uri uri = intent.getData();
-	        	if ( uri != null ) {
-	        		ContentResolver cr = getContentResolver();
-	        		try {
-						mm = cr.openInputStream(uri);
-					} catch (FileNotFoundException e) {
-	
-				    	abortWithPopup(R.string.filenotfound);
-				    	
-						ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
-						ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
-						ACRA.getErrorReporter().putCustomData("URI", uri.toString());
-						e.printStackTrace();
-					}
-	        	} else {
-	        		abortWithPopup(R.string.novalidfile);
-	        	}
-	        	
-				// store the Uri. Next time the MainActivity is started, we'll
-				// check whether the Uri has changed (-> load new document) or
-				// remained the same (-> reuse previous document)
-	        	application.mindmap.setUri(uri);
-	        } 
-	        
-	        // started from the launcher
-	        else {
-	        	Log.d(MainApplication.TAG, "started from app launcher intent");
-	        	
-	        	// display the default Mindmap "example.mm", from the resources
-		    	mm = getApplicationContext().getResources().openRawResource(R.raw.example);
-	        }
-	        
-	        // load the mindmap
-	        Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-	        application.mindmap.loadDocument(mm);
 
-	        // add the HorizontalMindmapView to the Layout Wrapper
-			((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
-			
-			// navigate down into the root node
-			application.horizontalMindmapView.down(application.mindmap.getRootNode());
+            // create a new Mindmap
+            application.mindmap = new Mindmap();
+
+            // create a new HorizontalMindmapView
+            application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
+
+            // create a ProgressDialog, and load the file asynchronously
+            this.progressDialog = ProgressDialog.show(this, "DroidPlane", "Opening Mindmap File...", true, false);
+            new FileOpenTask(intent, action, type).execute();
+
 		}
 		
 		// otherwise, we can display the existing HorizontalMindmapView again
@@ -166,9 +123,86 @@ public class MainActivity extends Activity {
 			application.horizontalMindmapView.setApplicationTitle();
 		}
     }
-	
-	
-	
+
+    private class FileOpenTask extends AsyncTask<String, Void, Object> {
+
+        private final Intent intent;
+        private final String action;
+        private final String type;
+
+        FileOpenTask(Intent intent, String action, String type) {
+            this.intent = intent;
+            this.action = action;
+            this.type = type;
+        }
+
+        @Override
+        protected Object doInBackground(String... strings) {
+
+            // prepare loading of the Mindmap file
+            InputStream mm = null;
+
+            // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
+            // started from ACTION_EDIT/VIEW intent
+            if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
+
+                Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
+
+                // get the URI to the target document (the Mindmap we are opening) and open the InputStream
+                Uri uri = intent.getData();
+                if ( uri != null ) {
+                    ContentResolver cr = getContentResolver();
+                    try {
+                        mm = cr.openInputStream(uri);
+                    } catch (FileNotFoundException e) {
+
+                        abortWithPopup(R.string.filenotfound);
+
+                        ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
+                        ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
+                        ACRA.getErrorReporter().putCustomData("URI", uri.toString());
+                        e.printStackTrace();
+                    }
+                } else {
+                    abortWithPopup(R.string.novalidfile);
+                }
+
+                // store the Uri. Next time the MainActivity is started, we'll
+                // check whether the Uri has changed (-> load new document) or
+                // remained the same (-> reuse previous document)
+                application.mindmap.setUri(uri);
+            }
+
+            // started from the launcher
+            else {
+                Log.d(MainApplication.TAG, "started from app launcher intent");
+
+                // display the default Mindmap "example.mm", from the resources
+                mm = getApplicationContext().getResources().openRawResource(R.raw.example);
+            }
+
+            // load the mindmap
+            Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
+            application.mindmap.loadDocument(mm);
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object o) {
+
+            // add the HorizontalMindmapView to the Layout Wrapper
+            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
+
+            // navigate down into the root node
+            application.horizontalMindmapView.down(application.mindmap.getRootNode());
+
+            if (progressDialog != null) {
+                progressDialog.dismiss();
+            }
+        }
+    }
+
 
 	/**
 	 * enables the home button if the Android version allows it
