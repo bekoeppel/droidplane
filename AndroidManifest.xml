@@ -43,6 +43,18 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
 
+            <!-- works for downloads -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="application/x-freemind" />
+            </intent-filter>
+
             </activity>
     </application>
 
