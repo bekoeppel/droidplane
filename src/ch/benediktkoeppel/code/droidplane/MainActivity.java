@@ -1,5 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
@@ -9,6 +10,7 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentResolver;
@@ -20,8 +22,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.google.analytics.tracking.android.EasyTracker;
 
@@ -298,9 +302,65 @@ public class MainActivity extends Activity {
 		// open the URI specified in the "LINK" tag
 		case R.id.contextopenlink:
 			Log.d(MainApplication.TAG, "Opening node link " + mindmapNode.link);
-			Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
-			openUriIntent.setData(mindmapNode.link);
-			startActivity(openUriIntent);
+
+            // try opening the link normally with an intent
+            try {
+                Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+                openUriIntent.setData(mindmapNode.link);
+                startActivity(openUriIntent);
+                break;
+            } catch (ActivityNotFoundException e) {
+                Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
+            }
+
+            // try to prepend file:// to open it as a file link
+            try {
+                // get path of mindmap file
+                String fileName = "no file";
+                if (mindmapNode.link.getPath().startsWith("/")) {
+                    // absolute filename
+                    fileName = mindmapNode.link.getPath();
+                } else {
+
+                    // link is relative to mindmap file
+                    String mindmapPath = application.mindmap.getUri().getPath();
+                    Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
+                    String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
+                    Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
+                    fileName = mindmapDirectoryPath + "/" + mindmapNode.link.getPath();
+
+                }
+                File file = new File(fileName);
+                if (!file.exists()) {
+                    Toast.makeText(this, "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
+                    Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
+                    break;
+                }
+                if (!file.canRead()) {
+                    Toast.makeText(this, "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
+                    Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
+                    break;
+                }
+                Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
+                // http://stackoverflow.com/a/3571239/1067124
+                String extension = "";
+                int i = fileName.lastIndexOf('.');
+                int p = fileName.lastIndexOf('/');
+                if (i > p) {
+                    extension = fileName.substring(i+1);
+                }
+                String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.fromFile(file), mime);
+                startActivity(intent);
+            } catch (Exception e1) {
+                Toast.makeText(this, "No application found to open " + mindmapNode.link, Toast.LENGTH_SHORT).show();
+                e1.printStackTrace();
+            }
+
+            break;
 
 		default:
 			break;
