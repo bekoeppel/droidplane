@@ -49,7 +49,7 @@
 </stylenode>
 </map_styles>
 </hook>
-<hook NAME="AutomaticEdgeColor" COUNTER="1"/>
+<hook NAME="AutomaticEdgeColor" COUNTER="4"/>
 <node POSITION="right" ID="ID_1195395951" CREATED="1419682528821" MODIFIED="1419682591600"><richcontent TYPE="NODE">
 
 <html>
@@ -67,6 +67,14 @@
 <edge COLOR="#ff0000"/>
 <node TEXT="subnode" ID="ID_968303933" CREATED="1419682724098" MODIFIED="1419682727226"/>
 <node TEXT="more subnodes" ID="ID_1667401843" CREATED="1419682727396" MODIFIED="1419682729143"/>
+</node>
+<node TEXT="normal node, but bold" POSITION="left" ID="ID_797592511" CREATED="1419683680709" MODIFIED="1419683686657">
+<edge COLOR="#0000ff"/>
+<font BOLD="true"/>
+</node>
+<node TEXT="normal node, italics" POSITION="left" ID="ID_1909650710" CREATED="1419683689400" MODIFIED="1419683691983">
+<edge COLOR="#00ff00"/>
+<font ITALIC="true"/>
 </node>
 </node>
 </map>

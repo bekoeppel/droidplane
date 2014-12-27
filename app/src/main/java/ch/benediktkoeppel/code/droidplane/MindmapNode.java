@@ -4,9 +4,12 @@ import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.text.Html;
+import android.text.SpannableString;
+import android.text.style.StyleSpan;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -38,6 +41,16 @@ public class MindmapNode extends LinearLayout {
 	 * the Text of the node (TEXT attribute).
 	 */
 	public String text;
+
+    /**
+     * bold style
+     */
+    private boolean isBold = false;
+
+    /**
+     * italic style
+     */
+    private boolean isItalic = false;
 	
 	/**
 	 * the name of the icon
@@ -115,12 +128,28 @@ public class MindmapNode extends LinearLayout {
 		// extract the string (TEXT attribute) of the nodes
 		text = tmp_element.getAttribute("TEXT");
 
+        // extract styles
+        NodeList styleNodeList = tmp_element.getChildNodes();
+        for (int i = 0; i < styleNodeList.getLength(); i++) {
+            Node n = styleNodeList.item(i);
+            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
+                Element fontElement = (Element) n;
+                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
+                    Log.d(MainApplication.TAG, "Found bold node");
+                    this.isBold = true;
+                }
+                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
+                    this.isItalic = true;
+                }
+            }
+        }
+
         // if no text, use richcontent (HTML)
         if (text == null || text.equals("")) {
             // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
-            NodeList nodeList = tmp_element.getChildNodes();
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                Node n = nodeList.item(i);
+            NodeList richtextNodeList = tmp_element.getChildNodes();
+            for (int i = 0; i < richtextNodeList.getLength(); i++) {
+                Node n = richtextNodeList.item(i);
                 if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
                     Element richcontentElement = (Element) n;
                     if (richcontentElement.getAttribute("TYPE").equals("NODE")) {
@@ -186,8 +215,15 @@ public class MindmapNode extends LinearLayout {
 		
 		TextView textView = (TextView) findViewById(R.id.label);
 		textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
-		textView.setText(text);
-		
+        SpannableString spannableString = new SpannableString(text);
+        if (isBold) {
+            spannableString.setSpan(new StyleSpan(Typeface.BOLD), 0, spannableString.length(), 0);
+        }
+        if (isItalic) {
+            spannableString.setSpan(new StyleSpan(Typeface.ITALIC), 0, spannableString.length(), 0);
+        }
+		textView.setText(spannableString);
+
 		ImageView expandable = (ImageView) findViewById(R.id.expandable);
 		if ( isExpandable ) {
 			if ( getIsSelected() ) {
