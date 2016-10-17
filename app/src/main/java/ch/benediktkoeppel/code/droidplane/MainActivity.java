@@ -144,7 +144,7 @@ public class MainActivity extends Activity {
 
             // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the launcher
             // started from ACTION_EDIT/VIEW intent
-            if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action)) && type != null) {
+            if ((Intent.ACTION_EDIT.equals(action)||Intent.ACTION_VIEW.equals(action))) {
 
                 Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
 
