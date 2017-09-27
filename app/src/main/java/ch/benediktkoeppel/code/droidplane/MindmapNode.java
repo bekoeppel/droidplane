@@ -53,14 +53,15 @@ public class MindmapNode extends LinearLayout {
     private boolean isItalic = false;
 	
 	/**
-	 * the name of the icon
+	 * the name of the icon(s)
+	 * TODO: not used?!
 	 */
-	public String icon_name;
+	//public ArrayList<String> icon_name;
 	
 	/**
 	 * the Android resource ID of the icon
 	 */
-	public int icon_res_id;
+	public ArrayList<Integer> icon_res_id;
 	
 	/**
 	 * whether the node is expandable, i.e. whether it has child nodes
@@ -161,22 +162,20 @@ public class MindmapNode extends LinearLayout {
 
         // extract icons
 		ArrayList<String> icons = getIcons();
-		String icon="";
-		icon_res_id = 0;
-		if ( icons.size() > 0 ) {
-			icon = icons.get(0);
-			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+		icon_res_id = new ArrayList<Integer>();
+		for (int i = 0; i < icons.size(); i++) {
+			icon_res_id.add(i, MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icons.get(i), "id", MainApplication.getStaticApplicationContext().getPackageName()));
 		}
 
         // extract link and set link icon if node has a link
         String linkAttribute = tmp_element.getAttribute("LINK");
         if ( !linkAttribute.equals("") ) {
             link = Uri.parse(linkAttribute);
-            icon_res_id = MainApplication
+            icon_res_id.add(0, MainApplication
                     .getStaticApplicationContext()
                     .getResources()
                     .getIdentifier("@drawable/link", "id",
-                            MainApplication.getStaticApplicationContext().getPackageName());
+                            MainApplication.getStaticApplicationContext().getPackageName()));
         }
 
 
@@ -209,10 +208,28 @@ public class MindmapNode extends LinearLayout {
 		inflateLayout(getContext());
 		
 		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
-		ImageView iconView = (ImageView)findViewById(R.id.icon);
-		iconView.setImageResource(icon_res_id);
-		iconView.setContentDescription(icon_name);
-		
+		if (icon_res_id.size() > 0){
+			ImageView iconView = (ImageView)findViewById(R.id.icon0);
+			iconView.setImageResource(icon_res_id.get(0));
+			//	iconView.setContentDescription(icon_name);
+		} else {
+			// don't waste space, there are no icons
+			ImageView iconView0 = (ImageView)findViewById(R.id.icon0);
+			iconView0.setVisibility(GONE);
+			ImageView iconView1 = (ImageView)findViewById(R.id.icon1);
+			iconView1.setVisibility(GONE);
+		}
+		// second icon
+		if (icon_res_id.size() > 1){
+			ImageView iconView = (ImageView)findViewById(R.id.icon1);
+			iconView.setImageResource(icon_res_id.get(1));
+			//	iconView.setContentDescription(icon_name);
+		} else {
+			// no second icon, don't waste space
+			ImageView iconView = (ImageView)findViewById(R.id.icon1);
+			iconView.setVisibility(GONE);
+		}
+
 		TextView textView = (TextView) findViewById(R.id.label);
 		textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
         SpannableString spannableString = new SpannableString(text);
@@ -310,6 +327,8 @@ public class MindmapNode extends LinearLayout {
 				Element e = (Element)n;
 				
 				if ( e.getTagName().equals("icon") && e.hasAttribute("BUILTIN") ) {
+					Log.d(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
+
 					icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN")));
 				}
 			}
@@ -330,6 +349,9 @@ public class MindmapNode extends LinearLayout {
 		Locale locale = MainApplication.getStaticApplicationContext().getResources().getConfiguration().locale;
 		String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
 		name.replaceAll("_$", "");
+
+		Log.d(MainApplication.TAG, "converted icon name " + iconName + " to " + name);
+
 		return name;
 	}
 	
@@ -368,7 +390,9 @@ public class MindmapNode extends LinearLayout {
 		
 		// build the menu
 		menu.setHeaderTitle(text);
-		menu.setHeaderIcon(icon_res_id);
+		if(icon_res_id.size() > 0) {
+			menu.setHeaderIcon(icon_res_id.get(0));
+		}
 		
 		// TODO: add a submenu showing all icons
 		// Context menus do not support icons.
