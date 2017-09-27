@@ -2,6 +2,9 @@ package ch.benediktkoeppel.code.droidplane;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -35,6 +38,11 @@ public class Mindmap {
 	 * The root node of the document.
 	 */
 	private MindmapNode rootNode;
+
+	/**
+	 * a hash map that resolves node IDs to Node objects
+	 */
+	private HashMap<String, MindmapNode> ids;
 
 	/**
 	 * Returns the Uri which is currently loaded in document.
@@ -82,6 +90,13 @@ public class Mindmap {
 			e.printStackTrace();
 			return;
 		}
+
+
+		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
+
+		// fill the hash map (TODO: is this a good place to do this? Should / Could this be done in a more efficient way?)
+		ids = new HashMap<String, MindmapNode>();
+		this.fillHashMap(rootNode);
 		
 		long loadDocumentEndTime = System.currentTimeMillis();
 	    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
@@ -89,8 +104,7 @@ public class Mindmap {
 	    
 		long numNodes = document.getElementsByTagName("node").getLength();
 		EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
-		
-		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
+
 	}
 	
 	/**
@@ -99,6 +113,29 @@ public class Mindmap {
 	 */
 	public MindmapNode getRootNode() {
 		return rootNode;
+	}
+
+	private void fillHashMap(MindmapNode n){
+
+		this.ids.put(n.id, n);
+		Log.d(MainApplication.TAG, "Added " + n.id + " to hashmap.");
+
+		ArrayList<MindmapNode> children = n.getChildNodes();
+		Iterator<MindmapNode> iter = children.iterator();
+
+		while (iter.hasNext()) {
+			this.fillHashMap(iter.next());
+		}
+
+	}
+
+	public MindmapNode getNodeFromID(String id) {
+
+		MindmapNode node = this.ids.get(id);
+
+		Log.d(MainApplication.TAG, "Returning node with ID " + id);
+
+		return node;
 	}
 
 }

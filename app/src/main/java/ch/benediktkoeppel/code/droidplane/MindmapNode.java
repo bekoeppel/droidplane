@@ -36,6 +36,11 @@ import java.util.Locale;
  * MindMapNode if it has type ELEMENT, and tag "node".
  */
 public class MindmapNode extends LinearLayout {
+
+	/**
+	 * The ID of the node (ID attribute)
+	 */
+	public String id;
 	
 	/**
 	 * the Text of the node (TEXT attribute).
@@ -124,7 +129,10 @@ public class MindmapNode extends LinearLayout {
 		
 		// store the Node
 		this.node = node;
-			
+
+		// extract the ID of the node
+		id = tmp_element.getAttribute("ID");
+
 		// extract the string (TEXT attribute) of the nodes
 		text = tmp_element.getAttribute("TEXT");
 
@@ -429,62 +437,82 @@ public class MindmapNode extends LinearLayout {
      */
     public void openLink() {
 
-        // try opening the link normally with an intent
-        try {
-            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
-            openUriIntent.setData(this.link);
-            MainApplication.getMainActivityInstance().startActivity(openUriIntent);
-            return;
-        } catch (ActivityNotFoundException e) {
-            Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
-        }
+		// TODO: if link is internal, substring ID
 
-        // try to open as relative file
-        try {
-            // get path of mindmap file
-            String fileName = "no file";
-            if (this.link.getPath().startsWith("/")) {
-                // absolute filename
-                fileName = this.link.getPath();
-            } else {
+		Log.d(MainApplication.TAG, "Opening link (to string): " + this.link.toString());
+		Log.d(MainApplication.TAG, "Opening link (fragment, everything after '#'): " + this.link.getFragment());
 
-                // link is relative to mindmap file
-                String mindmapPath = MainApplication.getInstance().mindmap.getUri().getPath();
-                Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
-                String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
-                Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
-                fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+		if (this.link.getFragment() != null && this.link.getFragment().startsWith("ID")) {
+			// internal link, so this.link is of the form "#ID_123234534"
+			// this.link.getFragment() should give everything after the "#"
+			// it is null if there is no "#", which should be the case for all other links
+			try {
+				MindmapNode linkedInternal = MainApplication.getMainActivityInstance().application.mindmap.getNodeFromID(this.link.getFragment());
 
-            }
-            File file = new File(fileName);
-            if (!file.exists()) {
-                Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
-                return;
-            }
-            if (!file.canRead()) {
-                Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
-                return;
-            }
-            Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
-            // http://stackoverflow.com/a/3571239/1067124
-            String extension = "";
-            int i = fileName.lastIndexOf('.');
-            int p = fileName.lastIndexOf('/');
-            if (i > p) {
-                extension = fileName.substring(i+1);
-            }
-            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+				Log.d(MainApplication.TAG, "Opening internal node, " + linkedInternal + ", with ID: " + this.link.getFragment());
 
-            Intent intent = new Intent();
-            intent.setAction(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), mime);
-            MainApplication.getMainActivityInstance().startActivity(intent);
-        } catch (Exception e1) {
-            Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
-            e1.printStackTrace();
-        }
+				MainApplication.getMainActivityInstance().application.horizontalMindmapView.down(linkedInternal);
+			} catch (Exception e1) {
+				Toast.makeText(getContext(), "This internal link to ID " + this.link.getFragment() + " seems to be broken.", Toast.LENGTH_SHORT).show();
+				e1.printStackTrace();
+			}
+		} else	{
+			// try opening the link normally with an intent
+			try {
+				Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+				openUriIntent.setData(this.link);
+				MainApplication.getMainActivityInstance().startActivity(openUriIntent);
+				return;
+			} catch (ActivityNotFoundException e) {
+				Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
+			}
 
+			// try to open as relative file
+			try {
+				// get path of mindmap file
+				String fileName = "no file";
+				if (this.link.getPath().startsWith("/")) {
+					// absolute filename
+					fileName = this.link.getPath();
+				} else {
+
+					// link is relative to mindmap file
+					String mindmapPath = MainApplication.getInstance().mindmap.getUri().getPath();
+					Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
+					String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
+					Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
+					fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+
+				}
+				File file = new File(fileName);
+				if (!file.exists()) {
+					Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
+					Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
+					return;
+				}
+				if (!file.canRead()) {
+					Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
+					Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
+					return;
+				}
+				Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
+				// http://stackoverflow.com/a/3571239/1067124
+				String extension = "";
+				int i = fileName.lastIndexOf('.');
+				int p = fileName.lastIndexOf('/');
+				if (i > p) {
+					extension = fileName.substring(i + 1);
+				}
+				String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+
+				Intent intent = new Intent();
+				intent.setAction(Intent.ACTION_VIEW);
+				intent.setDataAndType(Uri.fromFile(file), mime);
+				MainApplication.getMainActivityInstance().startActivity(intent);
+			} catch (Exception e1) {
+				Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
+				e1.printStackTrace();
+			}
+		}
     }
 }
