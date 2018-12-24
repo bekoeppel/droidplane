@@ -28,6 +28,7 @@ import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -36,6 +37,11 @@ import java.util.Locale;
  * MindMapNode if it has type ELEMENT, and tag "node".
  */
 public class MindmapNode extends LinearLayout {
+
+	/**
+	 * The ID of the node (ID attribute)
+	 */
+	public String id;
 	
 	/**
 	 * the Text of the node (TEXT attribute).
@@ -53,14 +59,9 @@ public class MindmapNode extends LinearLayout {
     private boolean isItalic = false;
 	
 	/**
-	 * the name of the icon
-	 */
-	public String icon_name;
-	
-	/**
 	 * the Android resource ID of the icon
 	 */
-	public int icon_res_id;
+	public List<Integer> iconResourceIds;
 	
 	/**
 	 * whether the node is expandable, i.e. whether it has child nodes
@@ -124,7 +125,10 @@ public class MindmapNode extends LinearLayout {
 		
 		// store the Node
 		this.node = node;
-			
+
+		// extract the ID of the node
+		id = tmp_element.getAttribute("ID");
+
 		// extract the string (TEXT attribute) of the nodes
 		text = tmp_element.getAttribute("TEXT");
 
@@ -161,22 +165,20 @@ public class MindmapNode extends LinearLayout {
 
         // extract icons
 		ArrayList<String> icons = getIcons();
-		String icon="";
-		icon_res_id = 0;
-		if ( icons.size() > 0 ) {
-			icon = icons.get(0);
-			icon_res_id = MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icon, "id", MainApplication.getStaticApplicationContext().getPackageName());
+		iconResourceIds = new ArrayList<>();
+		for (int i = 0; i < icons.size(); i++) {
+			iconResourceIds.add(i, MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icons.get(i), "id", MainApplication.getStaticApplicationContext().getPackageName()));
 		}
 
         // extract link and set link icon if node has a link
         String linkAttribute = tmp_element.getAttribute("LINK");
         if ( !linkAttribute.equals("") ) {
             link = Uri.parse(linkAttribute);
-            icon_res_id = MainApplication
+            iconResourceIds.add(0, MainApplication
                     .getStaticApplicationContext()
                     .getResources()
                     .getIdentifier("@drawable/link", "id",
-                            MainApplication.getStaticApplicationContext().getPackageName());
+                            MainApplication.getStaticApplicationContext().getPackageName()));
         }
 
 
@@ -209,10 +211,29 @@ public class MindmapNode extends LinearLayout {
 		inflateLayout(getContext());
 		
 		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
-		ImageView iconView = (ImageView)findViewById(R.id.icon);
-		iconView.setImageResource(icon_res_id);
-		iconView.setContentDescription(icon_name);
-		
+		if (iconResourceIds.size() > 0){
+			ImageView iconView = (ImageView)findViewById(R.id.icon0);
+			iconView.setImageResource(iconResourceIds.get(0));
+			//	iconView.setContentDescription(icon_name);
+		} else {
+			// don't waste space, there are no icons
+			ImageView iconView0 = (ImageView)findViewById(R.id.icon0);
+			iconView0.setVisibility(GONE);
+			ImageView iconView1 = (ImageView)findViewById(R.id.icon1);
+			iconView1.setVisibility(GONE);
+		}
+
+		// second icon
+		if (iconResourceIds.size() > 1){
+			ImageView iconView = (ImageView)findViewById(R.id.icon1);
+			iconView.setImageResource(iconResourceIds.get(1));
+			//	iconView.setContentDescription(icon_name);
+		} else {
+			// no second icon, don't waste space
+			ImageView iconView = (ImageView)findViewById(R.id.icon1);
+			iconView.setVisibility(GONE);
+		}
+
 		TextView textView = (TextView) findViewById(R.id.label);
 		textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
         SpannableString spannableString = new SpannableString(text);
@@ -310,6 +331,8 @@ public class MindmapNode extends LinearLayout {
 				Element e = (Element)n;
 				
 				if ( e.getTagName().equals("icon") && e.hasAttribute("BUILTIN") ) {
+					Log.v(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
+
 					icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN")));
 				}
 			}
@@ -330,6 +353,9 @@ public class MindmapNode extends LinearLayout {
 		Locale locale = MainApplication.getStaticApplicationContext().getResources().getConfiguration().locale;
 		String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
 		name.replaceAll("_$", "");
+
+		Log.d(MainApplication.TAG, "converted icon name " + iconName + " to " + name);
+
 		return name;
 	}
 	
@@ -368,7 +394,9 @@ public class MindmapNode extends LinearLayout {
 		
 		// build the menu
 		menu.setHeaderTitle(text);
-		menu.setHeaderIcon(icon_res_id);
+		if(iconResourceIds.size() > 0) {
+			menu.setHeaderIcon(iconResourceIds.get(0));
+		}
 		
 		// TODO: add a submenu showing all icons
 		// Context menus do not support icons.
@@ -429,62 +457,82 @@ public class MindmapNode extends LinearLayout {
      */
     public void openLink() {
 
-        // try opening the link normally with an intent
-        try {
-            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
-            openUriIntent.setData(this.link);
-            MainApplication.getMainActivityInstance().startActivity(openUriIntent);
-            return;
-        } catch (ActivityNotFoundException e) {
-            Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
-        }
+		// TODO: if link is internal, substring ID
 
-        // try to open as relative file
-        try {
-            // get path of mindmap file
-            String fileName = "no file";
-            if (this.link.getPath().startsWith("/")) {
-                // absolute filename
-                fileName = this.link.getPath();
-            } else {
+		Log.d(MainApplication.TAG, "Opening link (to string): " + this.link.toString());
+		Log.d(MainApplication.TAG, "Opening link (fragment, everything after '#'): " + this.link.getFragment());
 
-                // link is relative to mindmap file
-                String mindmapPath = MainApplication.getInstance().mindmap.getUri().getPath();
-                Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
-                String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
-                Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
-                fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+		if (this.link.getFragment() != null && this.link.getFragment().startsWith("ID")) {
+			// internal link, so this.link is of the form "#ID_123234534"
+			// this.link.getFragment() should give everything after the "#"
+			// it is null if there is no "#", which should be the case for all other links
+			try {
+				MindmapNode linkedInternal = MainApplication.getMainActivityInstance().application.mindmap.getNodeFromID(this.link.getFragment());
 
-            }
-            File file = new File(fileName);
-            if (!file.exists()) {
-                Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
-                return;
-            }
-            if (!file.canRead()) {
-                Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
-                return;
-            }
-            Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
-            // http://stackoverflow.com/a/3571239/1067124
-            String extension = "";
-            int i = fileName.lastIndexOf('.');
-            int p = fileName.lastIndexOf('/');
-            if (i > p) {
-                extension = fileName.substring(i+1);
-            }
-            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+				Log.d(MainApplication.TAG, "Opening internal node, " + linkedInternal + ", with ID: " + this.link.getFragment());
 
-            Intent intent = new Intent();
-            intent.setAction(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), mime);
-            MainApplication.getMainActivityInstance().startActivity(intent);
-        } catch (Exception e1) {
-            Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
-            e1.printStackTrace();
-        }
+				MainApplication.getMainActivityInstance().application.horizontalMindmapView.down(linkedInternal);
+			} catch (Exception e1) {
+				Toast.makeText(getContext(), "This internal link to ID " + this.link.getFragment() + " seems to be broken.", Toast.LENGTH_SHORT).show();
+				e1.printStackTrace();
+			}
+		} else	{
+			// try opening the link normally with an intent
+			try {
+				Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
+				openUriIntent.setData(this.link);
+				MainApplication.getMainActivityInstance().startActivity(openUriIntent);
+				return;
+			} catch (ActivityNotFoundException e) {
+				Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
+			}
 
+			// try to open as relative file
+			try {
+				// get path of mindmap file
+				String fileName = "no file";
+				if (this.link.getPath().startsWith("/")) {
+					// absolute filename
+					fileName = this.link.getPath();
+				} else {
+
+					// link is relative to mindmap file
+					String mindmapPath = MainApplication.getInstance().mindmap.getUri().getPath();
+					Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
+					String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
+					Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
+					fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+
+				}
+				File file = new File(fileName);
+				if (!file.exists()) {
+					Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
+					Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
+					return;
+				}
+				if (!file.canRead()) {
+					Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
+					Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
+					return;
+				}
+				Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
+				// http://stackoverflow.com/a/3571239/1067124
+				String extension = "";
+				int i = fileName.lastIndexOf('.');
+				int p = fileName.lastIndexOf('/');
+				if (i > p) {
+					extension = fileName.substring(i + 1);
+				}
+				String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+
+				Intent intent = new Intent();
+				intent.setAction(Intent.ACTION_VIEW);
+				intent.setDataAndType(Uri.fromFile(file), mime);
+				MainApplication.getMainActivityInstance().startActivity(intent);
+			} catch (Exception e1) {
+				Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
+				e1.printStackTrace();
+			}
+		}
     }
 }

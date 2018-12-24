@@ -4,6 +4,8 @@ import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -34,6 +36,11 @@ public class Mindmap {
 	 * The root node of the document.
 	 */
 	private MindmapNode rootNode;
+
+	/**
+	 * A map that resolves node IDs to Node objects
+	 */
+	private Map<String, MindmapNode> nodesById = new HashMap<>();
 
 	/**
 	 * Returns the Uri which is currently loaded in document.
@@ -78,6 +85,12 @@ public class Mindmap {
 			e.printStackTrace();
 			return;
 		}
+
+
+		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
+
+		// Index all nodes by their ID
+		indexNodesByIds(rootNode);
 		
 		long loadDocumentEndTime = System.currentTimeMillis();
 		Tracker tracker = MainApplication.getTracker();
@@ -97,7 +110,7 @@ public class Mindmap {
 				.setValue(numNodes)
 				.build()
 		);
-		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
+
 	}
 	
 	/**
@@ -106,6 +119,35 @@ public class Mindmap {
 	 */
 	public MindmapNode getRootNode() {
 		return rootNode;
+	}
+
+	/**
+	 * Index all nodes (and child nodes) by their ID, for fast lookup
+	 * @param node
+	 */
+	private void indexNodesByIds(MindmapNode node) {
+
+		this.nodesById.put(node.id, node);
+		Log.v(MainApplication.TAG, "Added " + node.id + " to hashmap");
+
+		for (MindmapNode mindmapNode : node.getChildNodes()) {
+			indexNodesByIds(mindmapNode);
+		}
+
+	}
+
+	/**
+	 * Returns the node for a given Node ID
+	 * @param id
+	 * @return
+	 */
+	public MindmapNode getNodeFromID(String id) {
+
+		MindmapNode node = this.nodesById.get(id);
+
+		Log.d(MainApplication.TAG, "Returning node with ID " + id);
+
+		return node;
 	}
 
 }
