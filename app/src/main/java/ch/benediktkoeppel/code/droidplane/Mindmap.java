@@ -9,7 +9,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.acra.ACRA;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -70,15 +69,12 @@ public class Mindmap {
 			docBuilder = docBuilderFactory.newDocumentBuilder();
 			document = docBuilder.parse(inputStream);
 		} catch (ParserConfigurationException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "ParserConfigurationException");
 			e.printStackTrace();
 			return;
 		} catch (SAXException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "SAXException");
 			e.printStackTrace();
 			return;
 		} catch (IOException e) {
-			ACRA.getErrorReporter().putCustomData("Exception", "IOException");
 			e.printStackTrace();
 			return;
 		}

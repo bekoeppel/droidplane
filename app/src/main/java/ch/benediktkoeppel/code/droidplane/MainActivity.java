@@ -3,9 +3,6 @@ package ch.benediktkoeppel.code.droidplane;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-
-import org.acra.ACRA;
-
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
@@ -158,10 +155,6 @@ public class MainActivity extends Activity {
                     } catch (FileNotFoundException e) {
 
                         abortWithPopup(R.string.filenotfound);
-
-                        ACRA.getErrorReporter().putCustomData("Exception", "FileNotFoundException");
-                        ACRA.getErrorReporter().putCustomData("Intent", "ACTION_EDIT/VIEW");
-                        ACRA.getErrorReporter().putCustomData("URI", uri.toString());
                         e.printStackTrace();
                     }
                 } else {

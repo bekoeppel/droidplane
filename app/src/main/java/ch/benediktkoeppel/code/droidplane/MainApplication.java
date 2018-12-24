@@ -1,25 +1,22 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import org.acra.ACRA;
-import org.acra.annotation.ReportsCrashes;
-
 import android.app.Application;
 import android.content.Context;
 
 import com.google.android.gms.analytics.GoogleAnalytics;
 import com.google.android.gms.analytics.Tracker;
+
 /**
  * The DroidPlane main application. It stores the loaded Uri and document, so
  * that we can recreate the MainActivity after a screen rotation.
  */
-@ReportsCrashes(formKey = "dE1VQVpQN2FNTWlLQXg1UUQ1b1VSN3c6MQ") 
 public class MainApplication extends Application {
 	
 	/**
 	 * Android Logging TAG
 	 */
 	public static final String TAG = "DroidPlane";
-	
+
 	/**
 	 * HorizontalMindmapView that contains all NodeColumns
 	 */
@@ -57,9 +54,6 @@ public class MainApplication extends Application {
 	public void onCreate() {
 		super.onCreate();
 
-		// initialize ACRA crash reports
-		ACRA.init(this);
-		
 		// save the context
 		MainApplication.context = getApplicationContext();
 		
@@ -99,8 +93,6 @@ public class MainApplication extends Application {
 	public static MainActivity getMainActivityInstance() {
 		return MainApplication.mainActivityInstance;
 	}
-	
-	
 
 	public static Tracker getTracker() {
 		return tracker;
