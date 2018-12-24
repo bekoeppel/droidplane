@@ -1,104 +1,123 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import android.app.Application;
-import android.content.Context;
-
 import com.google.android.gms.analytics.GoogleAnalytics;
 import com.google.android.gms.analytics.Tracker;
 
 /**
- * The DroidPlane main application. It stores the loaded Uri and document, so
- * that we can recreate the MainActivity after a screen rotation.
+ * The DroidPlane main application. It stores the loaded Uri and document, so that we can recreate the MainActivity
+ * after a screen rotation.
  */
 public class MainApplication extends Application {
-	
-	/**
-	 * Android Logging TAG
-	 */
-	public static final String TAG = "DroidPlane";
 
-	/**
-	 * HorizontalMindmapView that contains all NodeColumns
-	 */
-	public HorizontalMindmapView horizontalMindmapView;
+    /**
+     * Android Logging TAG
+     */
+    public static final String TAG = "DroidPlane";
 
-	/**
-	 * the application context
-	 */
-	private static Context context;
-	
-	/**
-	 * the main application instance
-	 */
-	private static MainApplication instance;
+    /**
+     * HorizontalMindmapView that contains all NodeColumns
+     */
+    public HorizontalMindmapView horizontalMindmapView;
 
-	/**
-	 * the main activity instance
-	 */
-	private static MainActivity mainActivityInstance;
+    /**
+     * The main application instance
+     */
+    private static MainApplication instance;
 
-	/**
-	 * Google Analytics
-	 */
-	private static GoogleAnalytics googleAnalytics;
-	private static Tracker tracker;
-	
-	/**
-	 * A reference to the Mindmap document
-	 */
-	public Mindmap mindmap;
-	
-	
+    /**
+     * The main activity instance
+     */
+    private static MainActivity mainActivityInstance;
 
-	@Override
-	public void onCreate() {
-		super.onCreate();
+    /**
+     * Google Analytics
+     */
+    private static GoogleAnalytics googleAnalytics;
+    private static Tracker tracker;
 
-		// save the context
-		MainApplication.context = getApplicationContext();
-		
-		// save the instance
-		MainApplication.instance = this;
+    /**
+     * A reference to the Mindmap document
+     */
+    private Mindmap mindmap;
 
-		// set up Google Analytics
-		googleAnalytics = GoogleAnalytics.getInstance(this);
-		tracker = googleAnalytics.newTracker(R.xml.global_tracker);
 
-	}
-	
-	/**
-	 * Helper to return the application context, even for static methods.
-	 * @return
-	 */
-	public static Context getStaticApplicationContext() {
-		return MainApplication.context;
-	}
+    @Override
+    public void onCreate() {
 
-	/**
-	 * Get the main application instance
-	 * @return the main application
-	 */
-	public static MainApplication getInstance() {
-		return MainApplication.instance;
-	}
-	
-	/**
-	 * Stores the MainActivity instance
-	 * @param mainActivityInstance
-	 */
-	public static void setMainActivityInstance(MainActivity mainActivityInstance) {
-		MainApplication.mainActivityInstance = mainActivityInstance;
-	}
-	
-	public static MainActivity getMainActivityInstance() {
-		return MainApplication.mainActivityInstance;
-	}
+        super.onCreate();
 
-	public static Tracker getTracker() {
-		return tracker;
-	}
+        // save the context
+        //MainApplication.context = getApplicationContext();
 
-	public static GoogleAnalytics getGoogleAnalytics() {
-		return googleAnalytics;
-	}
+        // save the instance
+        MainApplication.instance = this;
+
+        // set up Google Analytics
+        googleAnalytics = GoogleAnalytics.getInstance(this);
+        tracker = googleAnalytics.newTracker(R.xml.global_tracker);
+
+    }
+
+    /**
+     * Get the main application instance
+     *
+     * @return the main application
+     */
+    public static MainApplication getInstance() {
+
+        return MainApplication.instance;
+    }
+
+    /**
+     * Stores the MainActivity instance
+     *
+     * @param mainActivityInstance
+     */
+    public static void setMainActivityInstance(MainActivity mainActivityInstance) {
+
+        MainApplication.mainActivityInstance = mainActivityInstance;
+    }
+
+    /**
+     * Get the main activity
+     *
+     * @return main activity
+     */
+    public static MainActivity getMainActivityInstance() {
+
+        return MainApplication.mainActivityInstance;
+    }
+
+    /**
+     * Get the Google Analytics tracker
+     *
+     * @returnGoogle Analytics tracker
+     */
+    public static Tracker getTracker() {
+
+        return tracker;
+    }
+
+    /**
+     * Get the Google Analytics API
+     * @return Google Analytics API
+     */
+    public static GoogleAnalytics getGoogleAnalytics() {
+
+        return googleAnalytics;
+    }
+
+    /**
+     * Returns the open mindmap
+     * @return
+     */
+    public Mindmap getMindmap() {
+
+        return mindmap;
+    }
+
+    public void setMindmap(Mindmap mindmap) {
+        this.mindmap = mindmap;
+    }
 }
