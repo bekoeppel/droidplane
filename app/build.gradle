@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 16
-    buildToolsVersion "21.1.2"
+    compileSdkVersion 28
+    buildToolsVersion '28.0.3'
 
     defaultConfig {
         applicationId "ch.benediktkoeppel.code.droidplane"
-        minSdkVersion 8
-        targetSdkVersion 17
+        minSdkVersion 14
+        targetSdkVersion 28
     }
 
     buildTypes {
@@ -19,7 +19,7 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:18.0.0'
-    compile files('libs/acra-4.4.0.jar')
-    compile files('libs/libGoogleAnalyticsV2.jar')
+    implementation files('libs/acra-4.4.0.jar')
+    implementation files('libs/libGoogleAnalyticsV2.jar')
+    implementation 'com.android.support:support-v4:28.0.0'
 }
