@@ -6,6 +6,8 @@ import org.acra.annotation.ReportsCrashes;
 import android.app.Application;
 import android.content.Context;
 
+import com.google.android.gms.analytics.GoogleAnalytics;
+import com.google.android.gms.analytics.Tracker;
 /**
  * The DroidPlane main application. It stores the loaded Uri and document, so
  * that we can recreate the MainActivity after a screen rotation.
@@ -37,6 +39,12 @@ public class MainApplication extends Application {
 	 * the main activity instance
 	 */
 	private static MainActivity mainActivityInstance;
+
+	/**
+	 * Google Analytics
+	 */
+	private static GoogleAnalytics googleAnalytics;
+	private static Tracker tracker;
 	
 	/**
 	 * A reference to the Mindmap document
@@ -57,6 +65,11 @@ public class MainApplication extends Application {
 		
 		// save the instance
 		MainApplication.instance = this;
+
+		// set up Google Analytics
+		googleAnalytics = GoogleAnalytics.getInstance(this);
+		tracker = googleAnalytics.newTracker(R.xml.global_tracker);
+
 	}
 	
 	/**
@@ -88,4 +101,12 @@ public class MainApplication extends Application {
 	}
 	
 	
+
+	public static Tracker getTracker() {
+		return tracker;
+	}
+
+	public static GoogleAnalytics getGoogleAnalytics() {
+		return googleAnalytics;
+	}
 }

@@ -1,5 +1,7 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -10,8 +12,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.acra.ACRA;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
-
-import com.google.analytics.tracking.android.EasyTracker;
 
 import android.net.Uri;
 import android.util.Log;
@@ -84,12 +84,23 @@ public class Mindmap {
 		}
 		
 		long loadDocumentEndTime = System.currentTimeMillis();
-	    EasyTracker.getTracker().sendTiming("document", loadDocumentEndTime-loadDocumentStartTime, "loadDocument", "loadTime");
+		Tracker tracker = MainApplication.getTracker();
+		tracker.send(new HitBuilders.TimingBuilder()
+				.setCategory("document")
+				.setValue(loadDocumentEndTime-loadDocumentStartTime)
+				.setVariable("loadDocument")
+				.setLabel("loadTime")
+				.build());
 		Log.d(MainApplication.TAG, "Document loaded");
 	    
 		long numNodes = document.getElementsByTagName("node").getLength();
-		EasyTracker.getTracker().sendEvent("document", "loadDocument", "numNodes", numNodes);
-		
+		tracker.send(new HitBuilders.EventBuilder()
+				.setCategory("document")
+				.setAction("loadDocument")
+				.setLabel("numNodes")
+				.setValue(numNodes)
+				.build()
+		);
 		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
 	}
 	

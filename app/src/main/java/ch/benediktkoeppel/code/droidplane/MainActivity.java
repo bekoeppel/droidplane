@@ -29,7 +29,8 @@ import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.analytics.tracking.android.EasyTracker;
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open
@@ -51,14 +52,13 @@ public class MainActivity extends Activity {
     @Override
 	public void onStart() {
 		super.onStart();
-		EasyTracker.getInstance().activityStart(this);
+		((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStart(this);
 	}
 
 	@Override
 	public void onStop() {
 		super.onStop();
-		EasyTracker.getInstance().activityStop(this);
-		EasyTracker.getInstance().dispatch();
+		((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStop(this);
 	}
 	
 	@Override
@@ -70,9 +70,10 @@ public class MainActivity extends Activity {
         MainApplication.setMainActivityInstance(this);
         
         // initialize android stuff
-        // EasyTracker
-        EasyTracker.getInstance().setContext(this);
-    	EasyTracker.getTracker().sendView("MainActivity");
+        // Google Analytics
+		Tracker tracker = ((MainApplication) getApplication()).getTracker();
+		tracker.setScreenName("MainActivity");
+		tracker.send(new HitBuilders.EventBuilder().build());
 
     	// enable the Android home button
     	enableHomeButton();
