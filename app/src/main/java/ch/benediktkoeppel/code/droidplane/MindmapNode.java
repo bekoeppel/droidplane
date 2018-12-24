@@ -28,6 +28,7 @@ import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -58,15 +59,9 @@ public class MindmapNode extends LinearLayout {
     private boolean isItalic = false;
 	
 	/**
-	 * the name of the icon(s)
-	 * TODO: not used?!
-	 */
-	//public ArrayList<String> icon_name;
-	
-	/**
 	 * the Android resource ID of the icon
 	 */
-	public ArrayList<Integer> icon_res_id;
+	public List<Integer> iconResourceIds;
 	
 	/**
 	 * whether the node is expandable, i.e. whether it has child nodes
@@ -170,16 +165,16 @@ public class MindmapNode extends LinearLayout {
 
         // extract icons
 		ArrayList<String> icons = getIcons();
-		icon_res_id = new ArrayList<Integer>();
+		iconResourceIds = new ArrayList<>();
 		for (int i = 0; i < icons.size(); i++) {
-			icon_res_id.add(i, MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icons.get(i), "id", MainApplication.getStaticApplicationContext().getPackageName()));
+			iconResourceIds.add(i, MainApplication.getStaticApplicationContext().getResources().getIdentifier("@drawable/" + icons.get(i), "id", MainApplication.getStaticApplicationContext().getPackageName()));
 		}
 
         // extract link and set link icon if node has a link
         String linkAttribute = tmp_element.getAttribute("LINK");
         if ( !linkAttribute.equals("") ) {
             link = Uri.parse(linkAttribute);
-            icon_res_id.add(0, MainApplication
+            iconResourceIds.add(0, MainApplication
                     .getStaticApplicationContext()
                     .getResources()
                     .getIdentifier("@drawable/link", "id",
@@ -216,9 +211,9 @@ public class MindmapNode extends LinearLayout {
 		inflateLayout(getContext());
 		
 		// the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView ("+" button)
-		if (icon_res_id.size() > 0){
+		if (iconResourceIds.size() > 0){
 			ImageView iconView = (ImageView)findViewById(R.id.icon0);
-			iconView.setImageResource(icon_res_id.get(0));
+			iconView.setImageResource(iconResourceIds.get(0));
 			//	iconView.setContentDescription(icon_name);
 		} else {
 			// don't waste space, there are no icons
@@ -227,10 +222,11 @@ public class MindmapNode extends LinearLayout {
 			ImageView iconView1 = (ImageView)findViewById(R.id.icon1);
 			iconView1.setVisibility(GONE);
 		}
+
 		// second icon
-		if (icon_res_id.size() > 1){
+		if (iconResourceIds.size() > 1){
 			ImageView iconView = (ImageView)findViewById(R.id.icon1);
-			iconView.setImageResource(icon_res_id.get(1));
+			iconView.setImageResource(iconResourceIds.get(1));
 			//	iconView.setContentDescription(icon_name);
 		} else {
 			// no second icon, don't waste space
@@ -335,7 +331,7 @@ public class MindmapNode extends LinearLayout {
 				Element e = (Element)n;
 				
 				if ( e.getTagName().equals("icon") && e.hasAttribute("BUILTIN") ) {
-					Log.d(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
+					Log.v(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
 
 					icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN")));
 				}
@@ -398,8 +394,8 @@ public class MindmapNode extends LinearLayout {
 		
 		// build the menu
 		menu.setHeaderTitle(text);
-		if(icon_res_id.size() > 0) {
-			menu.setHeaderIcon(icon_res_id.get(0));
+		if(iconResourceIds.size() > 0) {
+			menu.setHeaderIcon(iconResourceIds.get(0));
 		}
 		
 		// TODO: add a submenu showing all icons

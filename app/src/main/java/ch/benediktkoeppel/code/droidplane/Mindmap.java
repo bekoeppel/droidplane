@@ -4,9 +4,8 @@ import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,9 +38,9 @@ public class Mindmap {
 	private MindmapNode rootNode;
 
 	/**
-	 * a hash map that resolves node IDs to Node objects
+	 * A map that resolves node IDs to Node objects
 	 */
-	private HashMap<String, MindmapNode> ids;
+	private Map<String, MindmapNode> nodesById = new HashMap<>();
 
 	/**
 	 * Returns the Uri which is currently loaded in document.
@@ -90,9 +89,8 @@ public class Mindmap {
 
 		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
 
-		// fill the hash map (TODO: is this a good place to do this? Should / Could this be done in a more efficient way?)
-		ids = new HashMap<String, MindmapNode>();
-		this.fillHashMap(rootNode);
+		// Index all nodes by their ID
+		indexNodesByIds(rootNode);
 		
 		long loadDocumentEndTime = System.currentTimeMillis();
 		Tracker tracker = MainApplication.getTracker();
@@ -112,7 +110,7 @@ public class Mindmap {
 				.setValue(numNodes)
 				.build()
 		);
-		rootNode = new MindmapNode(MainApplication.getStaticApplicationContext(), document.getDocumentElement().getElementsByTagName("node").item(0));
+
 	}
 	
 	/**
@@ -123,23 +121,29 @@ public class Mindmap {
 		return rootNode;
 	}
 
-	private void fillHashMap(MindmapNode n){
+	/**
+	 * Index all nodes (and child nodes) by their ID, for fast lookup
+	 * @param node
+	 */
+	private void indexNodesByIds(MindmapNode node) {
 
-		this.ids.put(n.id, n);
-		Log.d(MainApplication.TAG, "Added " + n.id + " to hashmap.");
+		this.nodesById.put(node.id, node);
+		Log.v(MainApplication.TAG, "Added " + node.id + " to hashmap");
 
-		ArrayList<MindmapNode> children = n.getChildNodes();
-		Iterator<MindmapNode> iter = children.iterator();
-
-		while (iter.hasNext()) {
-			this.fillHashMap(iter.next());
+		for (MindmapNode mindmapNode : node.getChildNodes()) {
+			indexNodesByIds(mindmapNode);
 		}
 
 	}
 
+	/**
+	 * Returns the node for a given Node ID
+	 * @param id
+	 * @return
+	 */
 	public MindmapNode getNodeFromID(String id) {
 
-		MindmapNode node = this.ids.get(id);
+		MindmapNode node = this.nodesById.get(id);
 
 		Log.d(MainApplication.TAG, "Returning node with ID " + id);
 
