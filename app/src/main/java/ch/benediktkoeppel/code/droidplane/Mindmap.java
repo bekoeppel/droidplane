@@ -93,7 +93,8 @@ public class Mindmap {
         // get the root node
         rootNode = new MindmapNode(
                 context,
-                document.getDocumentElement().getElementsByTagName("node").item(0)
+                document.getDocumentElement().getElementsByTagName("node").item(0),
+                null
         );
 
         long loadDocumentEndTime = System.currentTimeMillis();

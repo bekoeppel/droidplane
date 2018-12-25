@@ -285,6 +285,8 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 
+        super.onCreateContextMenu(menu);
+
         // get the menu information
         AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo)menuInfo;
 

@@ -40,6 +40,11 @@ public class MindmapNode extends LinearLayout {
     public String id;
 
     /**
+     * The Parent MindmapNode
+     */
+    public MindmapNode parentNode;
+
+    /**
      * The Text of the node (TEXT attribute).
      */
     public String text;
@@ -113,9 +118,12 @@ public class MindmapNode extends LinearLayout {
      *
      * @param node
      */
-    public MindmapNode(Context context, Node node) {
+    public MindmapNode(Context context, Node node, MindmapNode parentNode) {
 
         super(context);
+
+        // store the parentNode
+        this.parentNode = parentNode;
 
         // convert the XML Node to a XML Element
         Element tmpElement;
@@ -428,7 +436,7 @@ public class MindmapNode extends LinearLayout {
                 Node tmpNode = childNodes.item(i);
 
                 if (isMindmapNode(tmpNode)) {
-                    MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode);
+                    MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode, this);
                     childMindmapNodes.add(mindmapNode);
                 }
             }
@@ -479,7 +487,24 @@ public class MindmapNode extends LinearLayout {
 
         if (linkedInternal != null) {
             Log.d(MainApplication.TAG, "Opening internal node, " + linkedInternal + ", with ID: " + fragment);
-            MainApplication.getMainActivityInstance().application.horizontalMindmapView.down(linkedInternal);
+
+            // the internal linked node might be anywhere in the mindmap, i.e. on a completely separate branch than
+            // we are on currently. We need to go to the Top, and then descend into the mindmap to reach the right
+            // point
+            MainActivity mainActivity = MainApplication.getMainActivityInstance();
+            HorizontalMindmapView mindmapView = mainActivity.application.horizontalMindmapView;
+            mindmapView.top();
+
+            List<MindmapNode> nodeHierarchy = new ArrayList<>();
+            MindmapNode tmpNode = linkedInternal;
+            while (tmpNode.parentNode != null) {
+                nodeHierarchy.add(tmpNode);
+                tmpNode = tmpNode.parentNode;
+            }
+
+            for (MindmapNode mindmapNode : nodeHierarchy) {
+                mindmapView.down(mindmapNode);
+            }
 
         } else {
             Toast.makeText(getContext(),
