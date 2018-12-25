@@ -136,7 +136,9 @@ public class MainActivity extends Activity {
 
             // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the
             // launcher started from ACTION_EDIT/VIEW intent
-            if ((Intent.ACTION_EDIT.equals(action) || Intent.ACTION_VIEW.equals(action))) {
+            if ((Intent.ACTION_EDIT.equals(action) || Intent.ACTION_VIEW.equals(action)) ||
+                Intent.ACTION_OPEN_DOCUMENT.equals(action)
+            ) {
 
                 Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
 
@@ -270,6 +272,12 @@ public class MainActivity extends Activity {
                 Intent helpIntent = new Intent(this, MainActivity.class);
                 helpIntent.putExtra(INTENT_START_HELP, true);
                 startActivity(helpIntent);
+                break;
+
+            // "Open" menu action
+            case R.id.open:
+                performFileSearch();
+                break;
 
                 // App button (top left corner)
             case android.R.id.home:
@@ -351,5 +359,49 @@ public class MainActivity extends Activity {
 
         AlertDialog alert = builder.create();
         alert.show();
+    }
+
+    private static final int READ_REQUEST_CODE = 42;
+
+    /**
+     * Fires an intent to spin up the "file chooser" UI and select an image.
+     */
+    public void performFileSearch() {
+
+        // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
+        // browser.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
+        // Filter to only show results that can be "opened", such as a
+        // file (as opposed to a list of contacts or timezones)
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+
+        startActivityForResult(intent, READ_REQUEST_CODE);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode,
+                                 Intent resultData) {
+
+        // The ACTION_OPEN_DOCUMENT intent was sent with the request code READ_REQUEST_CODE. If the request code seen
+        // here doesn't match, it's the response to some other intent, and the code below shouldn't run at all.
+
+        if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            // The document selected by the user won't be returned in the intent. Instead, a URI to that document
+            // will be contained in the return intent provided to this method as a parameter. Pull that URI using
+            // resultData.getData().
+            if (resultData != null) {
+                Uri uri = resultData.getData();
+                Log.i(MainApplication.TAG, "Uri: " + uri.toString());
+
+                // create a new intent (with URI) to open this document
+                Intent openFileIntent = new Intent(this, MainActivity.class);
+                openFileIntent.setData(uri);
+                openFileIntent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+                startActivity(openFileIntent);
+
+            }
+        }
     }
 }
