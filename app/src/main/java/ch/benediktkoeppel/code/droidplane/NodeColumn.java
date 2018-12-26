@@ -16,7 +16,6 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends LinearLayout, and then embeds a ListView.
@@ -24,13 +23,6 @@ import java.util.HashMap;
  * wrapped in a LinearLayout with a padding.
  */
 public class NodeColumn extends LinearLayout implements OnCreateContextMenuListener {
-
-    /**
-     * This translates ListViews to NodeColumns. We need this because the OnItemClicked Events come with a ListView
-     * (i.e. the ListView which was clicked) as parent, but we need to find out which NodeColumn was clicked. This
-     * would have been a simple cast if NodeColumn extended ListView, but we extend LinearLayout and wrap the ListView.
-     */
-    private static HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
     /**
      * The parent node (i.e. the node that is parent to everything we display in this column)
@@ -115,25 +107,11 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         // add the content adapter
         listView.setAdapter(adapter);
 
-        // store the ListView to NodeColumn mapping in listViewToNodeColumn
-        listViewToNodeColumn.put(listView, this);
-
         // call NodeColumn's onCreateContextMenu when a context menu for one of the listView items should be generated
         listView.setOnCreateContextMenuListener(this);
 
         // add the listView to the linearView
         this.addView(listView);
-    }
-
-    /**
-     * Finds the NodeColumn which contains the given listView.
-     *
-     * @param listView
-     * @return the node column which contains listView
-     */
-    public static NodeColumn getNodeColumnFromListView(ListView listView) {
-
-        return listViewToNodeColumn.get(listView);
     }
 
     /**
@@ -296,6 +274,15 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         // forward the event to the clicked node
         clickedNode.onCreateContextMenu(menu, v, menuInfo);
 
+    }
+
+    /**
+     * Returns the ListView of this NodeColumn
+     * @return the ListView of this NodeColumn
+     */
+    public ListView getListView() {
+
+        return listView;
     }
 }
 

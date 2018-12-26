@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -41,6 +42,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * Constants to determine the minimum swipe distance and speed
      */
     private static final int SWIPE_THRESHOLD_VELOCITY = 300;
+
+    /**
+     * This translates ListViews to NodeColumns. We need this because the OnItemClicked Events come with a ListView
+     * (i.e. the ListView which was clicked) as parent, but we need to find out which NodeColumn was clicked. This
+     * would have been a simple cast if NodeColumn extended ListView, but we extend LinearLayout and wrap the ListView.
+     */
+    private HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
+
 
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
@@ -81,7 +90,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param nodeColumn the NodeColumn to add to the HorizontalMindmapView
      */
-    public void addColumn(NodeColumn nodeColumn) {
+    private void addColumn(NodeColumn nodeColumn) {
 
         // add the column to the layout
         nodeColumns.add(nodeColumn);
@@ -123,7 +132,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     /**
      * Removes all columns from this HorizontalMindmapView
      */
-    public void removeAllColumns() {
+    private void removeAllColumns() {
 
         nodeColumns.clear();
         linearLayout.removeAllViews();
@@ -145,7 +154,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @return True if a column was removed, false if no column was removed.
      */
-    public boolean removeRightmostColumn() {
+    private boolean removeRightmostColumn() {
 
         // only remove a column if we have at least 2 columns. If there is only one column, it will not be removed.
         if (nodeColumns.size() >= 2) {
@@ -177,7 +186,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @return
      */
-    public int getNumberOfColumns() {
+    private int getNumberOfColumns() {
 
         return nodeColumns.size();
     }
@@ -189,7 +198,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @return Title of the right most parent node or an empty string.
      */
-    public String getTitleOfRightmostParent() {
+    private String getTitleOfRightmostParent() {
 
         if (!nodeColumns.isEmpty()) {
 
@@ -210,7 +219,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param nodeColumn
      */
-    public void removeAllColumnsRightOf(NodeColumn nodeColumn) {
+    private void removeAllColumnsRightOf(NodeColumn nodeColumn) {
 
         // we go from right to left, from the end of nodeColumns back to one
         // element after nodeColumn
@@ -268,7 +277,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param force
      */
-    public void up(boolean force) {
+    private void up(boolean force) {
 
         boolean wasColumnRemoved = removeRightmostColumn();
 
@@ -292,10 +301,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     public void down(MindmapNode node) {
 
-        // add a new column for this node and add it to the
-        // HorizontalMindmapView
+        // add a new column for this node and add it to the HorizontalMindmapView
         NodeColumn nodeColumn = new NodeColumn(getContext(), node);
         addColumn(nodeColumn);
+
+        // keep track of which list view belongs to which node column. This is necessary because onItemClick will get a
+        // ListView (the one that was clicked), and we need to know which NodeColumn this is.
+        ListView nodeColumnListView = nodeColumn.getListView();
+        listViewToNodeColumn.put(nodeColumnListView, nodeColumn);
 
         // then scroll all the way to the right
         scrollToRight();
@@ -303,8 +316,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // enable the up navigation with the Home (app) button (top left corner)
         enableHomeButtonIfEnoughColumns();
 
-        // get the title of the parent of the rightmost column (i.e. the
-        // selected node in the 2nd-rightmost column)
+        // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
         setApplicationTitle();
 
     }
@@ -313,7 +325,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * Sets the application title to the name of the parent node of the rightmost column, which is the most recently
      * clicked node.
      */
-    void setApplicationTitle() {
+    public void setApplicationTitle() {
 
         // get the title of the parent of the rightmost column (i.e. the
         // selected node in the 2nd-rightmost column)
@@ -360,7 +372,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // the clicked column parent is the ListView in which the user clicked. Because NodeColumn does not extend
         // ListView (it only wraps a ListView), we have to find out which NodeColumn it was. We can do so because
         // NodeColumn.getNodeColumnFromListView uses a static HashMap to do the translation.
-        NodeColumn clickedNodeColumn = NodeColumn.getNodeColumnFromListView((ListView)parent);
+        NodeColumn clickedNodeColumn = listViewToNodeColumn.get(parent);
 
         // remove all columns right of the column which was clicked
         removeAllColumnsRightOf(clickedNodeColumn);
@@ -518,7 +530,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * The HorizontalMindmapViewGestureDetector should detect the onFling event. However, it never receives the
      * onDown event, so when it gets the onFling the event1 is empty, and we can't detect the fling properly.
      */
-    class HorizontalMindmapViewGestureDetector extends SimpleOnGestureListener {
+    private class HorizontalMindmapViewGestureDetector extends SimpleOnGestureListener {
 
         @Override
         public boolean onDown(MotionEvent e) {
@@ -534,9 +546,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
          * relying on event1 and event2 (and determine the distance the finger moved), we only consider the velocity
          * of the fling. This is not as accurate as it could be, but it works.
          *
-         * @see
-         * android.view.GestureDetector.SimpleOnGestureListener#onFling(android
-         * .view.MotionEvent, android.view.MotionEvent, float, float)
+         * @see android.view.GestureDetector.SimpleOnGestureListener#onFling(android .view.MotionEvent, android.view
+         * .MotionEvent, float, float)
          */
         @Override
         public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
