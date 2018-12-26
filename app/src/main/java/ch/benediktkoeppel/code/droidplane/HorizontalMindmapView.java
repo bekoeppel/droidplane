@@ -97,7 +97,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         linearLayout.addView(nodeColumn, linearLayout.getChildCount());
         Log.d(MainApplication.TAG, "linearLayout now has " + linearLayout.getChildCount() + " items");
 
-        // register as onItemClickListener and onItemLongClickListener
+        // register as onItemClickListener and onItemLongClickListener. This HorizontalMindmapView has to register
+        // itself as onItemClickListener, it's not enough if the nodeColumn would handle this onItemClick events itself.
+        // This is because we might have to remove columns (and add new columns) depending on where the user clicks,
+        // which is the responsibility of this HorizontalMindmapView.
         nodeColumn.setOnItemClickListener(this);
     }
 

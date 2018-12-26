@@ -115,16 +115,6 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     }
 
     /**
-     * GUI Helper to detach this LinearView from its parent
-     */
-    public void removeFromParent() {
-
-        if (this.getParent() != null) {
-            ((ViewGroup)this.getParent()).removeView(this);
-        }
-    }
-
-    /**
      * Sets the width of this column to columnWidth
      *
      * @param columnWidth width of the column
@@ -166,8 +156,6 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
      *
      * @return
      */
-    @SuppressWarnings("deprecation")
-    @SuppressLint("NewApi")
     private static int getOptimalColumnWidth(Context context) {
 
         // and R.integer.horizontally_visible_panes defines how many columns should be visible side by side
@@ -221,19 +209,6 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         // then select node at position
         mindmapNodes.get(position).setSelected(true);
-
-        // then notify about the GUI change
-        adapter.notifyDataSetChanged();
-    }
-
-    /**
-     * Clears the item color on all nodes
-     */
-    public void clearAllItemColor() {
-
-        for (int i = 0; i < mindmapNodes.size(); i++) {
-            mindmapNodes.get(i).setSelected(false);
-        }
 
         // then notify about the GUI change
         adapter.notifyDataSetChanged();
@@ -312,18 +287,10 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
     @Override
     public View getView(int position, View convertView, @NonNull ViewGroup parent) {
 
-//		if ( convertView != null ) {
-//			if ( convertView instanceof MindmapNode ) {
-//				((MindmapNode)convertView).discardView();
-//			}
-//		}
-
-        // when convertView != null, we should take the convertView and update
-        // it appropriately. Android is optimizing the performance
-        // and thus recycling GUI elements. However, we don't want to recycle
-        // anything, because these are genuine Mindmap nodes. Recycling
-        // the view here would show one node twice in the tree, while leaving
-        // out the actual node we should display.
+        // when convertView != null, we should take the convertView and update it appropriately. Android is
+        // optimizing the performance and thus recycling GUI elements. However, we don't want to recycle anything,
+        // because these are genuine Mindmap nodes. Recycling the view here would show one node twice in the tree,
+        // while leaving out the actual node we should display.
 
         MindmapNode view = mindmapNodes.get(position);
 
