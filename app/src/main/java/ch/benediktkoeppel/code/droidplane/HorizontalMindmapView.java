@@ -1,5 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
@@ -50,16 +51,23 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
+    private Mindmap mindmap;
+
+    private MainActivity mainActivity;
+
 
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
      * HorizontalScrollView and create the LinearLayout view inside the HorizontalScrollView.
      *
-     * @param context the Application Context
+     * @param mainActivity the Application Context
      */
-    public HorizontalMindmapView(Context context) {
+    public HorizontalMindmapView(Mindmap mindmap, MainActivity mainActivity) {
 
-        super(context);
+        super(mainActivity);
+
+        this.mindmap = mindmap;
+        this.mainActivity = mainActivity;
 
         // list where all columns are stored
         nodeColumns = new ArrayList<>();
@@ -73,7 +81,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         ViewGroup.LayoutParams linearLayoutParams = new ViewGroup.LayoutParams(width, height);
 
         // create a LinearLayout in this HorizontalScrollView. All NodeColumns will go into that LinearLayout.
-        linearLayout = new LinearLayout(context);
+        linearLayout = new LinearLayout(mainActivity);
         linearLayout.setLayoutParams(linearLayoutParams);
         this.addView(linearLayout);
 
@@ -255,7 +263,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         removeAllColumns();
 
         // go down into the root node
-        down(MainApplication.getInstance().getMindmap().getRootNode());
+        down(getContext(), mindmap.getRootNode());
     }
 
     /**
@@ -286,14 +294,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         // close the application if no column was removed, and the force switch was on
         if (!wasColumnRemoved && force) {
-            MainApplication.getMainActivityInstance().finish();
+            AndroidHelper.getActivity(getContext(), Activity.class).finish();
         }
 
         // enable the up navigation with the Home (app) button (top left corner)
-        enableHomeButtonIfEnoughColumns();
+        enableHomeButtonIfEnoughColumns(getContext());
 
         // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-        setApplicationTitle();
+        setApplicationTitle(getContext());
 
     }
 
@@ -302,7 +310,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param node
      */
-    public void down(MindmapNode node) {
+    public void down(Context context, MindmapNode node) {
 
         // add a new column for this node and add it to the HorizontalMindmapView
         NodeColumn nodeColumn = new NodeColumn(getContext(), node);
@@ -317,10 +325,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         scrollToRight();
 
         // enable the up navigation with the Home (app) button (top left corner)
-        enableHomeButtonIfEnoughColumns();
+        enableHomeButtonIfEnoughColumns(context);
 
         // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-        setApplicationTitle();
+        setApplicationTitle(context);
 
     }
 
@@ -328,7 +336,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * Sets the application title to the name of the parent node of the rightmost column, which is the most recently
      * clicked node.
      */
-    public void setApplicationTitle() {
+    public void setApplicationTitle(Context context) {
 
         // get the title of the parent of the rightmost column (i.e. the
         // selected node in the 2nd-rightmost column)
@@ -339,24 +347,24 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         if (nodeTitle.equals("")) {
             Log.d(MainApplication.TAG, "Setting application title to default string: " +
                                        getResources().getString(R.string.app_name));
-            MainApplication.getMainActivityInstance().setTitle(R.string.app_name);
+            AndroidHelper.getActivity(context, Activity.class).setTitle(R.string.app_name);
         } else {
             Log.d(MainApplication.TAG, "Setting application title to node name: " + nodeTitle);
-            MainApplication.getMainActivityInstance().setTitle(nodeTitle);
+            AndroidHelper.getActivity(context, Activity.class).setTitle(nodeTitle);
         }
     }
 
     /**
      * Enables the Home button in the application if we have enough columns, i.e. if "Up" will remove a column.
      */
-    void enableHomeButtonIfEnoughColumns() {
+    void enableHomeButtonIfEnoughColumns(Context context) {
         // if we only have one column (i.e. this is the root node), then we
         // disable the home button
         int numberOfColumns = getNumberOfColumns();
         if (numberOfColumns >= 2) {
-            MainApplication.getMainActivityInstance().enableHomeButton();
+            AndroidHelper.getActivity(context, MainActivity.class).enableHomeButton();
         } else {
-            MainApplication.getMainActivityInstance().disableHomeButton();
+            AndroidHelper.getActivity(context, MainActivity.class).disableHomeButton();
         }
     }
 
@@ -390,17 +398,17 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
             clickedNodeColumn.setItemColor(position);
 
             // and drill down
-            down(clickedNode);
+            down(mainActivity, clickedNode);
         }
 
         // if the clicked node has a link (and is a leaf), open the link
         else if (clickedNode.link != null) {
-            clickedNode.openLink();
+            clickedNode.openLink(mainActivity);
         }
 
         // otherwise (no children) then we just update the application title to the new parent node
         else {
-            setApplicationTitle();
+            setApplicationTitle(getContext());
         }
     }
 
@@ -527,6 +535,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         return numVisiblePixelsOnColumn;
+    }
+
+    public void setMainActivity(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
     }
 
     /**

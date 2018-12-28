@@ -40,6 +40,11 @@ public class MindmapNode extends LinearLayout {
     public String id;
 
     /**
+     * The mindmap, in which this node is
+     */
+    private Mindmap mindmap;
+
+    /**
      * The Parent MindmapNode
      */
     public MindmapNode parentNode;
@@ -118,9 +123,11 @@ public class MindmapNode extends LinearLayout {
      *
      * @param node
      */
-    public MindmapNode(Context context, Node node, MindmapNode parentNode) {
+    public MindmapNode(Context context, Node node, MindmapNode parentNode, Mindmap mindmap) {
 
         super(context);
+
+        this.mindmap = mindmap;
 
         // store the parentNode
         this.parentNode = parentNode;
@@ -436,7 +443,7 @@ public class MindmapNode extends LinearLayout {
                 Node tmpNode = childNodes.item(i);
 
                 if (isMindmapNode(tmpNode)) {
-                    MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode, this);
+                    MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode, this, mindmap);
                     childMindmapNodes.add(mindmapNode);
                 }
             }
@@ -454,7 +461,7 @@ public class MindmapNode extends LinearLayout {
     /**
      * Opens the link of this node (if any)
      */
-    public void openLink() {
+    public void openLink(MainActivity mainActivity) {
 
         // TODO: if link is internal, substring ID
 
@@ -463,26 +470,25 @@ public class MindmapNode extends LinearLayout {
 
         // if the link has a "#ID123", it's an internal link within the document
         if (this.link.getFragment() != null && this.link.getFragment().startsWith("ID")) {
-            openInternalFragmentLink();
+            openInternalFragmentLink(mainActivity);
 
         }
 
         // otherwise, we try to open it as intent
         else {
-            openIntentLink();
+            openIntentLink(mainActivity);
         }
     }
 
     /**
      * Open this node's link as internal fragment
      */
-    private void openInternalFragmentLink() {
+    private void openInternalFragmentLink(MainActivity mainActivity) {
 
         // internal link, so this.link is of the form "#ID_123234534" this.link.getFragment() should give everything
         // after the "#" it is null if there is no "#", which should be the case for all other links
         String fragment = this.link.getFragment();
 
-        Mindmap mindmap = MainApplication.getMainActivityInstance().application.getMindmap();
         MindmapNode linkedInternal = mindmap.getNodeByID(fragment);
 
         if (linkedInternal != null) {
@@ -491,8 +497,7 @@ public class MindmapNode extends LinearLayout {
             // the internal linked node might be anywhere in the mindmap, i.e. on a completely separate branch than
             // we are on currently. We need to go to the Top, and then descend into the mindmap to reach the right
             // point
-            MainActivity mainActivity = MainApplication.getMainActivityInstance();
-            HorizontalMindmapView mindmapView = mainActivity.application.horizontalMindmapView;
+            HorizontalMindmapView mindmapView = mainActivity.getHorizontalMindmapView();
             mindmapView.top();
 
             List<MindmapNode> nodeHierarchy = new ArrayList<>();
@@ -503,7 +508,7 @@ public class MindmapNode extends LinearLayout {
             }
 
             for (MindmapNode mindmapNode : nodeHierarchy) {
-                mindmapView.down(mindmapNode);
+                mindmapView.down(mainActivity, mindmapNode);
             }
 
         } else {
@@ -517,13 +522,13 @@ public class MindmapNode extends LinearLayout {
     /**
      * Open this node's link as intent
      */
-    private void openIntentLink() {
+    private void openIntentLink(MainActivity mainActivity) {
 
         // try opening the link normally with an intent
         try {
             Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
             openUriIntent.setData(this.link);
-            MainApplication.getMainActivityInstance().startActivity(openUriIntent);
+            mainActivity.startActivity(openUriIntent);
             return;
         } catch (ActivityNotFoundException e) {
             Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
@@ -539,7 +544,7 @@ public class MindmapNode extends LinearLayout {
             } else {
 
                 // link is relative to mindmap file
-                String mindmapPath = MainApplication.getInstance().getMindmap().getUri().getPath();
+                String mindmapPath = mindmap.getUri().getPath();
                 Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
                 String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
                 Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
@@ -570,7 +575,7 @@ public class MindmapNode extends LinearLayout {
             Intent intent = new Intent();
             intent.setAction(Intent.ACTION_VIEW);
             intent.setDataAndType(Uri.fromFile(file), mime);
-            MainApplication.getMainActivityInstance().startActivity(intent);
+            mainActivity.startActivity(intent);
         } catch (Exception e1) {
             Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
             e1.printStackTrace();

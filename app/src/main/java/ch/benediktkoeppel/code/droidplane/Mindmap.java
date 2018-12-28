@@ -94,7 +94,8 @@ public class Mindmap {
         rootNode = new MindmapNode(
                 context,
                 document.getDocumentElement().getElementsByTagName("node").item(0),
-                null
+                null,
+                this
         );
 
         long loadDocumentEndTime = System.currentTimeMillis();

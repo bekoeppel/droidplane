@@ -29,11 +29,19 @@ import java.io.InputStream;
  */
 public class MainActivity extends Activity {
 
-    MainApplication application;
-
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
     private ProgressDialog progressDialog;
+
+    private Mindmap mindmap;
+
+    private static HorizontalMindmapView onSaveInstanceHorizontalMindmapView;
+    private static Mindmap onSaveInstanceMindmap;
+
+    /**
+     * HorizontalMindmapView that contains all NodeColumns
+     */
+    private HorizontalMindmapView horizontalMindmapView;
 
     @Override
     public void onStart() {
@@ -55,9 +63,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        application = (MainApplication)getApplication();
-        MainApplication.setMainActivityInstance(this);
-
         // initialize android stuff
         // Google Analytics
         Tracker tracker = ((MainApplication)getApplication()).getTracker();
@@ -73,46 +78,68 @@ public class MainActivity extends Activity {
         String type = intent.getType();
 
         // if the application was reset, or the document has changed, we need to re-initialize everything
-        Mindmap mindmap = application.getMindmap();
-        if (mindmap == null || mindmap.document == null
-            || (mindmap.getUri() != intent.getData() && intent.getData() != null)
-            || (intent.getBooleanExtra(INTENT_START_HELP, false))
-        ) {
+        if (savedInstanceState == null || savedInstanceState.getParcelable("mindmapUri") == null) {
 
             // create a new Mindmap
-            application.setMindmap(new Mindmap());
+            mindmap = new Mindmap();
 
             // create a new HorizontalMindmapView
-            application.horizontalMindmapView = new HorizontalMindmapView(getApplicationContext());
+            horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
 
             // create a ProgressDialog, and load the file asynchronously
             this.progressDialog = ProgressDialog.show(this, "DroidPlane", "Opening Mindmap File...", true, false);
-            new FileOpenTask(intent, action, type).execute();
+            new FileOpenTask(this, intent, action, type).execute();
 
         }
 
         // otherwise, we can display the existing HorizontalMindmapView again
         else {
 
+            // TODO: this is a hack, it should be saved in the savedState
+            horizontalMindmapView = onSaveInstanceHorizontalMindmapView;
+            onSaveInstanceHorizontalMindmapView = null;
+            mindmap = onSaveInstanceMindmap;
+            onSaveInstanceMindmap = null;
+
             // add the HorizontalMindmapView to the Layout Wrapper
-            LinearLayout tmp_parent = ((LinearLayout)application.horizontalMindmapView.getParent());
+            LinearLayout tmp_parent = ((LinearLayout)horizontalMindmapView.getParent());
             if (tmp_parent != null) {
-                tmp_parent.removeView(application.horizontalMindmapView);
+                tmp_parent.removeView(horizontalMindmapView);
             }
-            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
+            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
+
+            horizontalMindmapView.setMainActivity(this);
 
             // fix the widths of all columns
-            application.horizontalMindmapView.resizeAllColumns(getApplicationContext());
+            horizontalMindmapView.resizeAllColumns(getApplicationContext());
 
             // and then scroll to the right
-            application.horizontalMindmapView.scrollToRight();
+            horizontalMindmapView.scrollToRight();
 
             // enable the up navigation with the Home (app) button (top left corner)
-            application.horizontalMindmapView.enableHomeButtonIfEnoughColumns();
+            horizontalMindmapView.enableHomeButtonIfEnoughColumns(this);
 
             // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-            application.horizontalMindmapView.setApplicationTitle();
+            horizontalMindmapView.setApplicationTitle(this);
         }
+    }
+
+    public HorizontalMindmapView getHorizontalMindmapView() {
+
+        return horizontalMindmapView;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+
+        super.onSaveInstanceState(outState);
+
+        // save the currently open mindmap, so that when the activity resumes, we can restore it
+        outState.putParcelable("mindmapUri", mindmap.getUri());
+        // TODO: this is a hack, it should be saved in the savedState
+        onSaveInstanceHorizontalMindmapView = horizontalMindmapView;
+        onSaveInstanceMindmap = mindmap;
+
     }
 
     private class FileOpenTask extends AsyncTask<String, Void, Object> {
@@ -120,9 +147,11 @@ public class MainActivity extends Activity {
         private final Intent intent;
         private final String action;
         private final String type;
+        private final Context initialContext;
 
-        FileOpenTask(Intent intent, String action, String type) {
+        FileOpenTask(Context context, Intent intent, String action, String type) {
 
+            this.initialContext = context;
             this.intent = intent;
             this.action = action;
             this.type = type;
@@ -160,7 +189,7 @@ public class MainActivity extends Activity {
                 // store the Uri. Next time the MainActivity is started, we'll
                 // check whether the Uri has changed (-> load new document) or
                 // remained the same (-> reuse previous document)
-                application.getMindmap().setUri(uri);
+                mindmap.setUri(uri);
             }
 
             // started from the launcher
@@ -173,7 +202,7 @@ public class MainActivity extends Activity {
 
             // load the mindmap
             Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            application.getMindmap().loadDocument(mm, getApplicationContext());
+            mindmap.loadDocument(mm, getApplicationContext());
 
             return null;
         }
@@ -182,10 +211,10 @@ public class MainActivity extends Activity {
         protected void onPostExecute(Object o) {
 
             // add the HorizontalMindmapView to the Layout Wrapper
-            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(application.horizontalMindmapView);
+            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
 
             // navigate down into the root node
-            application.horizontalMindmapView.down(application.getMindmap().getRootNode());
+            horizontalMindmapView.down(initialContext, mindmap.getRootNode());
 
             if (progressDialog != null) {
                 progressDialog.dismiss();
@@ -239,7 +268,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
 
-        application.horizontalMindmapView.upOrClose();
+        horizontalMindmapView.upOrClose();
     }
 
     /*
@@ -257,12 +286,12 @@ public class MainActivity extends Activity {
 
             // "Up" menu action
             case R.id.up:
-                application.horizontalMindmapView.up();
+                horizontalMindmapView.up();
                 break;
 
             // "Top" menu action
             case R.id.top:
-                application.horizontalMindmapView.top();
+                horizontalMindmapView.top();
                 break;
 
             // "Help" menu action
@@ -281,7 +310,7 @@ public class MainActivity extends Activity {
 
                 // App button (top left corner)
             case android.R.id.home:
-                application.horizontalMindmapView.up();
+                horizontalMindmapView.up();
                 break;
         }
 
@@ -329,7 +358,7 @@ public class MainActivity extends Activity {
             // open the URI specified in the "LINK" tag
             case R.id.contextopenlink:
                 Log.d(MainApplication.TAG, "Opening node link " + mindmapNode.link);
-                mindmapNode.openLink();
+                mindmapNode.openLink(this);
 
                 break;
 
