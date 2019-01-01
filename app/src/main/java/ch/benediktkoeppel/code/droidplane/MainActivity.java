@@ -5,10 +5,12 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.*;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -27,7 +29,7 @@ import java.io.InputStream;
  * before it got restarted. A restart can happen when the screen is rotated, and we want to continue wherever we were
  * before the screen rotate.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends FragmentActivity {
 
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
@@ -72,74 +74,58 @@ public class MainActivity extends Activity {
         // enable the Android home button
         enableHomeButton();
 
+        // get the Mindmap ViewModel
+        mindmap = ViewModelProviders.of(this).get(Mindmap.class);
+
         // intents (how we are called)
         Intent intent = getIntent();
         String action = intent.getAction();
         String type = intent.getType();
 
-        // if the application was reset, or the document has changed, we need to re-initialize everything
-        if (savedInstanceState == null || savedInstanceState.getParcelable("mindmapUri") == null) {
-
-            // create a new Mindmap
-            mindmap = new Mindmap();
-
-            // create a new HorizontalMindmapView
-            horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
+        // we didn't load a mindmap yet, we open it
+        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
+        if (mindmap.document == null) {
 
             // create a ProgressDialog, and load the file asynchronously
             this.progressDialog = ProgressDialog.show(this, "DroidPlane", "Opening Mindmap File...", true, false);
             new FileOpenTask(this, intent, action, type).execute();
+            // once the FileOpenTask is complete, it will call setUpHorizontalMindmapView().
 
+        } else {
+            setUpHorizontalMindmapView();
         }
 
-        // otherwise, we can display the existing HorizontalMindmapView again
-        else {
+    }
 
-            // TODO: this is a hack, it should be saved in the savedState
-            horizontalMindmapView = onSaveInstanceHorizontalMindmapView;
-            onSaveInstanceHorizontalMindmapView = null;
-            mindmap = onSaveInstanceMindmap;
-            onSaveInstanceMindmap = null;
+    private void setUpHorizontalMindmapView() {
 
-            // add the HorizontalMindmapView to the Layout Wrapper
-            LinearLayout tmp_parent = ((LinearLayout)horizontalMindmapView.getParent());
-            if (tmp_parent != null) {
-                tmp_parent.removeView(horizontalMindmapView);
-            }
-            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
+        // create a new HorizontalMindmapView
+        horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
 
-            horizontalMindmapView.setMainActivity(this);
+        ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
 
-            // fix the widths of all columns
-            horizontalMindmapView.resizeAllColumns(getApplicationContext());
+        horizontalMindmapView.setMainActivity(this);
 
-            // and then scroll to the right
-            horizontalMindmapView.scrollToRight();
 
-            // enable the up navigation with the Home (app) button (top left corner)
-            horizontalMindmapView.enableHomeButtonIfEnoughColumns(this);
+        // navigate down into the root node
+        horizontalMindmapView.down(this, mindmap.getRootNode());
 
-            // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
-            horizontalMindmapView.setApplicationTitle(this);
-        }
+        // fix the widths of all columns
+        horizontalMindmapView.resizeAllColumns(getApplicationContext());
+
+        // and then scroll to the right
+        horizontalMindmapView.scrollToRight();
+
+        // enable the up navigation with the Home (app) button (top left corner)
+        horizontalMindmapView.enableHomeButtonIfEnoughColumns(this);
+
+        // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
+        horizontalMindmapView.setApplicationTitle(this);
     }
 
     public HorizontalMindmapView getHorizontalMindmapView() {
 
         return horizontalMindmapView;
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-
-        super.onSaveInstanceState(outState);
-
-        // save the currently open mindmap, so that when the activity resumes, we can restore it
-        outState.putParcelable("mindmapUri", mindmap.getUri());
-        // TODO: this is a hack, it should be saved in the savedState
-        onSaveInstanceHorizontalMindmapView = horizontalMindmapView;
-        onSaveInstanceMindmap = mindmap;
-
     }
 
     private class FileOpenTask extends AsyncTask<String, Void, Object> {
@@ -210,11 +196,13 @@ public class MainActivity extends Activity {
         @Override
         protected void onPostExecute(Object o) {
 
-            // add the HorizontalMindmapView to the Layout Wrapper
-            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
+            setUpHorizontalMindmapView();
 
-            // navigate down into the root node
-            horizontalMindmapView.down(initialContext, mindmap.getRootNode());
+//            // add the HorizontalMindmapView to the Layout Wrapper
+//            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
+//
+//            // navigate down into the root node
+//            horizontalMindmapView.down(initialContext, mindmap.getRootNode());
 
             if (progressDialog != null) {
                 progressDialog.dismiss();

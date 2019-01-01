@@ -1,5 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import android.arch.lifecycle.ViewModel;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
@@ -19,7 +20,7 @@ import java.util.Map;
 /**
  * Mindmap handles the loading and storing of a mind map document.
  */
-public class Mindmap {
+public class Mindmap extends ViewModel {
 
     /**
      * the XML DOM document, the mind map
