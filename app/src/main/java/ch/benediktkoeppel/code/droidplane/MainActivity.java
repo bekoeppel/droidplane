@@ -33,12 +33,7 @@ public class MainActivity extends FragmentActivity {
 
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
-    private ProgressDialog progressDialog;
-
     private Mindmap mindmap;
-
-    private static HorizontalMindmapView onSaveInstanceHorizontalMindmapView;
-    private static Mindmap onSaveInstanceMindmap;
 
     /**
      * HorizontalMindmapView that contains all NodeColumns
@@ -80,16 +75,31 @@ public class MainActivity extends FragmentActivity {
         // intents (how we are called)
         Intent intent = getIntent();
         String action = intent.getAction();
-        String type = intent.getType();
 
         // we didn't load a mindmap yet, we open it
         // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
         if (mindmap.document == null) {
 
             // create a ProgressDialog, and load the file asynchronously
-            this.progressDialog = ProgressDialog.show(this, "DroidPlane", "Opening Mindmap File...", true, false);
-            new FileOpenTask(this, intent, action, type).execute();
-            // once the FileOpenTask is complete, it will call setUpHorizontalMindmapView().
+            ProgressDialog progressDialog = ProgressDialog.show(
+                    this,
+                    "DroidPlane",
+                    "Opening Mindmap File...",
+                    true,
+                    false
+            );
+
+            // Once the FileOpenTask is complete, we want to set up the horizontal mindmap view. If we already have
+            // a mindmap, we run it immediately.
+            Runnable onPostExecuteTask = new Runnable() {
+                @Override
+                public void run() {
+                    setUpHorizontalMindmapView();
+                }
+            };
+
+            // open file
+            new FileOpenTask(intent, action, progressDialog, onPostExecuteTask).execute();
 
         } else {
             setUpHorizontalMindmapView();
@@ -103,18 +113,6 @@ public class MainActivity extends FragmentActivity {
         horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
 
         ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
-
-        horizontalMindmapView.setMainActivity(this);
-
-
-        // navigate down into the root node
-        horizontalMindmapView.down(this, mindmap.getRootNode());
-
-        // fix the widths of all columns
-        horizontalMindmapView.resizeAllColumns(getApplicationContext());
-
-        // and then scroll to the right
-        horizontalMindmapView.scrollToRight();
 
         // enable the up navigation with the Home (app) button (top left corner)
         horizontalMindmapView.enableHomeButtonIfEnoughColumns(this);
@@ -132,15 +130,20 @@ public class MainActivity extends FragmentActivity {
 
         private final Intent intent;
         private final String action;
-        private final String type;
-        private final Context initialContext;
+        private final ProgressDialog progressDialog;
+        private final Runnable onPostExecuteTask;
 
-        FileOpenTask(Context context, Intent intent, String action, String type) {
+        FileOpenTask(
+                Intent intent,
+                String action,
+                ProgressDialog progressDialog,
+                Runnable onPostExecuteTask
+        ) {
 
-            this.initialContext = context;
             this.intent = intent;
             this.action = action;
-            this.type = type;
+            this.progressDialog = progressDialog;
+            this.onPostExecuteTask = onPostExecuteTask;
         }
 
         @Override
@@ -196,13 +199,9 @@ public class MainActivity extends FragmentActivity {
         @Override
         protected void onPostExecute(Object o) {
 
-            setUpHorizontalMindmapView();
-
-//            // add the HorizontalMindmapView to the Layout Wrapper
-//            ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
-//
-//            // navigate down into the root node
-//            horizontalMindmapView.down(initialContext, mindmap.getRootNode());
+            if (onPostExecuteTask != null) {
+                onPostExecuteTask.run();
+            }
 
             if (progressDialog != null) {
                 progressDialog.dismiss();
@@ -322,11 +321,11 @@ public class MainActivity extends FragmentActivity {
         AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
 
         // contextMenuInfo.position is the position in the ListView where the context menu was loaded, i.e. the index
-        // of the item in our mindmapNodes list
+        // of the item in our mindmapNodeLayouts list
 
-        // MindmapNode extends LinearView, so we can cast targetView back to MindmapNode
-        MindmapNode mindmapNode = (MindmapNode)contextMenuInfo.targetView;
-        Log.d(MainApplication.TAG, "mindmapNode.text = " + mindmapNode.text);
+        // MindmapNodeLayout extends LinearView, so we can cast targetView back to MindmapNodeLayout
+        MindmapNodeLayout mindmapNodeLayout = (MindmapNodeLayout)contextMenuInfo.targetView;
+        Log.d(MainApplication.TAG, "mindmapNodeLayout.text = " + mindmapNodeLayout.getMindmapNode().getText());
 
         Log.d(MainApplication.TAG, "contextMenuInfo.position = " + contextMenuInfo.position);
         Log.d(MainApplication.TAG, "item.getTitle() = " + item.getTitle());
@@ -338,15 +337,15 @@ public class MainActivity extends FragmentActivity {
                 Log.d(MainApplication.TAG, "Copying text to clipboard");
                 ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
 
-                ClipData clipData = ClipData.newPlainText("node", mindmapNode.text);
+                ClipData clipData = ClipData.newPlainText("node", mindmapNodeLayout.getMindmapNode().getText());
                 clipboardManager.setPrimaryClip(clipData);
 
                 break;
 
             // open the URI specified in the "LINK" tag
             case R.id.contextopenlink:
-                Log.d(MainApplication.TAG, "Opening node link " + mindmapNode.link);
-                mindmapNode.openLink(this);
+                Log.d(MainApplication.TAG, "Opening node link " + mindmapNodeLayout.getMindmapNode().getLink());
+                mindmapNodeLayout.openLink(this);
 
                 break;
 

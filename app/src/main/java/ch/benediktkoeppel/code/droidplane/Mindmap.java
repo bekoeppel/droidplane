@@ -43,6 +43,11 @@ public class Mindmap extends ViewModel {
     private Map<String, MindmapNode> nodesById;
 
     /**
+     * The deepest selected mindmap node
+     */
+    private MindmapNode deepestSelectedMindmapNode;
+
+    /**
      * Returns the Uri which is currently loaded in document.
      *
      * @return Uri
@@ -93,11 +98,13 @@ public class Mindmap extends ViewModel {
 
         // get the root node
         rootNode = new MindmapNode(
-                context,
                 document.getDocumentElement().getElementsByTagName("node").item(0),
                 null,
                 this
         );
+
+        // by default, the root node is the deepest node that is expanded
+        deepestSelectedMindmapNode = rootNode;
 
         long loadDocumentEndTime = System.currentTimeMillis();
         Tracker tracker = MainApplication.getTracker();
@@ -137,8 +144,8 @@ public class Mindmap extends ViewModel {
      */
     private void indexNodesByIds(MindmapNode node) {
 
-        this.nodesById.put(node.id, node);
-        Log.v(MainApplication.TAG, "Added " + node.id + " to hashmap");
+        this.nodesById.put(node.getId(), node);
+        Log.v(MainApplication.TAG, "Added " + node.getId() + " to hashmap");
 
         for (MindmapNode mindmapNode : node.getChildNodes()) {
             indexNodesByIds(mindmapNode);
@@ -167,4 +174,13 @@ public class Mindmap extends ViewModel {
         return node;
     }
 
+    public MindmapNode getDeepestSelectedMindmapNode() {
+
+        return deepestSelectedMindmapNode;
+    }
+
+    public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
+
+        this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+    }
 }

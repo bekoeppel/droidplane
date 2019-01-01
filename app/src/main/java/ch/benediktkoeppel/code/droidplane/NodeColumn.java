@@ -30,9 +30,9 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     private MindmapNode parent;
 
     /**
-     * The list of all MindmapNodes which we display in this column
+     * The list of all MindmapNodeLayouts which we display in this column
      */
-    private ArrayList<MindmapNode> mindmapNodes;
+    private ArrayList<MindmapNodeLayout> mindmapNodeLayouts;
 
     /**
      * The adapter for this column
@@ -73,8 +73,12 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         super(context);
 
-        // extract all <node.../> elements from the parent node, and add them to the mindmapNodes list
-        mindmapNodes = parent.getChildNodes();
+        // extract all <node.../> elements from the parent node, create layouts, and add them to the mindmapNodes list
+        mindmapNodeLayouts = new ArrayList<>();
+        ArrayList<MindmapNode> mindmapNodes = parent.getChildNodes();
+        for (MindmapNode mindmapNode : mindmapNodes) {
+            mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
+        }
 
         // store the parent node
         this.parent = parent;
@@ -102,7 +106,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
 
         // create adapter (i.e. data provider) for the column
-        adapter = new MindmapNodeAdapter(getContext(), R.layout.mindmap_node_list_item, mindmapNodes);
+        adapter = new MindmapNodeAdapter(getContext(), R.layout.mindmap_node_list_item, mindmapNodeLayouts);
 
         // add the content adapter
         listView.setAdapter(adapter);
@@ -133,7 +137,8 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
      */
     public void deselectAllNodes() {
         // deselect all nodes
-        for (MindmapNode mindmapNode : mindmapNodes) {
+        for (MindmapNodeLayout mindmapNodeLayout : mindmapNodeLayouts) {
+            MindmapNode mindmapNode = mindmapNodeLayout.getMindmapNode();
             mindmapNode.setSelected(false);
         }
 
@@ -185,14 +190,14 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     }
 
     /**
-     * Fetches the MindmapNode at the given position
+     * Fetches the MindmapNodeLayout at the given position
      *
-     * @param position the position from which the MindmapNode should be returned
-     * @return MindmapNode
+     * @param position the position from which the MindmapNodeLayout should be returned
+     * @return MindmapNodeLayout
      */
-    public MindmapNode getNodeAtPosition(int position) {
+    public MindmapNodeLayout getNodeAtPosition(int position) {
 
-        return mindmapNodes.get(position);
+        return mindmapNodeLayouts.get(position);
     }
 
     /**
@@ -203,12 +208,12 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     public void setItemColor(int position) {
 
         // deselect all nodes
-        for (int i = 0; i < mindmapNodes.size(); i++) {
-            mindmapNodes.get(i).setSelected(false);
+        for (int i = 0; i < mindmapNodeLayouts.size(); i++) {
+            mindmapNodeLayouts.get(i).setSelected(false);
         }
 
         // then select node at position
-        mindmapNodes.get(position).setSelected(true);
+        mindmapNodeLayouts.get(position).setSelected(true);
 
         // then notify about the GUI change
         adapter.notifyDataSetChanged();
@@ -244,7 +249,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo)menuInfo;
 
         // get the clicked node
-        MindmapNode clickedNode = mindmapNodes.get(contextMenuInfo.position);
+        MindmapNodeLayout clickedNode = mindmapNodeLayouts.get(contextMenuInfo.position);
 
         // forward the event to the clicked node
         clickedNode.onCreateContextMenu(menu, v, menuInfo);
@@ -265,14 +270,14 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 /**
  * The MindmapNodeAdapter is the data provider for the NodeColumn (respectively its ListView).
  */
-class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
+class MindmapNodeAdapter extends ArrayAdapter<MindmapNodeLayout> {
 
-    private ArrayList<MindmapNode> mindmapNodes;
+    private ArrayList<MindmapNodeLayout> mindmapNodeLayouts;
 
-    public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNode> mindmapNodes) {
+    public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNodeLayout> mindmapNodeLayouts) {
 
-        super(context, textViewResourceId, mindmapNodes);
-        this.mindmapNodes = mindmapNodes;
+        super(context, textViewResourceId, mindmapNodeLayouts);
+        this.mindmapNodeLayouts = mindmapNodeLayouts;
     }
 
     /* (non-Javadoc)
@@ -292,7 +297,7 @@ class MindmapNodeAdapter extends ArrayAdapter<MindmapNode> {
         // because these are genuine Mindmap nodes. Recycling the view here would show one node twice in the tree,
         // while leaving out the actual node we should display.
 
-        MindmapNode view = mindmapNodes.get(position);
+        MindmapNodeLayout view = mindmapNodeLayouts.get(position);
 
         // tell the node to refresh it's view
         view.refreshView();

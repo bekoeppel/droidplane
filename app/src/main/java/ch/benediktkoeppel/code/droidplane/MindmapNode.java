@@ -1,43 +1,26 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import android.annotation.SuppressLint;
-import android.content.ActivityNotFoundException;
-import android.content.Context;
-import android.content.Intent;
-import android.content.res.Resources;
-import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Build;
 import android.text.Html;
-import android.text.SpannableString;
-import android.text.style.StyleSpan;
 import android.util.Log;
-import android.view.ContextMenu;
-import android.view.ContextMenu.ContextMenuInfo;
-import android.view.Gravity;
-import android.view.View;
-import android.webkit.MimeTypeMap;
-import android.widget.*;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 
 /**
  * A MindMapNode is a special type of DOM Node. A DOM Node can be converted to a MindMapNode if it has type ELEMENT,
  * and tag "node".
  */
-public class MindmapNode extends LinearLayout {
+public class MindmapNode {
 
     /**
      * The ID of the node (ID attribute)
      */
-    public String id;
+    private String id;
 
     /**
      * The mindmap, in which this node is
@@ -47,12 +30,12 @@ public class MindmapNode extends LinearLayout {
     /**
      * The Parent MindmapNode
      */
-    public MindmapNode parentNode;
+    private MindmapNode parentNode;
 
     /**
      * The Text of the node (TEXT attribute).
      */
-    public String text;
+    private String text;
 
     /**
      * Bold style
@@ -65,9 +48,9 @@ public class MindmapNode extends LinearLayout {
     private boolean isItalic = false;
 
     /**
-     * The Android resource IDs of the icon
+     * The names of the icon
      */
-    private List<Integer> iconResourceIds;
+    private List<String> iconNames;
 
     /**
      * Whether the node is expandable, i.e. whether it has child nodes
@@ -77,7 +60,7 @@ public class MindmapNode extends LinearLayout {
     /**
      * If the node has a LINK attribute, it will be stored in Uri link
      */
-    public Uri link;
+    private Uri link;
 
     /**
      * The XML DOM node from which this MindMapNode is derived
@@ -95,37 +78,12 @@ public class MindmapNode extends LinearLayout {
     private ArrayList<MindmapNode> childMindmapNodes;
 
     /**
-     * True, when this MindmapNode has an inflated layout. Otherwise false.
-     */
-    private Boolean isLayoutInflated = false;
-
-    /**
-     * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always
-     * throw a IllegalArgumentException.
-     *
-     * @param context
-     * @deprecated
-     */
-    public MindmapNode(Context context) {
-
-        super(context);
-        if (!isInEditMode()) {
-            throw new IllegalArgumentException(
-                    "The constructor public MindmapNode(Context context) may only be called by graphical layout " +
-					"tools, i.e. when View#isInEditMode() is true. In production, use the constructor public " +
-					"MindmapNode(Context context, Node node).");
-        }
-    }
-
-    /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
      * {@link ClassCastException} if the Node can not be converted to a MindmapNode.
      *
      * @param node
      */
-    public MindmapNode(Context context, Node node, MindmapNode parentNode, Mindmap mindmap) {
-
-        super(context);
+    public MindmapNode(Node node, MindmapNode parentNode, Mindmap mindmap) {
 
         this.mindmap = mindmap;
 
@@ -181,118 +139,19 @@ public class MindmapNode extends LinearLayout {
         }
 
         // extract icons
-        Resources resources = context.getResources();
-        String packageName = context.getPackageName();
-
-        ArrayList<String> icons = getIcons(context);
-        iconResourceIds = new ArrayList<>();
-        for (String icon : icons) {
-            iconResourceIds.add(resources.getIdentifier("@drawable/" + icon, "id", packageName));
-        }
-
-        // extract link and set link icon if node has a link. The link icon will be the first icon shown
-        String linkAttribute = tmpElement.getAttribute("LINK");
-        if (!linkAttribute.equals("")) {
-            link = Uri.parse(linkAttribute);
-            iconResourceIds.add(0, resources.getIdentifier("@drawable/link", "id", packageName));
-        }
+        iconNames = getIcons();
 
         // find out if it has sub nodes
         isExpandable = (getNumChildMindmapNodes() > 0);
 
+        // extract link
+        String linkAttribute = tmpElement.getAttribute("LINK");
+        if (!linkAttribute.equals("")) {
+            link = Uri.parse(linkAttribute);
+        }
+
     }
 
-    /**
-     * Inflates the layout from the XML file if it is not yet inflated
-     *
-     * @param context
-     */
-    private void inflateLayout(Context context) {
-
-        synchronized (isLayoutInflated) {
-            if (!isLayoutInflated) {
-                MindmapNode.inflate(context, R.layout.mindmap_node_list_item, this);
-            }
-        }
-    }
-
-    @SuppressLint("InlinedApi")
-    public void refreshView() {
-
-        // inflate the layout if we haven't done so yet
-        inflateLayout(getContext());
-
-        // the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView
-		// ("+" button)
-        ImageView icon0View = findViewById(R.id.icon0);
-        ImageView icon1View = findViewById(R.id.icon1);
-
-        if (iconResourceIds.size() > 0) {
-            icon0View.setImageResource(iconResourceIds.get(0));
-
-        } else {
-
-            // don't waste space, there are no icons
-            icon0View.setVisibility(GONE);
-            icon1View.setVisibility(GONE);
-        }
-
-        // second icon
-        if (iconResourceIds.size() > 1) {
-            icon1View.setImageResource(iconResourceIds.get(1));
-
-        } else {
-
-            // no second icon, don't waste space
-            icon1View.setVisibility(GONE);
-        }
-
-        TextView textView = findViewById(R.id.label);
-        textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
-        SpannableString spannableString = new SpannableString(text);
-        if (isBold) {
-            spannableString.setSpan(new StyleSpan(Typeface.BOLD), 0, spannableString.length(), 0);
-        }
-        if (isItalic) {
-            spannableString.setSpan(new StyleSpan(Typeface.ITALIC), 0, spannableString.length(), 0);
-        }
-        textView.setText(spannableString);
-
-        ImageView expandable = findViewById(R.id.expandable);
-        if (isExpandable) {
-            if (getIsSelected()) {
-                expandable.setImageResource(R.drawable.minus_alt);
-            } else {
-                expandable.setImageResource(R.drawable.plus_alt);
-            }
-        }
-
-        // if the node is selected and has child nodes, give it a special background
-        if (getIsSelected() && getNumChildMindmapNodes() > 0) {
-            int backgroundColor;
-
-            // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
-            } else {
-                backgroundColor = getContext().getResources().getColor(android.R.color.darker_gray);
-            }
-
-            setBackgroundColor(backgroundColor);
-        } else {
-            setBackgroundColor(0);
-        }
-
-        // set the layout parameter
-        // TODO: this should not be necessary. The problem is that the inflate
-        // (in the constructor) loads the XML as child of this LinearView, so
-        // the MindmapNode-LinearView wraps the root LinearView from the
-        // mindmap_node_list_item XML file.
-        setLayoutParams(new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT,
-                AbsListView.LayoutParams.WRAP_CONTENT
-        ));
-        setGravity(Gravity.LEFT | Gravity.CENTER);
-    }
 
     /**
      * Selects or deselects this node
@@ -337,9 +196,9 @@ public class MindmapNode extends LinearLayout {
      *
      * @return list of names of the icons
      */
-    private ArrayList<String> getIcons(Context context) {
+    private ArrayList<String> getIcons() {
 
-        ArrayList<String> icons = new ArrayList<>();
+        ArrayList<String> iconsNames = new ArrayList<>();
 
         NodeList childNodes = node.getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
@@ -351,30 +210,12 @@ public class MindmapNode extends LinearLayout {
                 if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
                     Log.v(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
 
-                    icons.add(getDrawableNameFromMindmapIcon(e.getAttribute("BUILTIN"), context));
+                    iconsNames.add(e.getAttribute("BUILTIN"));
                 }
             }
         }
 
-        return icons;
-    }
-
-    /**
-     * Mindmap icons have names such as 'button-ok', but resources have to have names with pattern [a-z0-9_.]. This
-     * method translates the Mindmap icon names to Android resource names.
-     *
-     * @param iconName the icon name as it is specified in the XML
-     * @return the name of the corresponding android resource icon
-     */
-    private String getDrawableNameFromMindmapIcon(String iconName, Context context) {
-
-        Locale locale = context.getResources().getConfiguration().locale;
-        String name = "icon_" + iconName.toLowerCase(locale).replaceAll("[^a-z0-9_.]", "_");
-        name = name.replaceAll("_$", "");
-
-        Log.d(MainApplication.TAG, "converted icon name " + iconName + " to " + name);
-
-        return name;
+        return iconsNames;
     }
 
     /**
@@ -398,32 +239,6 @@ public class MindmapNode extends LinearLayout {
         return numMindmapNodes;
     }
 
-    /**
-     * The NodeColumn forwards the CreateContextMenu event to the appropriate MindmapNode, which can then generate
-     * the context menu as it likes. Note that the MindmapNode itself is not registered as the listener for such
-     * events per se, because the NodeColumn first has to decide for which MindmapNode the event applies.
-     *
-     * @param menu
-     * @param v
-     * @param menuInfo
-     */
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-
-        // build the menu
-        menu.setHeaderTitle(text);
-        if (iconResourceIds.size() > 0) {
-            menu.setHeaderIcon(iconResourceIds.get(0));
-        }
-
-        // allow copying the node text
-        menu.add(0, R.id.contextcopy, 0, R.string.copynodetext);
-
-        // add menu to open link, if the node has a hyperlink
-        if (link != null) {
-            menu.add(0, R.id.contextopenlink, 0, R.string.openlink);
-        }
-    }
-
 
     /**
      * Generates and returns the child nodes of this MindmapNode. getChildNodes() does lazy loading, i.e. it
@@ -443,7 +258,7 @@ public class MindmapNode extends LinearLayout {
                 Node tmpNode = childNodes.item(i);
 
                 if (isMindmapNode(tmpNode)) {
-                    MindmapNode mindmapNode = new MindmapNode(getContext(), tmpNode, this, mindmap);
+                    MindmapNode mindmapNode = new MindmapNode(tmpNode, this, mindmap);
                     childMindmapNodes.add(mindmapNode);
                 }
             }
@@ -458,127 +273,48 @@ public class MindmapNode extends LinearLayout {
         }
     }
 
-    /**
-     * Opens the link of this node (if any)
-     */
-    public void openLink(MainActivity mainActivity) {
+    public List<String> getIconNames() {
 
-        // TODO: if link is internal, substring ID
-
-        Log.d(MainApplication.TAG, "Opening link (to string): " + this.link.toString());
-        Log.d(MainApplication.TAG, "Opening link (fragment, everything after '#'): " + this.link.getFragment());
-
-        // if the link has a "#ID123", it's an internal link within the document
-        if (this.link.getFragment() != null && this.link.getFragment().startsWith("ID")) {
-            openInternalFragmentLink(mainActivity);
-
-        }
-
-        // otherwise, we try to open it as intent
-        else {
-            openIntentLink(mainActivity);
-        }
+        return iconNames;
     }
 
-    /**
-     * Open this node's link as internal fragment
-     */
-    private void openInternalFragmentLink(MainActivity mainActivity) {
+    public String getText() {
 
-        // internal link, so this.link is of the form "#ID_123234534" this.link.getFragment() should give everything
-        // after the "#" it is null if there is no "#", which should be the case for all other links
-        String fragment = this.link.getFragment();
-
-        MindmapNode linkedInternal = mindmap.getNodeByID(fragment);
-
-        if (linkedInternal != null) {
-            Log.d(MainApplication.TAG, "Opening internal node, " + linkedInternal + ", with ID: " + fragment);
-
-            // the internal linked node might be anywhere in the mindmap, i.e. on a completely separate branch than
-            // we are on currently. We need to go to the Top, and then descend into the mindmap to reach the right
-            // point
-            HorizontalMindmapView mindmapView = mainActivity.getHorizontalMindmapView();
-            mindmapView.top();
-
-            List<MindmapNode> nodeHierarchy = new ArrayList<>();
-            MindmapNode tmpNode = linkedInternal;
-            while (tmpNode.parentNode != null) {
-                nodeHierarchy.add(tmpNode);
-                tmpNode = tmpNode.parentNode;
-            }
-
-            for (MindmapNode mindmapNode : nodeHierarchy) {
-                mindmapView.down(mainActivity, mindmapNode);
-            }
-
-        } else {
-            Toast.makeText(getContext(),
-                    "This internal link to ID " + fragment + " seems to be broken.",
-                    Toast.LENGTH_SHORT
-            ).show();
-        }
+        return text;
     }
 
-    /**
-     * Open this node's link as intent
-     */
-    private void openIntentLink(MainActivity mainActivity) {
+    public boolean isBold() {
 
-        // try opening the link normally with an intent
-        try {
-            Intent openUriIntent = new Intent(Intent.ACTION_VIEW);
-            openUriIntent.setData(this.link);
-            mainActivity.startActivity(openUriIntent);
-            return;
-        } catch (ActivityNotFoundException e) {
-            Log.d(MainApplication.TAG, "ActivityNotFoundException when opening link as normal intent");
-        }
+        return isBold;
+    }
 
-        // try to open as relative file
-        try {
-            // get path of mindmap file
-            String fileName;
-            if (this.link.getPath().startsWith("/")) {
-                // absolute filename
-                fileName = this.link.getPath();
-            } else {
+    public boolean isItalic() {
 
-                // link is relative to mindmap file
-                String mindmapPath = mindmap.getUri().getPath();
-                Log.d(MainApplication.TAG, "Mindmap path " + mindmapPath);
-                String mindmapDirectoryPath = mindmapPath.substring(0, mindmapPath.lastIndexOf("/"));
-                Log.d(MainApplication.TAG, "Mindmap directory path " + mindmapDirectoryPath);
-                fileName = mindmapDirectoryPath + "/" + this.link.getPath();
+        return isItalic;
+    }
 
-            }
-            File file = new File(fileName);
-            if (!file.exists()) {
-                Toast.makeText(getContext(), "File " + fileName + " does not exist.", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "File " + fileName + " does not exist.");
-                return;
-            }
-            if (!file.canRead()) {
-                Toast.makeText(getContext(), "Can not read file " + fileName + ".", Toast.LENGTH_SHORT).show();
-                Log.d(MainApplication.TAG, "Can not read file " + fileName + ".");
-                return;
-            }
-            Log.d(MainApplication.TAG, "Opening file " + Uri.fromFile(file));
-            // http://stackoverflow.com/a/3571239/1067124
-            String extension = "";
-            int i = fileName.lastIndexOf('.');
-            int p = fileName.lastIndexOf('/');
-            if (i > p) {
-                extension = fileName.substring(i + 1);
-            }
-            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+    public boolean isExpandable() {
 
-            Intent intent = new Intent();
-            intent.setAction(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(file), mime);
-            mainActivity.startActivity(intent);
-        } catch (Exception e1) {
-            Toast.makeText(getContext(), "No application found to open " + this.link, Toast.LENGTH_SHORT).show();
-            e1.printStackTrace();
-        }
+        return isExpandable;
+    }
+
+    public Uri getLink() {
+
+        return link;
+    }
+
+    public Mindmap getMindmap() {
+
+        return mindmap;
+    }
+
+    public String getId() {
+
+        return id;
+    }
+
+    public MindmapNode getParentNode() {
+
+        return parentNode;
     }
 }

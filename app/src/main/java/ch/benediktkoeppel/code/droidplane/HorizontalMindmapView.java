@@ -18,6 +18,7 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -51,9 +52,9 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
-    private Mindmap mindmap;
+    private final Mindmap mindmap;
 
-    private MainActivity mainActivity;
+    private final MainActivity mainActivity;
 
 
     /**
@@ -91,6 +92,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         // register HorizontalMindmapView to receive all touch events on itself
         setOnTouchListener(this);
+
+        // fix the widths of all columns
+        resizeAllColumns(getContext());
+
+        // expand the selected node chain
+        downTo(getContext(), mindmap.getDeepestSelectedMindmapNode());
+
+        // and then scroll to the right
+        scrollToRight();
     }
 
     /**
@@ -214,7 +224,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         if (!nodeColumns.isEmpty()) {
 
             MindmapNode parent = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
-            return parent.text;
+            return parent.getText();
 
         }
 
@@ -306,7 +316,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
 
     /**
-     * Open up Node node, and display all its child nodes
+     * Open up Node node, and display all its child nodes. This should only be called if the node's parent is
+     * currently already expanded. If not (e.g. when following a deep link), use downTo
      *
      * @param node
      */
@@ -329,6 +340,35 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         // get the title of the parent of the rightmost column (i.e. the selected node in the 2nd-rightmost column)
         setApplicationTitle(context);
+
+        // mark node as selected
+        node.setSelected(true);
+
+        // keep track in the mind map which node is currently selected
+        mindmap.setDeepestSelectedMindmapNode(node);
+
+    }
+
+    /**
+     * Navigate down the Mindmap to the specified node, opening each of it's parent nodes along the way.
+     * @param context
+     * @param node
+     */
+    public void downTo(Context context, MindmapNode node) {
+
+        // first navigate back to the top (essentially closing all other nodes)
+        top();
+
+        List<MindmapNode> nodeHierarchy = new ArrayList<>();
+        MindmapNode tmpNode = node;
+        while (tmpNode.getParentNode() != null) {
+            nodeHierarchy.add(tmpNode);
+            tmpNode = tmpNode.getParentNode();
+        }
+
+        for (MindmapNode mindmapNode : nodeHierarchy) {
+            down(context, mindmapNode);
+        }
 
     }
 
@@ -389,20 +429,20 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         removeAllColumnsRightOf(clickedNodeColumn);
 
         // then get the clicked node
-        MindmapNode clickedNode = clickedNodeColumn.getNodeAtPosition(position);
+        MindmapNodeLayout clickedNode = clickedNodeColumn.getNodeAtPosition(position);
 
         // if the clicked node has child nodes, we set it to selected and drill down
-        if (clickedNode.getNumChildMindmapNodes() > 0) {
+        if (clickedNode.getMindmapNode().getNumChildMindmapNodes() > 0) {
 
             // give it a special color
             clickedNodeColumn.setItemColor(position);
 
             // and drill down
-            down(mainActivity, clickedNode);
+            down(mainActivity, clickedNode.getMindmapNode());
         }
 
         // if the clicked node has a link (and is a leaf), open the link
-        else if (clickedNode.link != null) {
+        else if (clickedNode.getMindmapNode().getLink() != null) {
             clickedNode.openLink(mainActivity);
         }
 
@@ -535,10 +575,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         return numVisiblePixelsOnColumn;
-    }
-
-    public void setMainActivity(MainActivity mainActivity) {
-        this.mainActivity = mainActivity;
     }
 
     /**
