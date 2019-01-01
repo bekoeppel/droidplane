@@ -20,37 +20,37 @@ public class MindmapNode {
     /**
      * The ID of the node (ID attribute)
      */
-    private String id;
+    private final String id;
 
     /**
      * The mindmap, in which this node is
      */
-    private Mindmap mindmap;
+    private final Mindmap mindmap;
 
     /**
      * The Parent MindmapNode
      */
-    private MindmapNode parentNode;
+    private final MindmapNode parentNode;
 
     /**
      * The Text of the node (TEXT attribute).
      */
-    private String text;
+    private final String text;
 
     /**
      * Bold style
      */
-    private boolean isBold = false;
+    private final boolean isBold;
 
     /**
      * Italic style
      */
-    private boolean isItalic = false;
+    private final boolean isItalic;
 
     /**
      * The names of the icon
      */
-    private List<String> iconNames;
+    private final List<String> iconNames;
 
     /**
      * Whether the node is expandable, i.e. whether it has child nodes
@@ -60,12 +60,12 @@ public class MindmapNode {
     /**
      * If the node has a LINK attribute, it will be stored in Uri link
      */
-    private Uri link;
+    private final Uri link;
 
     /**
      * The XML DOM node from which this MindMapNode is derived
      */
-    private Node node;
+    private final Node node;
 
     /**
      * Whether the node is selected or not, will be set after it was clicked by the user
@@ -75,7 +75,7 @@ public class MindmapNode {
     /**
      * The list of child MindmapNodes. We support lazy loading.
      */
-    private ArrayList<MindmapNode> childMindmapNodes;
+    private List<MindmapNode> childMindmapNodes;
 
     /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
@@ -104,24 +104,9 @@ public class MindmapNode {
         // extract the ID of the node
         id = tmpElement.getAttribute("ID");
 
-        // extract the string (TEXT attribute) of the nodes
-        text = tmpElement.getAttribute("TEXT");
 
-        // extract styles
-        NodeList styleNodeList = tmpElement.getChildNodes();
-        for (int i = 0; i < styleNodeList.getLength(); i++) {
-            Node n = styleNodeList.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
-                Element fontElement = (Element)n;
-                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
-                    Log.d(MainApplication.TAG, "Found bold node");
-                    this.isBold = true;
-                }
-                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
-                    this.isItalic = true;
-                }
-            }
-        }
+        // extract the string (TEXT attribute) of the nodes
+        String text = tmpElement.getAttribute("TEXT");
 
         // if no text, use richcontent (HTML)
         if (text == null || text.equals("")) {
@@ -137,6 +122,28 @@ public class MindmapNode {
                 }
             }
         }
+        this.text = text;
+
+
+        // extract styles
+        NodeList styleNodeList = tmpElement.getChildNodes();
+        boolean isBold = false;
+        boolean isItalic = false;
+        for (int i = 0; i < styleNodeList.getLength(); i++) {
+            Node n = styleNodeList.item(i);
+            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
+                Element fontElement = (Element)n;
+                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
+                    Log.d(MainApplication.TAG, "Found bold node");
+                    isBold = true;
+                }
+                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
+                    isItalic = true;
+                }
+            }
+        }
+        this.isBold = isBold;
+        this.isItalic = isItalic;
 
         // extract icons
         iconNames = getIcons();
@@ -148,6 +155,8 @@ public class MindmapNode {
         String linkAttribute = tmpElement.getAttribute("LINK");
         if (!linkAttribute.equals("")) {
             link = Uri.parse(linkAttribute);
+        } else {
+            link = null;
         }
 
     }
@@ -178,14 +187,12 @@ public class MindmapNode {
      * @param node
      * @return
      */
-    public static boolean isMindmapNode(Node node) {
+    private static boolean isMindmapNode(Node node) {
 
         if (node.getNodeType() == Node.ELEMENT_NODE) {
             Element element = (Element)node;
 
-            if (element.getTagName().equals("node")) {
-                return true;
-            }
+            return element.getTagName().equals("node");
         }
         return false;
     }
@@ -246,7 +253,7 @@ public class MindmapNode {
      *
      * @return ArrayList of this MindmapNode's child nodes
      */
-    public ArrayList<MindmapNode> getChildNodes() {
+    public List<MindmapNode> getChildNodes() {
 
         // if we haven't loaded the childMindmapNodes before
         if (childMindmapNodes == null) {

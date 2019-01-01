@@ -191,7 +191,7 @@ public class MainActivity extends FragmentActivity {
 
             // load the mindmap
             Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm, getApplicationContext());
+            mindmap.loadDocument(mm);
 
             return null;
         }
@@ -361,7 +361,7 @@ public class MainActivity extends FragmentActivity {
      *
      * @param stringResourceId
      */
-    public void abortWithPopup(int stringResourceId) {
+    private void abortWithPopup(int stringResourceId) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(stringResourceId);

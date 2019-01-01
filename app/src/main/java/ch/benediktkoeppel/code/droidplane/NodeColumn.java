@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends LinearLayout, and then embeds a ListView.
@@ -75,7 +76,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         // extract all <node.../> elements from the parent node, create layouts, and add them to the mindmapNodes list
         mindmapNodeLayouts = new ArrayList<>();
-        ArrayList<MindmapNode> mindmapNodes = parent.getChildNodes();
+        List<MindmapNode> mindmapNodes = parent.getChildNodes();
         for (MindmapNode mindmapNode : mindmapNodes) {
             mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
         }
@@ -272,7 +273,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
  */
 class MindmapNodeAdapter extends ArrayAdapter<MindmapNodeLayout> {
 
-    private ArrayList<MindmapNodeLayout> mindmapNodeLayouts;
+    private final List<MindmapNodeLayout> mindmapNodeLayouts;
 
     public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNodeLayout> mindmapNodeLayouts) {
 

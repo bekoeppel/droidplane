@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Build;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.util.Log;
@@ -38,11 +37,6 @@ public class MindmapNodeLayout extends LinearLayout {
      * The Android resource IDs of the icon
      */
     private List<Integer> iconResourceIds;
-
-    /**
-     * True, when this MindmapNode has an inflated layout. Otherwise false.
-     */
-    private Boolean isLayoutInflated = false;
 
     /**
      * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always
@@ -87,25 +81,12 @@ public class MindmapNodeLayout extends LinearLayout {
 
     }
 
-    /**
-     * Inflates the layout from the XML file if it is not yet inflated
-     *
-     * @param context
-     */
-    private void inflateLayout(Context context) {
-
-        synchronized (isLayoutInflated) {
-            if (!isLayoutInflated) {
-                MindmapNodeLayout.inflate(context, R.layout.mindmap_node_list_item, this);
-            }
-        }
-    }
-
     @SuppressLint("InlinedApi")
     public void refreshView() {
 
         // inflate the layout if we haven't done so yet
-        inflateLayout(getContext());
+        inflate(getContext(), R.layout.mindmap_node_list_item, this);
+
 
         // the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView
 		// ("+" button)
@@ -157,11 +138,7 @@ public class MindmapNodeLayout extends LinearLayout {
             int backgroundColor;
 
             // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
-            } else {
-                backgroundColor = getContext().getResources().getColor(android.R.color.darker_gray);
-            }
+            backgroundColor = getContext().getResources().getColor(android.R.color.holo_blue_bright);
 
             setBackgroundColor(backgroundColor);
         } else {

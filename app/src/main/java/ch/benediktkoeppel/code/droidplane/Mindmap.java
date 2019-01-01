@@ -1,7 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import android.arch.lifecycle.ViewModel;
-import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 import com.google.android.gms.analytics.HitBuilders;
@@ -72,7 +71,7 @@ public class Mindmap extends ViewModel {
      *
      * @param inputStream the inputStream to load
      */
-    public void loadDocument(InputStream inputStream, Context context) {
+    public void loadDocument(InputStream inputStream) {
 
         // start measuring the document load time
         long loadDocumentStartTime = System.currentTimeMillis();

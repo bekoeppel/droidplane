@@ -19,6 +19,7 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -26,19 +27,17 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * HorizontalScrollView can only have one view, so we need to add a LinearLayout underneath it, and then stuff
      * all NodeColumns into this linearLayout.
      */
-    private LinearLayout linearLayout;
+    private final LinearLayout linearLayout;
 
     /**
      * nodeColumns holds the list of columns that are displayed in this HorizontalScrollView.
      */
-    private ArrayList<NodeColumn> nodeColumns;
+    private final List<NodeColumn> nodeColumns;
 
     /**
      * Gesture detector
      */
-    private GestureDetector gestureDetector;
-
-    private HorizontalMindmapViewGestureDetector horizontalMindmapViewGestureDetector;
+    private final GestureDetector gestureDetector;
 
     /**
      * Constants to determine the minimum swipe distance and speed
@@ -50,7 +49,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * (i.e. the ListView which was clicked) as parent, but we need to find out which NodeColumn was clicked. This
      * would have been a simple cast if NodeColumn extended ListView, but we extend LinearLayout and wrap the ListView.
      */
-    private HashMap<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
+    private final Map<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
     private final Mindmap mindmap;
 
@@ -87,7 +86,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         this.addView(linearLayout);
 
         // add a new gesture controller
-        horizontalMindmapViewGestureDetector = new HorizontalMindmapViewGestureDetector();
+        HorizontalMindmapViewGestureDetector horizontalMindmapViewGestureDetector =
+                new HorizontalMindmapViewGestureDetector();
         gestureDetector = new GestureDetector(getContext(), horizontalMindmapViewGestureDetector);
 
         // register HorizontalMindmapView to receive all touch events on itself
@@ -128,14 +128,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @return true if the key event is consumed by this method, false otherwise
      */
-    public void scrollToRight() {
+    private void scrollToRight() {
 
         // a runnable that knows "this"
         final class HorizontalMindmapViewRunnable implements Runnable {
 
             HorizontalMindmapView horizontalMindmapView;
 
-            public HorizontalMindmapViewRunnable(HorizontalMindmapView horizontalMindmapView) {
+            HorizontalMindmapViewRunnable(HorizontalMindmapView horizontalMindmapView) {
 
                 this.horizontalMindmapView = horizontalMindmapView;
             }
@@ -162,7 +162,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     /**
      * Adjusts the width of all columns in the HorizontalMindmapView
      */
-    public void resizeAllColumns(Context context) {
+    private void resizeAllColumns(Context context) {
 
         for (NodeColumn nodeColumn : nodeColumns) {
             nodeColumn.resizeColumnWidth(context);
@@ -321,7 +321,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param node
      */
-    public void down(Context context, MindmapNode node) {
+    private void down(Context context, MindmapNode node) {
 
         // add a new column for this node and add it to the HorizontalMindmapView
         NodeColumn nodeColumn = new NodeColumn(getContext(), node);
