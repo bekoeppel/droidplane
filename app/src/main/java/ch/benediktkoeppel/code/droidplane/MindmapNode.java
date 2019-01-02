@@ -29,6 +29,11 @@ public class MindmapNode {
     private final String id;
 
     /**
+     * The numeric representation of this ID
+     */
+    private final Integer numericId;
+
+    /**
      * The mindmap, in which this node is
      */
     private final Mindmap mindmap;
@@ -94,6 +99,21 @@ public class MindmapNode {
     private final String treeIdAttribute;
 
     /**
+     * List of outgoing arrow links
+     */
+    private final List<String> arrowLinkDestinationIds;
+
+    /**
+     * List of outgoing arrow MindmapNodes
+     */
+    private List<MindmapNode> arrowLinkDestinationNodes;
+
+    /**
+     * List of incoming arrow MindmapNodes
+     */
+    private List<MindmapNode> arrowLinkIncomingNodes;
+
+    /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
      * {@link ClassCastException} if the Node can not be converted to a MindmapNode.
      *
@@ -119,6 +139,8 @@ public class MindmapNode {
 
         // extract the ID of the node
         id = tmpElement.getAttribute("ID");
+
+        numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
 
 
         // extract the string (TEXT attribute) of the nodes
@@ -194,6 +216,20 @@ public class MindmapNode {
 
         // get cloned node's info
         treeIdAttribute = tmpElement.getAttribute("TREE_ID");
+
+        // get arrow link destinations
+        arrowLinkDestinationIds = new ArrayList<>();
+        arrowLinkDestinationNodes = new ArrayList<>();
+        arrowLinkIncomingNodes = new ArrayList<>();
+        NodeList arrowlinkList = tmpElement.getChildNodes();
+        for (int i = 0; i< arrowlinkList.getLength(); i++) {
+            Node n = arrowlinkList.item(i);
+            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("arrowlink")) {
+                Element arrowlinkElement = (Element)n;
+                String destinationId = arrowlinkElement.getAttribute("DESTINATION");
+                arrowLinkDestinationIds.add(destinationId);
+            }
+        }
 
     }
 
@@ -369,5 +405,42 @@ public class MindmapNode {
     public String getRichTextContent() {
 
         return richTextContent;
+    }
+
+    public List<String> getArrowLinkDestinationIds() {
+
+        return arrowLinkDestinationIds;
+    }
+
+    public List<MindmapNode> getArrowLinkDestinationNodes() {
+
+        return arrowLinkDestinationNodes;
+    }
+
+    public void setArrowLinkDestinationNodes(List<MindmapNode> arrowLinkDestinationNodes) {
+
+        this.arrowLinkDestinationNodes = arrowLinkDestinationNodes;
+    }
+
+    public List<MindmapNode> getArrowLinkIncomingNodes() {
+
+        return arrowLinkIncomingNodes;
+    }
+
+    public void setArrowLinkIncomingNodes(List<MindmapNode> arrowLinkIncomingNodes) {
+
+        this.arrowLinkIncomingNodes = arrowLinkIncomingNodes;
+    }
+
+    public List<MindmapNode> getArrowLinks() {
+        ArrayList<MindmapNode> combinedArrowLists = new ArrayList<>();
+        combinedArrowLists.addAll(arrowLinkDestinationNodes);
+        combinedArrowLists.addAll(arrowLinkIncomingNodes);
+        return combinedArrowLists;
+    }
+
+    public Integer getNumericId() {
+
+        return numericId;
     }
 }

@@ -35,6 +35,7 @@ public class Mindmap extends ViewModel {
      * A map that resolves node IDs to Node objects
      */
     private Map<String, MindmapNode> nodesById;
+    private Map<Integer, MindmapNode> nodesByNumericId;
 
     /**
      * The deepest selected mindmap node
@@ -97,7 +98,12 @@ public class Mindmap extends ViewModel {
 
         // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
         nodesById = new HashMap<>();
+        nodesByNumericId = new HashMap<>();
         loadAndIndexNodesByIds(rootNode);
+
+        // Nodes can refer to other nodes with arrowlinks. We want to have the link on both ends of the link, so we can
+        // now set the corresponding links
+        fillArrowLinks();
 
         long loadDocumentEndTime = System.currentTimeMillis();
         Tracker tracker = MainApplication.getTracker();
@@ -137,7 +143,8 @@ public class Mindmap extends ViewModel {
      */
     private void loadAndIndexNodesByIds(MindmapNode node) {
 
-        this.nodesById.put(node.getId(), node);
+        nodesById.put(node.getId(), node);
+        nodesByNumericId.put(node.getNumericId(), node);
 
         for (MindmapNode mindmapNode : node.getChildNodes()) {
             loadAndIndexNodesByIds(mindmapNode);
@@ -152,8 +159,11 @@ public class Mindmap extends ViewModel {
      * @return
      */
     public MindmapNode getNodeByID(String id) {
+        return nodesById.get(id);
+    }
 
-        return this.nodesById.get(id);
+    public MindmapNode getNodeByNumericID(Integer numericId) {
+        return nodesByNumericId.get(numericId);
     }
 
     public MindmapNode getDeepestSelectedMindmapNode() {
@@ -164,5 +174,19 @@ public class Mindmap extends ViewModel {
     public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
 
         this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+    }
+
+    private void fillArrowLinks() {
+
+        for (String nodeId : nodesById.keySet()) {
+            MindmapNode mindmapNode = nodesById.get(nodeId);
+            for (String linkDestinationId : mindmapNode.getArrowLinkDestinationIds()) {
+                MindmapNode destinationNode = nodesById.get(linkDestinationId);
+                if (destinationNode != null) {
+                    mindmapNode.getArrowLinkDestinationNodes().add(destinationNode);
+                    destinationNode.getArrowLinkIncomingNodes().add(mindmapNode);
+                }
+            }
+        }
     }
 }

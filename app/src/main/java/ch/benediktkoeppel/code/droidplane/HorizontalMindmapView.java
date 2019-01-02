@@ -164,6 +164,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private void removeAllColumns() {
 
+        // unselect all nodes
+        for (NodeColumn nodeColumn : nodeColumns) {
+            nodeColumn.deselectAllNodes();
+        }
+
+        // then remove all columns
         nodeColumns.clear();
         linearLayout.removeAllViews();
     }
@@ -381,7 +387,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         // descent from the root node down to the target node
         for (MindmapNode mindmapNode : nodeHierarchy) {
-            down(context, mindmapNode);
+            mindmapNode.setSelected(true);
+            if (mindmapNode.getNumChildMindmapNodes() > 0) {
+                down(context, mindmapNode);
+            }
         }
 
     }

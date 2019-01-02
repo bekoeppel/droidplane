@@ -28,6 +28,9 @@ import java.util.Locale;
  */
 public class MindmapNodeLayout extends LinearLayout {
 
+    public static final int CONTEXT_MENU_NORMAL_GROUP_ID = 0;
+    public static final int CONTEXT_MENU_ARROWLINK_GROUP_ID = 1;
+
     /**
      * The MindmapNode, to which this layout belongs
      */
@@ -138,8 +141,8 @@ public class MindmapNodeLayout extends LinearLayout {
             }
         }
 
-        // if the node is selected and has child nodes, give it a special background
-        if (mindmapNode.getIsSelected() && mindmapNode.getNumChildMindmapNodes() > 0) {
+        // if the node is selected, give it a special background
+        if (mindmapNode.getIsSelected()) {
             int backgroundColor;
 
             // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
@@ -197,16 +200,21 @@ public class MindmapNodeLayout extends LinearLayout {
         }
 
         // allow copying the node text
-        menu.add(0, R.id.contextcopy, 0, R.string.copynodetext);
+        menu.add(CONTEXT_MENU_NORMAL_GROUP_ID, R.id.contextcopy, 0, R.string.copynodetext);
 
         // add menu to open link, if the node has a hyperlink
         if (mindmapNode.getLink() != null) {
-            menu.add(0, R.id.contextopenlink, 0, R.string.openlink);
+            menu.add(CONTEXT_MENU_NORMAL_GROUP_ID, R.id.contextopenlink, 0, R.string.openlink);
         }
 
         // add menu to show rich text, if the node has
         if (mindmapNode.getRichTextContent() != null) {
-            menu.add(0, R.id.openrichtext, 0, R.string.openrichtext);
+            menu.add(CONTEXT_MENU_NORMAL_GROUP_ID, R.id.openrichtext, 0, R.string.openrichtext);
+        }
+
+        // add menu for each arrow link
+        for (MindmapNode linkedNode : mindmapNode.getArrowLinks()) {
+            menu.add(CONTEXT_MENU_ARROWLINK_GROUP_ID, linkedNode.getNumericId(), 0, linkedNode.getText());
         }
     }
 

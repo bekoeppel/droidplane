@@ -330,35 +330,49 @@ public class MainActivity extends FragmentActivity {
         Log.d(MainApplication.TAG, "contextMenuInfo.position = " + contextMenuInfo.position);
         Log.d(MainApplication.TAG, "item.getTitle() = " + item.getTitle());
 
-        switch (item.getItemId()) {
+        switch (item.getGroupId()) {
+            // normal menu entries
+            case MindmapNodeLayout.CONTEXT_MENU_NORMAL_GROUP_ID:
+                switch (item.getItemId()) {
 
-            // copy node text to clipboard
-            case R.id.contextcopy:
-                Log.d(MainApplication.TAG, "Copying text to clipboard");
-                ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                    // copy node text to clipboard
+                    case R.id.contextcopy:
+                        Log.d(MainApplication.TAG, "Copying text to clipboard");
+                        ClipboardManager clipboardManager = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
 
-                ClipData clipData = ClipData.newPlainText("node", mindmapNodeLayout.getMindmapNode().getText());
-                clipboardManager.setPrimaryClip(clipData);
+                        ClipData clipData = ClipData.newPlainText("node", mindmapNodeLayout.getMindmapNode().getText());
+                        clipboardManager.setPrimaryClip(clipData);
 
+                        break;
+
+                    // open the URI specified in the "LINK" tag
+                    case R.id.contextopenlink:
+                        Log.d(MainApplication.TAG, "Opening node link " + mindmapNodeLayout.getMindmapNode().getLink());
+                        mindmapNodeLayout.openLink(this);
+
+                        break;
+
+                    // open RichText content
+                    case R.id.openrichtext:
+                        Log.d(MainApplication.TAG,
+                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent()
+                        );
+                        mindmapNodeLayout.openRichText(this);
+
+
+                        break;
+
+                    default:
+                        break;
+                }
                 break;
 
-            // open the URI specified in the "LINK" tag
-            case R.id.contextopenlink:
-                Log.d(MainApplication.TAG, "Opening node link " + mindmapNodeLayout.getMindmapNode().getLink());
-                mindmapNodeLayout.openLink(this);
+            // arrow links, resolve by the selected ID and jump to this node
+            case MindmapNodeLayout.CONTEXT_MENU_ARROWLINK_GROUP_ID:
+                int nodeNumericId = item.getItemId();
+                MindmapNode nodeByNumericID = mindmap.getNodeByNumericID(nodeNumericId);
+                horizontalMindmapView.downTo(this, nodeByNumericID);
 
-                break;
-
-            // open RichText content
-            case R.id.openrichtext:
-                Log.d(MainApplication.TAG, "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent());
-                mindmapNodeLayout.openRichText(this);
-
-
-                break;
-
-            default:
-                break;
         }
 
         return true;
