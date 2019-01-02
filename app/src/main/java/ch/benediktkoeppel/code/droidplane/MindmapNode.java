@@ -7,6 +7,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +42,11 @@ public class MindmapNode {
      * The Text of the node (TEXT attribute).
      */
     private final String text;
+
+    /**
+     * The Rich Text content of the node (if any)
+     */
+    private final String richTextContent;
 
     /**
      * Bold style
@@ -109,6 +120,7 @@ public class MindmapNode {
         String text = tmpElement.getAttribute("TEXT");
 
         // if no text, use richcontent (HTML)
+        String richTextContent = null;
         if (text == null || text.equals("")) {
             // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
             NodeList richtextNodeList = tmpElement.getChildNodes();
@@ -117,12 +129,25 @@ public class MindmapNode {
                 if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
                     Element richcontentElement = (Element)n;
                     if (richcontentElement.getAttribute("TYPE").equals("NODE")) {
+
+                        // extract the whole rich text (XML), to show in a WebView activity
+                        try {
+                            Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                            ByteArrayOutputStream boas = new ByteArrayOutputStream();
+                            transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
+                            richTextContent = boas.toString();
+                        } catch (TransformerException e) {
+                            e.printStackTrace();
+                        }
+
+                        // convert the content (text only) into a string, to show in the normal list view
                         text = Html.fromHtml(richcontentElement.getTextContent()).toString();
                     }
                 }
             }
         }
         this.text = text;
+        this.richTextContent = richTextContent;
 
 
         // extract styles
@@ -323,5 +348,10 @@ public class MindmapNode {
     public MindmapNode getParentNode() {
 
         return parentNode;
+    }
+
+    public String getRichTextContent() {
+
+        return richTextContent;
     }
 }

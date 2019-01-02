@@ -2,30 +2,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ch.benediktkoeppel.code.droidplane"
     android:versionCode="10"
-    android:versionName="1.0.9" >
+    android:versionName="1.0.9">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-
-
     <application
+        android:name=".MainApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme"
-        android:name="MainApplication"
-        android:largeHeap="true" >
+        android:largeHeap="true"
+        android:theme="@style/AppTheme">
         <activity
-            android:name="ch.benediktkoeppel.code.droidplane.MainActivity"
-            android:label="@string/app_name" >
+            android:name=".MainActivity"
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
+
             <!-- works from Nexus 4 Dropbox -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -51,11 +49,14 @@
                 <data android:host="*" />
                 <data android:mimeType="application/x-freemind" />
             </intent-filter>
+        </activity>
 
-            </activity>
 
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 
+        <activity
+            android:name=".RichTextViewActivity"
+            android:label="@string/title_activity_rich_text_view"></activity>
     </application>
 
 </manifest>

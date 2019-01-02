@@ -460,6 +460,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
             clickedNode.openLink(mainActivity);
         }
 
+        // if the clicked node has a rich text content (and is a leaf), open the rich text
+        else if (clickedNode.getMindmapNode().getRichTextContent() != null) {
+            clickedNode.openRichText(mainActivity);
+        }
+
         // otherwise (no children) then we just update the application title to the new parent node
         else {
             setApplicationTitle(getContext());

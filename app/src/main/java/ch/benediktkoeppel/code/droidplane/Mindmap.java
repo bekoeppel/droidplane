@@ -84,13 +84,7 @@ public class Mindmap extends ViewModel {
         try {
             docBuilder = docBuilderFactory.newDocumentBuilder();
             document = docBuilder.parse(inputStream);
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-            return;
-        } catch (SAXException e) {
-            e.printStackTrace();
-            return;
-        } catch (IOException e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
             return;
         }

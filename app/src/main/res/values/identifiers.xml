@@ -2,5 +2,6 @@
 <resources>
     <item name="contextcopy" type="id" />
     <item name="contextopenlink" type="id" />
+    <item name="openrichtext" type="id" />
     
 </resources>

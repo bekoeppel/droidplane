@@ -23,4 +23,5 @@ dependencies {
     implementation 'com.google.android.gms:play-services-analytics:16.0.6'
     implementation "android.arch.lifecycle:extensions:1.1.1"
     implementation "android.arch.lifecycle:viewmodel:1.1.1"
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
 }

@@ -349,6 +349,14 @@ public class MainActivity extends FragmentActivity {
 
                 break;
 
+            // open RichText content
+            case R.id.openrichtext:
+                Log.d(MainApplication.TAG, "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent());
+                mindmapNodeLayout.openRichText(this);
+
+
+                break;
+
             default:
                 break;
         }
