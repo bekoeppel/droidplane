@@ -89,6 +89,11 @@ public class MindmapNode {
     private List<MindmapNode> childMindmapNodes;
 
     /**
+     * If the node clones another node, it doesn't have text or richtext, but a TREE_ID
+     */
+    private final String treeIdAttribute;
+
+    /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
      * {@link ClassCastException} if the Node can not be converted to a MindmapNode.
      *
@@ -186,6 +191,9 @@ public class MindmapNode {
         } else {
             link = null;
         }
+
+        // get cloned node's info
+        treeIdAttribute = tmpElement.getAttribute("TREE_ID");
 
     }
 
@@ -311,6 +319,14 @@ public class MindmapNode {
     }
 
     public String getText() {
+
+        // if this is a cloned node, get the text from the original node
+        if (treeIdAttribute != null) {
+            MindmapNode linkedNode = mindmap.getNodeByID(treeIdAttribute);
+            if (linkedNode != null) {
+                return linkedNode.getText();
+            }
+        }
 
         return text;
     }
