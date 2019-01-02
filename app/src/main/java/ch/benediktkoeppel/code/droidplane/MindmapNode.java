@@ -119,35 +119,38 @@ public class MindmapNode {
         // extract the string (TEXT attribute) of the nodes
         String text = tmpElement.getAttribute("TEXT");
 
-        // if no text, use richcontent (HTML)
+        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
+        // (TYPE="NODE"), and for "Notes" (TYPE="NOTE").
         String richTextContent = null;
-        if (text == null || text.equals("")) {
-            // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
-            NodeList richtextNodeList = tmpElement.getChildNodes();
-            for (int i = 0; i < richtextNodeList.getLength(); i++) {
-                Node n = richtextNodeList.item(i);
-                if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
-                    Element richcontentElement = (Element)n;
-                    if (richcontentElement.getAttribute("TYPE").equals("NODE")) {
+        // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
+        NodeList richtextNodeList = tmpElement.getChildNodes();
+        for (int i = 0; i < richtextNodeList.getLength(); i++) {
+            Node n = richtextNodeList.item(i);
+            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
+                Element richcontentElement = (Element)n;
+                String typeAttribute = richcontentElement.getAttribute("TYPE");
+                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE")) {
 
-                        // extract the whole rich text (XML), to show in a WebView activity
-                        try {
-                            Transformer transformer = TransformerFactory.newInstance().newTransformer();
-                            ByteArrayOutputStream boas = new ByteArrayOutputStream();
-                            transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
-                            richTextContent = boas.toString();
-                        } catch (TransformerException e) {
-                            e.printStackTrace();
-                        }
+                    // extract the whole rich text (XML), to show in a WebView activity
+                    try {
+                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                        ByteArrayOutputStream boas = new ByteArrayOutputStream();
+                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
+                        richTextContent = boas.toString();
+                    } catch (TransformerException e) {
+                        e.printStackTrace();
+                    }
 
+                    // if the node has no text itself, then convert the rich text content to a text
+                    if (text == null || text.equals("")) {
                         // convert the content (text only) into a string, to show in the normal list view
                         text = Html.fromHtml(richcontentElement.getTextContent()).toString();
                     }
                 }
             }
         }
-        this.text = text;
         this.richTextContent = richTextContent;
+        this.text = text;
 
 
         // extract styles
