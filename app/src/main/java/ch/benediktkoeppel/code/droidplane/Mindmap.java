@@ -22,11 +22,6 @@ import java.util.Map;
 public class Mindmap extends ViewModel {
 
     /**
-     * the XML DOM document, the mind map
-     */
-    public Document document;
-
-    /**
      * The currently loaded Uri
      */
     private Uri uri;
@@ -81,6 +76,7 @@ public class Mindmap extends ViewModel {
         DocumentBuilder docBuilder;
 
         // load the Mindmap from the InputStream
+        Document document;
         try {
             docBuilder = docBuilderFactory.newDocumentBuilder();
             document = docBuilder.parse(inputStream);
@@ -98,6 +94,10 @@ public class Mindmap extends ViewModel {
 
         // by default, the root node is the deepest node that is expanded
         deepestSelectedMindmapNode = rootNode;
+
+        // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
+        nodesById = new HashMap<>();
+        loadAndIndexNodesByIds(rootNode);
 
         long loadDocumentEndTime = System.currentTimeMillis();
         Tracker tracker = MainApplication.getTracker();
@@ -135,13 +135,12 @@ public class Mindmap extends ViewModel {
      *
      * @param node
      */
-    private void indexNodesByIds(MindmapNode node) {
+    private void loadAndIndexNodesByIds(MindmapNode node) {
 
         this.nodesById.put(node.getId(), node);
-        Log.v(MainApplication.TAG, "Added " + node.getId() + " to hashmap");
 
         for (MindmapNode mindmapNode : node.getChildNodes()) {
-            indexNodesByIds(mindmapNode);
+            loadAndIndexNodesByIds(mindmapNode);
         }
 
     }
@@ -154,17 +153,7 @@ public class Mindmap extends ViewModel {
      */
     public MindmapNode getNodeByID(String id) {
 
-        // lazy index mindmap nodes
-        if (this.nodesById == null) {
-            this.nodesById = new HashMap<>();
-            indexNodesByIds(rootNode);
-        }
-
-        MindmapNode node = this.nodesById.get(id);
-
-        Log.d(MainApplication.TAG, "Returning node with ID " + id);
-
-        return node;
+        return this.nodesById.get(id);
     }
 
     public MindmapNode getDeepestSelectedMindmapNode() {

@@ -243,8 +243,6 @@ public class MindmapNode {
                 Element e = (Element)n;
 
                 if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
-                    Log.v(MainApplication.TAG, "searching for icon " + e.getAttribute("BUILTIN"));
-
                     iconsNames.add(e.getAttribute("BUILTIN"));
                 }
             }
@@ -297,7 +295,6 @@ public class MindmapNode {
                     childMindmapNodes.add(mindmapNode);
                 }
             }
-            Log.d(MainApplication.TAG, "Returning newly generated childMindmapNodes");
             return childMindmapNodes;
         }
 

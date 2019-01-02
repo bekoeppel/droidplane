@@ -78,7 +78,7 @@ public class MainActivity extends FragmentActivity {
 
         // we didn't load a mindmap yet, we open it
         // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
-        if (mindmap.document == null) {
+        if (mindmap.getRootNode() == null) {
 
             // create a ProgressDialog, and load the file asynchronously
             ProgressDialog progressDialog = ProgressDialog.show(
