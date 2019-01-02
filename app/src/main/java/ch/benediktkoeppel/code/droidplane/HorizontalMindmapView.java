@@ -16,10 +16,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -112,6 +109,18 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         // add the column to the layout
         nodeColumns.add(nodeColumn);
+
+        // assert that the nodeColumns make a proper hierarchy, i.e. nodeColumn i's parent is nodeColumn i-1
+        MindmapNode previousParent = null;
+        for (NodeColumn column : nodeColumns) {
+            MindmapNode thisParent = column.getParentNode();
+            if (!Objects.equals(thisParent.getParentNode(), previousParent)) {
+                throw new IllegalStateException("Node column " + nodeColumn + " has a parent that doesn't match with the left column");
+            }
+            previousParent = thisParent;
+        }
+
+
         linearLayout.addView(nodeColumn, linearLayout.getChildCount());
         Log.d(MainApplication.TAG, "linearLayout now has " + linearLayout.getChildCount() + " items");
 
@@ -359,6 +368,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // first navigate back to the top (essentially closing all other nodes)
         top();
 
+        // go upwards from the target node, and keep track of each node leading down to the target node
         List<MindmapNode> nodeHierarchy = new ArrayList<>();
         MindmapNode tmpNode = node;
         while (tmpNode.getParentNode() != null) {
@@ -366,6 +376,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
             tmpNode = tmpNode.getParentNode();
         }
 
+        // reverse the list, so that we start with the root node
+        Collections.reverse(nodeHierarchy);
+
+        // descent from the root node down to the target node
         for (MindmapNode mindmapNode : nodeHierarchy) {
             down(context, mindmapNode);
         }

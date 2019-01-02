@@ -28,7 +28,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     /**
      * The parent node (i.e. the node that is parent to everything we display in this column)
      */
-    private MindmapNode parent;
+    private final MindmapNode parent;
 
     /**
      * The list of all MindmapNodeLayouts which we display in this column
@@ -55,6 +55,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     public NodeColumn(Context context) {
 
         super(context);
+        parent = null;
         if (!isInEditMode()) {
             throw new IllegalArgumentException(
                     "The constructor public NodeColumn(Context context) may only be called by graphical layout tools," +
