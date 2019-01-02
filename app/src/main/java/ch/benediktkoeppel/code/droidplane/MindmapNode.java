@@ -31,7 +31,7 @@ public class MindmapNode {
     /**
      * The numeric representation of this ID
      */
-    private final Integer numericId;
+    private Integer numericId;
 
     /**
      * The mindmap, in which this node is
@@ -140,7 +140,11 @@ public class MindmapNode {
         // extract the ID of the node
         id = tmpElement.getAttribute("ID");
 
-        numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
+        try {
+            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
+        } catch (NumberFormatException e) {
+            numericId = id.hashCode();
+        }
 
 
         // extract the string (TEXT attribute) of the nodes
