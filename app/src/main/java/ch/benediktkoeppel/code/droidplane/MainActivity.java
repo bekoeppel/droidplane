@@ -6,7 +6,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.arch.lifecycle.ViewModelProviders;
-import android.content.*;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -16,11 +21,17 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open intent. If the MainApplication was
@@ -76,9 +87,60 @@ public class MainActivity extends FragmentActivity {
         Intent intent = getIntent();
         String action = intent.getAction();
 
+        // if we're opening a file: check what file we're opening, and when it was last modified
+        // sadly it seems files opened from the Files app (or Root Explorer) don't have the last modified field set
+        // so in that case, we have to assume that the file is new
+        Uri intentUri = intent.getData();
+        Date lastModifiedDate = null;
+        if (intentUri != null) {
+            ContentResolver cr = getContentResolver();
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                // query document
+                String[] p = new String[]{"last_modified"};
+                Cursor c = cr.query(intentUri, p, null, null);
+
+                // check if we got last_modified
+                int lastModifiedColumnIndex = c.getColumnIndex("last_modified");
+                String lastModifiedString = null;
+                if (lastModifiedColumnIndex >= 0) {
+                    c.moveToFirst();
+                    lastModifiedString = c.getString(lastModifiedColumnIndex);
+
+                }
+
+                // parse if we got last_modified
+                // from Dropbox, the path looks like this: Thu, 01 Sep 2022 10:25:22 +02:00
+                if (lastModifiedString != null) {
+                    try {
+                        DateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
+                        lastModifiedDate = dateFormat.parse(lastModifiedString);
+                    } catch (ParseException e) {
+                        Log.v(MainApplication.TAG, "Could not parse last modified date: " + lastModifiedString);
+                    }
+
+                }
+
+            } else {
+                Log.d(MainApplication.TAG, "Can't query ContentResolver due to too low SDK_INT: " + android.os.Build.VERSION.SDK_INT + " < " + android.os.Build.VERSION_CODES.O);
+            }
+        }
+
         // we didn't load a mindmap yet, we open it
-        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
-        if (mindmap.getRootNode() == null) {
+        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again if it is the same URI and hasn't been modified since
+        // TODO: check if URI of the intent is the same as URI we opened last time (and probably also modification times...)
+        boolean noPreviousMindmapLoaded = mindmap.getRootNode() == null;
+        boolean previousMindmapUriDiffers = mindmap.getUri() == null || !mindmap.getUri().equals(intentUri);
+        boolean previousMindmapModifiedEarlier = mindmap.getLastModified() == null || lastModifiedDate == null || mindmap.getLastModified().before(lastModifiedDate);
+
+        Log.v(MainApplication.TAG, "noPreviousMindmapLoaded: " + noPreviousMindmapLoaded);
+        Log.v(MainApplication.TAG, "previousMindmapUriDiffers: " + previousMindmapUriDiffers);
+        Log.v(MainApplication.TAG, "previousMindmapModifiedEarlier: " + previousMindmapModifiedEarlier);
+
+        // open a new document if we (one of):
+        // - have no document previously loaded
+        // - the previously loaded document has a different URI
+        // - the previously loaded document was modified earlier than this document (i.e. other document was modified after)
+        if (noPreviousMindmapLoaded || previousMindmapUriDiffers || previousMindmapModifiedEarlier) {
 
             // create a ProgressDialog, and load the file asynchronously
             ProgressDialog progressDialog = ProgressDialog.show(
@@ -99,7 +161,7 @@ public class MainActivity extends FragmentActivity {
             };
 
             // open file
-            new FileOpenTask(intent, action, progressDialog, onPostExecuteTask).execute();
+            new FileOpenTask(intent, action, lastModifiedDate, progressDialog, onPostExecuteTask).execute();
 
         } else {
             setUpHorizontalMindmapView();
@@ -130,18 +192,21 @@ public class MainActivity extends FragmentActivity {
 
         private final Intent intent;
         private final String action;
+        private final Date documentLastModified;
         private final ProgressDialog progressDialog;
         private final Runnable onPostExecuteTask;
 
         FileOpenTask(
                 Intent intent,
                 String action,
+                Date documentLastModified,
                 ProgressDialog progressDialog,
                 Runnable onPostExecuteTask
         ) {
 
             this.intent = intent;
             this.action = action;
+            this.documentLastModified = documentLastModified;
             this.progressDialog = progressDialog;
             this.onPostExecuteTask = onPostExecuteTask;
         }
@@ -179,6 +244,10 @@ public class MainActivity extends FragmentActivity {
                 // check whether the Uri has changed (-> load new document) or
                 // remained the same (-> reuse previous document)
                 mindmap.setUri(uri);
+
+                // store the last modified date, so next time we know whether to reload the file
+                // or display the same
+                mindmap.setLastModified(documentLastModified);
             }
 
             // started from the launcher
