@@ -3,22 +3,18 @@ package ch.benediktkoeppel.code.droidplane;
 import android.arch.lifecycle.ViewModel;
 import android.net.Uri;
 import android.util.Log;
-
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
-
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Mindmap handles the loading and storing of a mind map document.
@@ -29,11 +25,6 @@ public class Mindmap extends ViewModel {
      * The currently loaded Uri
      */
     private Uri uri;
-
-    /**
-     * The last modified date of the underlying document. Null if unknown
-     */
-    private Date lastModified;
 
     /**
      * The root node of the document.
@@ -69,14 +60,6 @@ public class Mindmap extends ViewModel {
     public void setUri(Uri uri) {
 
         this.uri = uri;
-    }
-
-    public Date getLastModified() {
-        return lastModified;
-    }
-
-    public void setLastModified(Date lastModified) {
-        this.lastModified = lastModified;
     }
 
     /**
