@@ -4,6 +4,9 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/droidplane.iml" filepath="$PROJECT_DIR$/droidplane.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/droidplane.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/droidplane.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/droidplane.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/droidplane.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/droidplane.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/droidplane.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/droidplane.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/droidplane.app.unitTest.iml" />
     </modules>
   </component>
 </project>
