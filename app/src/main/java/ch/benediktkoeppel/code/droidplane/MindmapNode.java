@@ -3,18 +3,20 @@ package ch.benediktkoeppel.code.droidplane;
 import android.net.Uri;
 import android.text.Html;
 import android.util.Log;
+
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -151,7 +153,7 @@ public class MindmapNode {
         String text = tmpElement.getAttribute("TEXT");
 
         // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
-        // (TYPE="NODE"), and for "Notes" (TYPE="NOTE").
+        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
         String richTextContent = null;
         // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
         NodeList richtextNodeList = tmpElement.getChildNodes();
@@ -160,7 +162,7 @@ public class MindmapNode {
             if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
                 Element richcontentElement = (Element)n;
                 String typeAttribute = richcontentElement.getAttribute("TYPE");
-                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE")) {
+                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE") || typeAttribute.equals("DETAILS")) {
 
                     // extract the whole rich text (XML), to show in a WebView activity
                     try {
