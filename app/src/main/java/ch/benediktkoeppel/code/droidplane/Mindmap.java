@@ -3,18 +3,18 @@ package ch.benediktkoeppel.code.droidplane;
 import android.arch.lifecycle.ViewModel;
 import android.net.Uri;
 import android.util.Log;
-import com.google.android.gms.analytics.HitBuilders;
-import com.google.android.gms.analytics.Tracker;
+
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * Mindmap handles the loading and storing of a mind map document.
@@ -106,23 +106,23 @@ public class Mindmap extends ViewModel {
         fillArrowLinks();
 
         long loadDocumentEndTime = System.currentTimeMillis();
-        Tracker tracker = MainApplication.getTracker();
-        tracker.send(new HitBuilders.TimingBuilder()
-                .setCategory("document")
-                .setValue(loadDocumentEndTime - loadDocumentStartTime)
-                .setVariable("loadDocument")
-                .setLabel("loadTime")
-                .build());
+        //Tracker tracker = MainApplication.getTracker();
+        //tracker.send(new HitBuilders.TimingBuilder()
+        //        .setCategory("document")
+        //        .setValue(loadDocumentEndTime - loadDocumentStartTime)
+        //        .setVariable("loadDocument")
+        //        .setLabel("loadTime")
+        //        .build());
         Log.d(MainApplication.TAG, "Document loaded");
 
         long numNodes = document.getElementsByTagName("node").getLength();
-        tracker.send(new HitBuilders.EventBuilder()
-                .setCategory("document")
-                .setAction("loadDocument")
-                .setLabel("numNodes")
-                .setValue(numNodes)
-                .build()
-        );
+        //tracker.send(new HitBuilders.EventBuilder()
+        //        .setCategory("document")
+        //        .setAction("loadDocument")
+        //        .setLabel("numNodes")
+        //        .setValue(numNodes)
+        //        .build()
+        //);
 
     }
 

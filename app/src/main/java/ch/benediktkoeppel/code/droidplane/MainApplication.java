@@ -1,8 +1,6 @@
 package ch.benediktkoeppel.code.droidplane;
 
 import android.app.Application;
-import com.google.android.gms.analytics.GoogleAnalytics;
-import com.google.android.gms.analytics.Tracker;
 
 /**
  * The DroidPlane main application. It stores the loaded Uri and document, so that we can recreate the MainActivity
@@ -18,8 +16,8 @@ public class MainApplication extends Application {
     /**
      * Google Analytics
      */
-    private static GoogleAnalytics googleAnalytics;
-    private static Tracker tracker;
+    //private static GoogleAnalytics googleAnalytics;
+    //private static Tracker tracker;
 
     @Override
     public void onCreate() {
@@ -27,27 +25,27 @@ public class MainApplication extends Application {
         super.onCreate();
 
         // set up Google Analytics
-        googleAnalytics = GoogleAnalytics.getInstance(this);
-        tracker = googleAnalytics.newTracker(R.xml.global_tracker);
+        //googleAnalytics = GoogleAnalytics.getInstance(this);
+        //tracker = googleAnalytics.newTracker(R.xml.global_tracker);
 
     }
 
-    /**
-     * Get the Google Analytics tracker
-     *
-     * @returnGoogle Analytics tracker
-     */
-    public static Tracker getTracker() {
-
-        return tracker;
-    }
-
-    /**
-     * Get the Google Analytics API
-     * @return Google Analytics API
-     */
-    public static GoogleAnalytics getGoogleAnalytics() {
-
-        return googleAnalytics;
-    }
+//    /**
+//     * Get the Google Analytics tracker
+//     *
+//     * @returnGoogle Analytics tracker
+//     */
+//    public static Tracker getTracker() {
+//
+//        return tracker;
+//    }
+//
+//    /**
+//     * Get the Google Analytics API
+//     * @return Google Analytics API
+//     */
+//    public static GoogleAnalytics getGoogleAnalytics() {
+//
+//        return googleAnalytics;
+//    }
 }

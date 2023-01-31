@@ -16,8 +16,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
-import com.google.android.gms.analytics.HitBuilders;
-import com.google.android.gms.analytics.Tracker;
+//import com.google.android.gms.analytics.HitBuilders;
+//import com.google.android.gms.analytics.Tracker;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -44,14 +44,14 @@ public class MainActivity extends FragmentActivity {
     public void onStart() {
 
         super.onStart();
-        ((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStart(this);
+        //((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStart(this);
     }
 
     @Override
     public void onStop() {
 
         super.onStop();
-        ((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStop(this);
+        //((MainApplication)getApplication()).getGoogleAnalytics().reportActivityStop(this);
     }
 
     @Override
@@ -62,9 +62,9 @@ public class MainActivity extends FragmentActivity {
 
         // initialize android stuff
         // Google Analytics
-        Tracker tracker = ((MainApplication)getApplication()).getTracker();
-        tracker.setScreenName("MainActivity");
-        tracker.send(new HitBuilders.EventBuilder().build());
+        //Tracker tracker = ((MainApplication)getApplication()).getTracker();
+        //tracker.setScreenName("MainActivity");
+        //tracker.send(new HitBuilders.EventBuilder().build());
 
         // enable the Android home button
         enableHomeButton();
