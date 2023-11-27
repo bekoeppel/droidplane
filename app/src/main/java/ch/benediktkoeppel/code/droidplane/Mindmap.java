@@ -1,29 +1,20 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import androidx.lifecycle.ViewModel;
 import android.net.Uri;
 import android.util.Log;
-import android.util.Pair;
-
-import androidx.lifecycle.ViewModel;
-
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
-
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
-
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Mindmap handles the loading and storing of a mind map document.
@@ -76,10 +67,7 @@ public class Mindmap extends ViewModel {
      *
      * @param inputStream the inputStream to load
      */
-    public void loadDocument(InputStream inputStream, MainActivity.FileOpenTaskStatusCallback statusCallback) {
-
-        // idea: maybe move to a streaming parser, and just append elements to the view as they become available
-        // https://github.com/FasterXML/woodstox
+    public void loadDocument(InputStream inputStream) {
 
         // start measuring the document load time
         long loadDocumentStartTime = System.currentTimeMillis();
@@ -91,21 +79,12 @@ public class Mindmap extends ViewModel {
         // load the Mindmap from the InputStream
         Document document;
         try {
-            docBuilderFactory.setNamespaceAware(false);
-            docBuilderFactory.setValidating(false);
-            docBuilderFactory.setXIncludeAware(false);
-            docBuilderFactory.setFeature("http://xml.org/sax/features/namespaces", false);
-            docBuilderFactory.setFeature("http://xml.org/sax/features/validation", false);
-
             docBuilder = docBuilderFactory.newDocumentBuilder();
-            statusCallback.statusUpdate("Parsing file");
-            document = docBuilder.parse(new BufferedInputStream(inputStream));
+            document = docBuilder.parse(inputStream);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
             return;
         }
-
-        statusCallback.statusUpdate("Loading nodes");
 
         // get the root node
         rootNode = new MindmapNode(
@@ -118,20 +97,13 @@ public class Mindmap extends ViewModel {
         deepestSelectedMindmapNode = rootNode;
 
         // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
-        // other idea: already finish the mindmap loading, and do this in the background
-        statusCallback.statusUpdate("Indexing nodes");
-        MindmapIndexes mindmapIndexes = loadAndIndexNodesByIds(rootNode);
-
-        nodesById = mindmapIndexes.getNodesByIdIndex();
-        nodesByNumericId = mindmapIndexes.getNodesByNumericIndex();
-
+        nodesById = new HashMap<>();
+        nodesByNumericId = new HashMap<>();
+        loadAndIndexNodesByIds(rootNode);
 
         // Nodes can refer to other nodes with arrowlinks. We want to have the link on both ends of the link, so we can
         // now set the corresponding links
-        statusCallback.statusUpdate("Building links");
         fillArrowLinks();
-
-        statusCallback.statusUpdate("Done");
 
         long loadDocumentEndTime = System.currentTimeMillis();
         Tracker tracker = MainApplication.getTracker();
@@ -167,40 +139,16 @@ public class Mindmap extends ViewModel {
     /**
      * Index all nodes (and child nodes) by their ID, for fast lookup
      *
-     * @param root
+     * @param node
      */
-    private MindmapIndexes loadAndIndexNodesByIds(MindmapNode root) {
+    private void loadAndIndexNodesByIds(MindmapNode node) {
 
-        Stack<MindmapNode> stack = new Stack<>();
-        stack.push(root);
+        nodesById.put(node.getId(), node);
+        nodesByNumericId.put(node.getNumericId(), node);
 
-        // try first to just extract all IDs and the respective node, and
-        // only insert into the hashmap once we know the size of the hashmap
-        List<Pair<String, MindmapNode>> idAndNode = new ArrayList<>();
-        List<Pair<Integer, MindmapNode>> numericIdAndNode = new ArrayList<>();
-
-        while (!stack.isEmpty()) {
-            MindmapNode node = stack.pop();
-
-            idAndNode.add(new Pair<>(node.getId(), node));
-            numericIdAndNode.add(new Pair<>(node.getNumericId(), node));
-
-            for (MindmapNode mindmapNode : node.getChildNodes()) {
-                stack.push(mindmapNode);
-            }
+        for (MindmapNode mindmapNode : node.getChildNodes()) {
+            loadAndIndexNodesByIds(mindmapNode);
         }
-
-        Map<String, MindmapNode> newNodesById = new HashMap<>(idAndNode.size());
-        Map<Integer, MindmapNode> newNodesByNumericId = new HashMap<>(numericIdAndNode.size());
-
-        for (Pair<String, MindmapNode> i : idAndNode) {
-            newNodesById.put(i.first, i.second);
-        }
-        for (Pair<Integer, MindmapNode> i : numericIdAndNode) {
-            newNodesByNumericId.put(i.first, i.second);
-        }
-
-        return new MindmapIndexes(newNodesById, newNodesByNumericId);
 
     }
 
@@ -239,25 +187,6 @@ public class Mindmap extends ViewModel {
                     destinationNode.getArrowLinkIncomingNodes().add(mindmapNode);
                 }
             }
-        }
-    }
-
-    private class MindmapIndexes {
-
-        private final Map<String, MindmapNode> nodesById;
-        private final Map<Integer, MindmapNode> nodesByNumericId;
-
-        private MindmapIndexes(Map<String, MindmapNode> nodesById, Map<Integer, MindmapNode> nodesByNumericId) {
-            this.nodesById = nodesById;
-            this.nodesByNumericId = nodesByNumericId;
-        }
-
-        public Map<String, MindmapNode> getNodesByIdIndex() {
-            return this.nodesById;
-        }
-
-        public Map<Integer, MindmapNode> getNodesByNumericIndex() {
-            return this.nodesByNumericId;
         }
     }
 }

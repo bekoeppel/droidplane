@@ -5,23 +5,17 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.ContentResolver;
-import android.content.DialogInterface;
-import android.content.Intent;
+import androidx.lifecycle.ViewModelProviders;
+import android.content.*;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import androidx.fragment.app.FragmentActivity;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
-
-import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.ViewModelProviders;
-
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
@@ -40,8 +34,6 @@ public class MainActivity extends FragmentActivity {
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
     private Mindmap mindmap;
-
-    private final String openingMessage = "Opening Mindmap File...";
 
     /**
      * HorizontalMindmapView that contains all NodeColumns
@@ -88,11 +80,11 @@ public class MainActivity extends FragmentActivity {
         // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
         if (mindmap.getRootNode() == null) {
 
-            // load the file asynchronously, continuously appending in the horizontal mindmap view
+            // create a ProgressDialog, and load the file asynchronously
             ProgressDialog progressDialog = ProgressDialog.show(
                     this,
                     "DroidPlane",
-                    openingMessage,
+                    "Opening Mindmap File...",
                     true,
                     false
             );
@@ -134,11 +126,7 @@ public class MainActivity extends FragmentActivity {
         return horizontalMindmapView;
     }
 
-    interface FileOpenTaskStatusCallback {
-        public void statusUpdate(String string);
-    }
-
-    private class FileOpenTask extends AsyncTask<String, Void, Object> implements FileOpenTaskStatusCallback {
+    private class FileOpenTask extends AsyncTask<String, Void, Object> {
 
         private final Intent intent;
         private final String action;
@@ -203,7 +191,7 @@ public class MainActivity extends FragmentActivity {
 
             // load the mindmap
             Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm, this);
+            mindmap.loadDocument(mm);
 
             return null;
         }
@@ -218,12 +206,6 @@ public class MainActivity extends FragmentActivity {
             if (progressDialog != null) {
                 progressDialog.dismiss();
             }
-        }
-
-
-        @Override
-        public void statusUpdate(String string) {
-            progressDialog.setMessage(openingMessage + "\n" + string);
         }
     }
 
