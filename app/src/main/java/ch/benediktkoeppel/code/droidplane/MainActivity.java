@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
@@ -45,6 +46,8 @@ public class MainActivity extends FragmentActivity {
      * HorizontalMindmapView that contains all NodeColumns
      */
     private HorizontalMindmapView horizontalMindmapView;
+    private Menu menu;
+    private boolean mindmapIsLoading;
 
     @Override
     public void onStart() {
@@ -155,6 +158,8 @@ public class MainActivity extends FragmentActivity {
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
+        this.menu = menu;
+        updateLoadingIndicatorOnUiThread();
         return true;
     }
 
@@ -168,6 +173,7 @@ public class MainActivity extends FragmentActivity {
 
         horizontalMindmapView.upOrClose();
     }
+
 
     /*
      * (non-Javadoc)
@@ -206,7 +212,7 @@ public class MainActivity extends FragmentActivity {
                 performFileSearch();
                 break;
 
-                // App button (top left corner)
+            // App button (top left corner)
             case android.R.id.home:
                 horizontalMindmapView.up();
                 break;
@@ -351,6 +357,24 @@ public class MainActivity extends FragmentActivity {
                 startActivity(openFileIntent);
 
             }
+        }
+    }
+
+
+    public void setMindmapIsLoading(boolean mindmapIsLoading) {
+
+        this.mindmapIsLoading = mindmapIsLoading;
+
+        // update the loading indicator in the menu
+        updateLoadingIndicatorOnUiThread();
+    }
+
+    private void updateLoadingIndicatorOnUiThread() {
+        if (menu != null && menu.findItem(R.id.mindmap_loading) != null) {
+
+            MenuItem mindmapLoadingIndicator = menu.findItem(R.id.mindmap_loading);
+
+            runOnUiThread(() -> mindmapLoadingIndicator.setVisible(mindmapIsLoading));
         }
     }
 }

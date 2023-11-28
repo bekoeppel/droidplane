@@ -80,18 +80,16 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         super(context);
 
-        // extract all <node.../> elements from the parent node, create layouts, and add them to the mindmapNodes list
-        // TODO this comment here is explaining what getChildNodes does, too detailed
-        mindmapNodeLayouts = new ArrayList<>();
-        List<MindmapNode> mindmapNodes = parent.getChildNodes();
-        for (MindmapNode mindmapNode : mindmapNodes) {
-            mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
-        }
-
-        // store the parent node
-        // TODO move up
         this.parent = parent;
 
+        // create list items for each child node
+        mindmapNodeLayouts = new ArrayList<>();
+        List<MindmapNode> mindmapNodes = parent.getChildNodes();
+        synchronized (mindmapNodes) {
+            for (MindmapNode mindmapNode : mindmapNodes) {
+                mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
+            }
+        }
 
         // define the layout of this LinearView
         int linearViewHeight = LayoutParams.MATCH_PARENT;

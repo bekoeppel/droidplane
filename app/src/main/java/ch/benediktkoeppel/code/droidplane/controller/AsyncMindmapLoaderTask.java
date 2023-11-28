@@ -115,6 +115,9 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
      */
     public void loadDocument(InputStream inputStream) {
 
+        // show loading indicator
+        mainActivity.setMindmapIsLoading(true);
+
         // idea: maybe move to a streaming parser, and just append elements to the view as they become available
         // https://github.com/FasterXML/woodstox
 
@@ -160,6 +163,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 horizontalMindmapView.setDeepestSelectedMindmapNode(rootNode);
 
                 horizontalMindmapView.onRootNodeLoaded();
+
             }
         });
 
@@ -185,8 +189,6 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 .build());
         Log.d(MainApplication.TAG, "Document loaded");
 
-        // TODO: currently we have to click on "top" once in the UI to make the view show up, after the document is loaded
-
         long numNodes = document.getElementsByTagName("node").getLength();
         tracker.send(new HitBuilders.EventBuilder()
                 .setCategory("document")
@@ -197,6 +199,8 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         );
 
         mindmap.setLoaded(true);
+
+        mainActivity.setMindmapIsLoading(false);
 
     }
 
