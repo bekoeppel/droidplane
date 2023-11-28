@@ -93,6 +93,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // fix the widths of all columns
         resizeAllColumns(getContext());
 
+        // if we already have the root, we can already set up the columns; otherwise we do this when the root node is loaded
+        if (mindmap.getRootNode() != null) {
+            onRootNodeLoaded();
+        }
+    }
+
+    public void onRootNodeLoaded() {
+
         // expand the selected node chain
         downTo(getContext(), mindmap.getDeepestSelectedMindmapNode());
 

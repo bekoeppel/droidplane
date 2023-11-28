@@ -363,7 +363,8 @@ public class MindmapNode {
     public String getText() {
 
         // if this is a cloned node, get the text from the original node
-        if (treeIdAttribute != null) {
+        if (treeIdAttribute != null && !treeIdAttribute.equals("")) {
+            // TODO this now fails when loading, because the background indexing is not done yet - so we maybe should mark this as "pending", and put it into a queue, to be updated once the linked node is there
             MindmapNode linkedNode = mindmap.getNodeByID(treeIdAttribute);
             if (linkedNode != null) {
                 return linkedNode.getText();

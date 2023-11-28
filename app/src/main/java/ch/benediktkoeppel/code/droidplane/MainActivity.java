@@ -4,18 +4,23 @@ import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import androidx.lifecycle.ViewModelProviders;
-import android.content.*;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import androidx.fragment.app.FragmentActivity;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.ViewModelProviders;
+
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
@@ -34,6 +39,8 @@ public class MainActivity extends FragmentActivity {
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
     private Mindmap mindmap;
+
+    private final String openingMessage = "Opening Mindmap File...";
 
     /**
      * HorizontalMindmapView that contains all NodeColumns
@@ -80,26 +87,11 @@ public class MainActivity extends FragmentActivity {
         // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
         if (mindmap.getRootNode() == null) {
 
-            // create a ProgressDialog, and load the file asynchronously
-            ProgressDialog progressDialog = ProgressDialog.show(
-                    this,
-                    "DroidPlane",
-                    "Opening Mindmap File...",
-                    true,
-                    false
-            );
+            // set up horizontal mindmap view first, then in the background populate the map
+            setUpHorizontalMindmapView();
 
-            // Once the FileOpenTask is complete, we want to set up the horizontal mindmap view. If we already have
-            // a mindmap, we run it immediately.
-            Runnable onPostExecuteTask = new Runnable() {
-                @Override
-                public void run() {
-                    setUpHorizontalMindmapView();
-                }
-            };
-
-            // open file
-            new FileOpenTask(intent, action, progressDialog, onPostExecuteTask).execute();
+            // load the file asynchronously, continuously appending in the horizontal mindmap view
+            new FileOpenTask(intent, action).execute();
 
         } else {
             setUpHorizontalMindmapView();
@@ -130,20 +122,14 @@ public class MainActivity extends FragmentActivity {
 
         private final Intent intent;
         private final String action;
-        private final ProgressDialog progressDialog;
-        private final Runnable onPostExecuteTask;
 
         FileOpenTask(
                 Intent intent,
-                String action,
-                ProgressDialog progressDialog,
-                Runnable onPostExecuteTask
+                String action
         ) {
 
             this.intent = intent;
             this.action = action;
-            this.progressDialog = progressDialog;
-            this.onPostExecuteTask = onPostExecuteTask;
         }
 
         @Override
@@ -191,21 +177,22 @@ public class MainActivity extends FragmentActivity {
 
             // load the mindmap
             Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm);
+            mindmap.loadDocument(mm, new Runnable() {
+                @Override
+                public void run() {
+                    // TODO: this doesn't have to be two threads nested into each other
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            horizontalMindmapView.onRootNodeLoaded();
+                        }
+                    });
+
+                }
+            });
+
 
             return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-
-            if (onPostExecuteTask != null) {
-                onPostExecuteTask.run();
-            }
-
-            if (progressDialog != null) {
-                progressDialog.dismiss();
-            }
         }
     }
 
