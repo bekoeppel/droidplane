@@ -54,6 +54,9 @@ public class Mindmap extends ViewModel {
     // TODO: this is not really part of the mindmap model
     private MindmapNode deepestSelectedMindmapNode;
 
+    // whether the mindmap has finished loading
+    private boolean isLoaded = false;
+
     /**
      * Returns the Uri which is currently loaded in document.
      *
@@ -155,6 +158,8 @@ public class Mindmap extends ViewModel {
                 .build()
         );
 
+        this.isLoaded = true;
+
     }
 
     /**
@@ -245,6 +250,14 @@ public class Mindmap extends ViewModel {
                 }
             }
         }
+    }
+
+    public boolean isLoaded() {
+        return isLoaded;
+    }
+
+    public void setLoaded(boolean loaded) {
+        isLoaded = loaded;
     }
 
     private class MindmapIndexes {

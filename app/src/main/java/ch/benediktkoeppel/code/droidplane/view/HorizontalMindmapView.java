@@ -55,7 +55,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private final Map<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
-    private final Mindmap mindmap;
+    private Mindmap mindmap;
 
     private final MainActivity mainActivity;
 
@@ -66,11 +66,9 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      *
      * @param mainActivity the Application Context
      */
-    public HorizontalMindmapView(Mindmap mindmap, MainActivity mainActivity) {
+    public HorizontalMindmapView(MainActivity mainActivity) {
 
         super(mainActivity);
-
-        this.mindmap = mindmap;
 
         // TODO: why does the view need access to the mainActivity?
         this.mainActivity = mainActivity;
@@ -102,11 +100,18 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // fix the widths of all columns
         resizeAllColumns(getContext());
 
+    }
+
+    public void setMindmap(Mindmap mindmap) {
+
+        this.mindmap = mindmap;
+
         // if we already have the root, we can already set up the columns; otherwise we do this when the root node is loaded
         // TODO: this should maybe never be done here
         if (mindmap.getRootNode() != null) {
             onRootNodeLoaded();
         }
+
     }
 
     // TODO: comment missing

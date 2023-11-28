@@ -6,11 +6,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuInflater;
@@ -24,9 +22,7 @@ import androidx.lifecycle.ViewModelProviders;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
+import ch.benediktkoeppel.code.droidplane.controller.AsyncMindmapLoaderTask;
 import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
@@ -79,26 +75,27 @@ public class MainActivity extends FragmentActivity {
         // enable the Android home button
         enableHomeButton();
 
-        // get the Mindmap ViewModel
-        mindmap = ViewModelProviders.of(this).get(Mindmap.class);
-
-        // intents (how we are called)
-        Intent intent = getIntent();
-        String action = intent.getAction();
-
         // set up horizontal mindmap view first
         setUpHorizontalMindmapView();
 
-        // then populate view with mindmap
-        // we didn't load a mindmap yet, we open it
-        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
-        if (mindmap.getRootNode() == null) {
+        // get the Mindmap ViewModel
+        mindmap = ViewModelProviders.of(this).get(Mindmap.class);
 
-            // load the file asynchronously, continuously appending in the horizontal mindmap view
-            new FileOpenTask(intent, action).execute();
+        // then populate view with mindmap
+        // if we already have a loaded mindmap, use this; otherwise load from the intent
+        if (mindmap.isLoaded()) {
+            horizontalMindmapView.setMindmap(mindmap);
 
         } else {
-            setUpHorizontalMindmapView();
+
+            // load the file asynchronously
+            new AsyncMindmapLoaderTask(
+                    this,
+                    mindmap,
+                    horizontalMindmapView,
+                    getIntent()
+            ).execute();
+
         }
 
     }
@@ -106,7 +103,7 @@ public class MainActivity extends FragmentActivity {
     private void setUpHorizontalMindmapView() {
 
         // create a new HorizontalMindmapView
-        horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
+        horizontalMindmapView = new HorizontalMindmapView(this);
 
         ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
 
@@ -120,84 +117,6 @@ public class MainActivity extends FragmentActivity {
     public HorizontalMindmapView getHorizontalMindmapView() {
 
         return horizontalMindmapView;
-    }
-
-    private class FileOpenTask extends AsyncTask<String, Void, Object> {
-
-        private final Intent intent;
-        private final String action;
-
-        FileOpenTask(
-                Intent intent,
-                String action
-        ) {
-
-            this.intent = intent;
-            this.action = action;
-        }
-
-        @Override
-        protected Object doInBackground(String... strings) {
-
-            // prepare loading of the Mindmap file
-            InputStream mm = null;
-
-            // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the
-            // launcher started from ACTION_EDIT/VIEW intent
-            if ((Intent.ACTION_EDIT.equals(action) || Intent.ACTION_VIEW.equals(action)) ||
-                Intent.ACTION_OPEN_DOCUMENT.equals(action)
-            ) {
-
-                Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
-
-                // get the URI to the target document (the Mindmap we are opening) and open the InputStream
-                Uri uri = intent.getData();
-                if (uri != null) {
-                    ContentResolver cr = getContentResolver();
-                    try {
-                        mm = cr.openInputStream(uri);
-                    } catch (FileNotFoundException e) {
-
-                        abortWithPopup(R.string.filenotfound);
-                        e.printStackTrace();
-                    }
-                } else {
-                    abortWithPopup(R.string.novalidfile);
-                }
-
-                // store the Uri. Next time the MainActivity is started, we'll
-                // check whether the Uri has changed (-> load new document) or
-                // remained the same (-> reuse previous document)
-                mindmap.setUri(uri);
-            }
-
-            // started from the launcher
-            else {
-                Log.d(MainApplication.TAG, "started from app launcher intent");
-
-                // display the default Mindmap "example.mm", from the resources
-                mm = getApplicationContext().getResources().openRawResource(R.raw.example);
-            }
-
-            // load the mindmap
-            Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm, new Runnable() {
-                @Override
-                public void run() {
-                    // TODO: this doesn't have to be two threads nested into each other
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            horizontalMindmapView.onRootNodeLoaded();
-                        }
-                    });
-
-                }
-            });
-
-
-            return null;
-        }
     }
 
 
@@ -374,7 +293,7 @@ public class MainActivity extends FragmentActivity {
      *
      * @param stringResourceId
      */
-    private void abortWithPopup(int stringResourceId) {
+    public void abortWithPopup(int stringResourceId) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(stringResourceId);
