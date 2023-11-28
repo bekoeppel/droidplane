@@ -335,9 +335,11 @@ public class MindmapNode {
      *
      * TODO: not so sure if this is really doing lazy loading. We probably call this already pretty early on. Should check.
      *
+     * TODO: this should be called differently, to not confuse it with getChildNodes of Node
+     *
      * @return ArrayList of this MindmapNode's child nodes
      */
-    public List<MindmapNode> getChildNodes() {
+    public synchronized List<MindmapNode> getChildNodes() {
 
         // if we haven't loaded the childMindmapNodes before
         if (this.childMindmapNodes == null) {
@@ -435,19 +437,9 @@ public class MindmapNode {
         return arrowLinkDestinationNodes;
     }
 
-    public void setArrowLinkDestinationNodes(List<MindmapNode> arrowLinkDestinationNodes) {
-
-        this.arrowLinkDestinationNodes = arrowLinkDestinationNodes;
-    }
-
     public List<MindmapNode> getArrowLinkIncomingNodes() {
 
         return arrowLinkIncomingNodes;
-    }
-
-    public void setArrowLinkIncomingNodes(List<MindmapNode> arrowLinkIncomingNodes) {
-
-        this.arrowLinkIncomingNodes = arrowLinkIncomingNodes;
     }
 
     public List<MindmapNode> getArrowLinks() {

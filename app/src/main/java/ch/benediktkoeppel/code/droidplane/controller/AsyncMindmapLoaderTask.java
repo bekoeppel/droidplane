@@ -215,6 +215,8 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         // TODO: check if this optimization was necessary - otherwise go back to old implementation
 
+        // TODO: this causes us to load all mindmap nodes, defeating the lazy loading in ch.benediktkoeppel.code.droidplane.model.MindmapNode.getChildNodes
+
         Stack<MindmapNode> stack = new Stack<>();
         stack.push(root);
 
