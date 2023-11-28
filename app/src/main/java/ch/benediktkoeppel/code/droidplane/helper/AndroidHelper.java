@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.helper;
 
 import android.app.Activity;
 import android.content.Context;

@@ -18,6 +18,8 @@ import android.widget.ListView;
 
 import java.util.*;
 
+import ch.benediktkoeppel.code.droidplane.helper.AndroidHelper;
+
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
     /**
