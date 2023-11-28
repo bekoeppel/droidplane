@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
 import android.text.Html;
@@ -17,6 +17,8 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import ch.benediktkoeppel.code.droidplane.MainApplication;
 
 
 /**
@@ -73,6 +75,7 @@ public class MindmapNode {
     /**
      * Whether the node is expandable, i.e. whether it has child nodes
      */
+    // TODO: this is badly named, it should just be called "hasChildren", and then the view can decide that this means it's expandable
     private boolean isExpandable;
 
     /**
@@ -88,6 +91,7 @@ public class MindmapNode {
     /**
      * Whether the node is selected or not, will be set after it was clicked by the user
      */
+    // TODO: this has nothing to do with the model
     private boolean selected;
 
     /**
@@ -210,6 +214,7 @@ public class MindmapNode {
         iconNames = getIcons();
 
         // find out if it has sub nodes
+        // TODO: this should just go into a getter
         isExpandable = (getNumChildMindmapNodes() > 0);
 
         // extract link
@@ -326,6 +331,8 @@ public class MindmapNode {
     /**
      * Generates and returns the child nodes of this MindmapNode. getChildNodes() does lazy loading, i.e. it
      * generates the child nodes on demand and stores them in childMindmapNodes.
+     *
+     * TODO: not so sure if this is really doing lazy loading. We probably call this already pretty early on. Should check.
      *
      * @return ArrayList of this MindmapNode's child nodes
      */

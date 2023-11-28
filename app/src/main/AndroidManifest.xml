@@ -68,7 +68,7 @@
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 
         <activity
-            android:name=".RichTextViewActivity"
+            android:name=".view.RichTextViewActivity"
             android:label="@string/title_activity_rich_text_view"></activity>
     </application>
 

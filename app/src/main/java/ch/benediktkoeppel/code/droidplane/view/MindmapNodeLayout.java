@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
@@ -15,12 +15,21 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.MimeTypeMap;
-import android.widget.*;
+import android.widget.AbsListView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import ch.benediktkoeppel.code.droidplane.MainActivity;
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+import ch.benediktkoeppel.code.droidplane.R;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 
 /**

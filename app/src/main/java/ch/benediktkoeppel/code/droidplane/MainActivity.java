@@ -27,6 +27,11 @@ import com.google.android.gms.analytics.Tracker;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
+import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
+import ch.benediktkoeppel.code.droidplane.view.MindmapNodeLayout;
+
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open intent. If the MainApplication was
  * already running, the previously used document is re-used. Also, most of the information about the mind map and the
@@ -39,8 +44,6 @@ public class MainActivity extends FragmentActivity {
     public final static String INTENT_START_HELP = "ch.benediktkoeppel.code.droidplane.INTENT_START_HELP";
 
     private Mindmap mindmap;
-
-    private final String openingMessage = "Opening Mindmap File...";
 
     /**
      * HorizontalMindmapView that contains all NodeColumns
@@ -83,12 +86,13 @@ public class MainActivity extends FragmentActivity {
         Intent intent = getIntent();
         String action = intent.getAction();
 
+        // set up horizontal mindmap view first
+        setUpHorizontalMindmapView();
+
+        // then populate view with mindmap
         // we didn't load a mindmap yet, we open it
         // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
         if (mindmap.getRootNode() == null) {
-
-            // set up horizontal mindmap view first, then in the background populate the map
-            setUpHorizontalMindmapView();
 
             // load the file asynchronously, continuously appending in the horizontal mindmap view
             new FileOpenTask(intent, action).execute();
@@ -201,7 +205,7 @@ public class MainActivity extends FragmentActivity {
      * Enables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void enableHomeButton() {
+    public void enableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {
@@ -213,7 +217,7 @@ public class MainActivity extends FragmentActivity {
      * Disables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void disableHomeButton() {
+    public void disableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {

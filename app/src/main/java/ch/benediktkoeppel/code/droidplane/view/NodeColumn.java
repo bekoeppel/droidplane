@@ -1,22 +1,27 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Point;
-import androidx.annotation.NonNull;
 import android.util.Log;
-import android.view.*;
+import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Display;
+import android.view.View;
 import android.view.View.OnCreateContextMenuListener;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+import ch.benediktkoeppel.code.droidplane.R;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends LinearLayout, and then embeds a ListView.
@@ -76,6 +81,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         super(context);
 
         // extract all <node.../> elements from the parent node, create layouts, and add them to the mindmapNodes list
+        // TODO this comment here is explaining what getChildNodes does, too detailed
         mindmapNodeLayouts = new ArrayList<>();
         List<MindmapNode> mindmapNodes = parent.getChildNodes();
         for (MindmapNode mindmapNode : mindmapNodes) {
@@ -83,6 +89,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         }
 
         // store the parent node
+        // TODO move up
         this.parent = parent;
 
 
@@ -269,41 +276,3 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 }
 
 
-/**
- * The MindmapNodeAdapter is the data provider for the NodeColumn (respectively its ListView).
- */
-class MindmapNodeAdapter extends ArrayAdapter<MindmapNodeLayout> {
-
-    private final List<MindmapNodeLayout> mindmapNodeLayouts;
-
-    public MindmapNodeAdapter(Context context, int textViewResourceId, ArrayList<MindmapNodeLayout> mindmapNodeLayouts) {
-
-        super(context, textViewResourceId, mindmapNodeLayouts);
-        this.mindmapNodeLayouts = mindmapNodeLayouts;
-    }
-
-    /* (non-Javadoc)
-     * getView is responsible to return a view for each individual element in the ListView
-     * @param int position: the position in the mindmapNodes array, for which we need to generate a view
-     * @param View convertView: the view we should recycle
-     * @param ViewGroup parent: not sure, is this the NodeColumn for which the Adapter is generating views?
-     * @see android.widget.ArrayAdapter#getView(int, android.view.View, android.view.ViewGroup)
-     */
-    @NonNull
-    @SuppressLint("InlinedApi")
-    @Override
-    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
-
-        // when convertView != null, we should take the convertView and update it appropriately. Android is
-        // optimizing the performance and thus recycling GUI elements. However, we don't want to recycle anything,
-        // because these are genuine Mindmap nodes. Recycling the view here would show one node twice in the tree,
-        // while leaving out the actual node we should display.
-
-        MindmapNodeLayout view = mindmapNodeLayouts.get(position);
-
-        // tell the node to refresh it's view
-        view.refreshView();
-
-        return view;
-    }
-}

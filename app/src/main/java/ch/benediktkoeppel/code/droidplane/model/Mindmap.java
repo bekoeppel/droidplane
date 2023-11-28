@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
 import android.util.Log;
@@ -25,6 +25,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+
 /**
  * Mindmap handles the loading and storing of a mind map document.
  */
@@ -49,6 +51,7 @@ public class Mindmap extends ViewModel {
     /**
      * The deepest selected mindmap node
      */
+    // TODO: this is not really part of the mindmap model
     private MindmapNode deepestSelectedMindmapNode;
 
     /**
@@ -76,6 +79,7 @@ public class Mindmap extends ViewModel {
      *
      * @param inputStream the inputStream to load
      */
+    // TODO: this should probably be a controller instead?
     public void loadDocument(InputStream inputStream, Runnable onRootNodeLoaded) {
 
         // idea: maybe move to a streaming parser, and just append elements to the view as they become available
@@ -169,6 +173,8 @@ public class Mindmap extends ViewModel {
      * @param root
      */
     private MindmapIndexes loadAndIndexNodesByIds(MindmapNode root) {
+
+        // TODO: check if this optimization was necessary - otherwise go back to old implementation
 
         Stack<MindmapNode> stack = new Stack<>();
         stack.push(root);

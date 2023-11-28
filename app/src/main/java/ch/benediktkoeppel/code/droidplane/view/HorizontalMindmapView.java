@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
 import android.app.Activity;
 import android.content.Context;
@@ -18,7 +18,12 @@ import android.widget.ListView;
 
 import java.util.*;
 
+import ch.benediktkoeppel.code.droidplane.MainActivity;
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
+import ch.benediktkoeppel.code.droidplane.R;
 import ch.benediktkoeppel.code.droidplane.helper.AndroidHelper;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -66,6 +71,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         super(mainActivity);
 
         this.mindmap = mindmap;
+
+        // TODO: why does the view need access to the mainActivity?
         this.mainActivity = mainActivity;
 
         // list where all columns are stored
@@ -96,11 +103,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         resizeAllColumns(getContext());
 
         // if we already have the root, we can already set up the columns; otherwise we do this when the root node is loaded
+        // TODO: this should maybe never be done here
         if (mindmap.getRootNode() != null) {
             onRootNodeLoaded();
         }
     }
 
+    // TODO: comment missing
     public void onRootNodeLoaded() {
 
         // expand the selected node chain
@@ -430,7 +439,8 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     /**
      * Enables the Home button in the application if we have enough columns, i.e. if "Up" will remove a column.
      */
-    void enableHomeButtonIfEnoughColumns(Context context) {
+    // TODO: the view should not do this
+    public void enableHomeButtonIfEnoughColumns(Context context) {
         // if we only have one column (i.e. this is the root node), then we
         // disable the home button
         int numberOfColumns = getNumberOfColumns();
