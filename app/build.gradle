@@ -22,12 +22,15 @@ android {
     }
 }
 
+
 dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'com.google.android.gms:play-services-analytics:18.0.2'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'com.fasterxml:aalto-xml:1.3.2'
     compileOnly "org.projectlombok:lombok:1.18.30"
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }
+
