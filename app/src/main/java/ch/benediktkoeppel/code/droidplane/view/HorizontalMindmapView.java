@@ -60,6 +60,14 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     private final MainActivity mainActivity;
 
 
+
+
+    /**
+     * The deepest selected mindmap node
+     */
+    private MindmapNode deepestSelectedMindmapNode;
+
+
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
      * HorizontalScrollView and create the LinearLayout view inside the HorizontalScrollView.
@@ -103,25 +111,21 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
 
     public void setMindmap(Mindmap mindmap) {
-
         this.mindmap = mindmap;
-
-        // if we already have the root, we can already set up the columns; otherwise we do this when the root node is loaded
-        // TODO: this should maybe never be done here
-        if (mindmap.getRootNode() != null) {
-            onRootNodeLoaded();
-        }
-
     }
 
     // TODO: comment missing
     public void onRootNodeLoaded() {
 
         // expand the selected node chain
-        downTo(getContext(), mindmap.getDeepestSelectedMindmapNode());
+        downTo(getContext(), this.getDeepestSelectedMindmapNode());
 
         // and then scroll to the right
         scrollToRight();
+    }
+
+    private MindmapNode getDeepestSelectedMindmapNode() {
+        return this.deepestSelectedMindmapNode;
     }
 
     /**
@@ -384,7 +388,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         node.setSelected(true);
 
         // keep track in the mind map which node is currently selected
-        mindmap.setDeepestSelectedMindmapNode(node);
+        this.setDeepestSelectedMindmapNode(node);
 
     }
 
@@ -628,6 +632,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         return numVisiblePixelsOnColumn;
+    }
+
+    public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
+        this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
     }
 
     /**
