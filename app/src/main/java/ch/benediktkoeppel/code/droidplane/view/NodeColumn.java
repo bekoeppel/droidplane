@@ -85,10 +85,8 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
         // create list items for each child node
         mindmapNodeLayouts = new ArrayList<>();
         List<MindmapNode> mindmapNodes = parent.getChildNodes();
-        synchronized (mindmapNodes) {
-            for (MindmapNode mindmapNode : mindmapNodes) {
-                mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
-            }
+        for (MindmapNode mindmapNode : mindmapNodes) {
+            mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
         }
 
         // define the layout of this LinearView

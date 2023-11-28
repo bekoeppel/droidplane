@@ -10,6 +10,7 @@ import org.w3c.dom.NodeList;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.xml.transform.Transformer;
@@ -339,27 +340,30 @@ public class MindmapNode {
     public List<MindmapNode> getChildNodes() {
 
         // if we haven't loaded the childMindmapNodes before
-        if (childMindmapNodes == null) {
+        if (this.childMindmapNodes == null) {
 
             // fetch all child DOM Nodes, convert them to MindmapNodes
-            childMindmapNodes = new ArrayList<>();
+            List<MindmapNode> newChildMindmapNodes = new ArrayList<>();
             NodeList childNodes = node.getChildNodes();
             for (int i = 0; i < childNodes.getLength(); i++) {
                 Node tmpNode = childNodes.item(i);
 
                 if (isMindmapNode(tmpNode)) {
                     MindmapNode mindmapNode = new MindmapNode(tmpNode, this, mindmap);
-                    childMindmapNodes.add(mindmapNode);
+                    newChildMindmapNodes.add(mindmapNode);
                 }
             }
-            return childMindmapNodes;
+
+            this.childMindmapNodes = Collections.unmodifiableList(newChildMindmapNodes);
+
         }
 
         // we already did that before, so return the previous result
         else {
             Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
-            return childMindmapNodes;
         }
+
+        return this.childMindmapNodes;
     }
 
     public List<String> getIconNames() {
