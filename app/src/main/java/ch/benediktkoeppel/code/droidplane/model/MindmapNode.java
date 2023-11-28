@@ -147,6 +147,10 @@ public class MindmapNode {
         // extract the ID of the node
         id = tmpElement.getAttribute("ID");
 
+        if (this.id.equals("ID_209248072")) {
+            Log.d(MainApplication.TAG, "Created MindmapNode for ID \"ID_209248072\"");
+        }
+
         try {
             numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
         } catch (NumberFormatException e) {
@@ -341,8 +345,14 @@ public class MindmapNode {
      */
     public synchronized List<MindmapNode> getChildNodes() {
 
+        if (this.parentNode == null) {
+            Log.d(MainApplication.TAG, "Calling getChildNodes on root");
+        }
+
         // if we haven't loaded the childMindmapNodes before
         if (this.childMindmapNodes == null) {
+
+            //Log.d(MainApplication.TAG, "Loading child nodes of node " + this.id);
 
             // fetch all child DOM Nodes, convert them to MindmapNodes
             List<MindmapNode> newChildMindmapNodes = new ArrayList<>();
