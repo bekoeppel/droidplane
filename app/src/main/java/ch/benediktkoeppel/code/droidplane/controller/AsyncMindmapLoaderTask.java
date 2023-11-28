@@ -1,5 +1,7 @@
 package ch.benediktkoeppel.code.droidplane.controller;
 
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
@@ -7,6 +9,11 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.util.Pair;
 
+import com.fasterxml.aalto.AsyncByteArrayFeeder;
+import com.fasterxml.aalto.AsyncXMLInputFactory;
+import com.fasterxml.aalto.AsyncXMLStreamReader;
+import com.fasterxml.aalto.stax.InputFactoryImpl;
+import com.fasterxml.aalto.stax.StreamReaderImpl;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
@@ -123,6 +130,40 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         // start measuring the document load time
         long loadDocumentStartTime = System.currentTimeMillis();
+
+
+
+        int BLOCK_SIZE = 24;
+        final byte[] buf = new byte[BLOCK_SIZE];
+
+        byte[] xml = "<html>Very <b>simple</b> input document!</html>".getBytes();
+
+        int inputPtr = 0; // as we feed byte at a time
+        int type = 0;
+
+        AsyncXMLInputFactory inputF = new InputFactoryImpl(); // sub-class of XMLStreamReader2
+        AsyncXMLStreamReader<AsyncByteArrayFeeder> parser = inputF.createAsyncFor(xml);
+
+        StreamReaderImpl asyncReader = (StreamReaderImpl) parser;
+        AsyncByteArrayFeeder feeder = parser.getInputFeeder();
+
+        do {
+            // May need to feed multiple "segments"
+            while ((type = asyncReader.next()) == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
+                feeder.feedInput(buf, inputPtr++, 1);
+                if (inputPtr >= xml.length) { // to indicate end-of-content (important for error handling)
+                    feeder.endOfInput();
+                }
+            }
+            // and once we have full event, we just dump out event type (for now)
+            System.out.println("Got event of type: "+type);
+            // could also just copy event as is, using Stax, or do any other normal non-blocking handling:
+            // xmlStreamWriter.copyEventFromReader(asyncReader, false);
+        } while (type != END_DOCUMENT);
+
+        asyncReader.close();
+
+
 
         // XML document builder
         DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
