@@ -1,31 +1,20 @@
 package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
-import android.text.Html;
-import android.util.Log;
 
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import ch.benediktkoeppel.code.droidplane.MainApplication;
+import lombok.Builder;
 
 
 /**
  * A MindMapNode is a special type of DOM Node. A DOM Node can be converted to a MindMapNode if it has type ELEMENT,
  * and tag "node".
  */
+@Builder
 public class MindmapNode {
 
     /**
@@ -87,6 +76,7 @@ public class MindmapNode {
     /**
      * The XML DOM node from which this MindMapNode is derived
      */
+    // TODO: MindmapNode should not need this node
     private final Node node;
 
     /**
@@ -113,12 +103,12 @@ public class MindmapNode {
     /**
      * List of outgoing arrow MindmapNodes
      */
-    private List<MindmapNode> arrowLinkDestinationNodes;
+    private List<MindmapNode> arrowLinkDestinationNodes = new ArrayList<>();
 
     /**
      * List of incoming arrow MindmapNodes
      */
-    private List<MindmapNode> arrowLinkIncomingNodes;
+    private List<MindmapNode> arrowLinkIncomingNodes = new ArrayList<>();
 
     /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
@@ -126,124 +116,124 @@ public class MindmapNode {
      *
      * @param node
      */
-    public MindmapNode(Node node, MindmapNode parentNode, Mindmap mindmap) {
-
-        this.mindmap = mindmap;
-
-        // store the parentNode
-        this.parentNode = parentNode;
-
-        // convert the XML Node to a XML Element
-        Element tmpElement;
-        if (isMindmapNode(node)) {
-            tmpElement = (Element)node;
-        } else {
-            throw new ClassCastException("Can not convert Node to MindmapNode");
-        }
-
-        // store the Node
-        this.node = node;
-
-        // extract the ID of the node
-        id = tmpElement.getAttribute("ID");
-
-        try {
-            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
-        } catch (NumberFormatException e) {
-            numericId = id.hashCode();
-        }
-
-
-        // extract the string (TEXT attribute) of the nodes
-        String text = tmpElement.getAttribute("TEXT");
-
-        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
-        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
-        String richTextContent = null;
-        // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
-        NodeList richtextNodeList = tmpElement.getChildNodes();
-        for (int i = 0; i < richtextNodeList.getLength(); i++) {
-            Node n = richtextNodeList.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
-                Element richcontentElement = (Element)n;
-                String typeAttribute = richcontentElement.getAttribute("TYPE");
-                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE") || typeAttribute.equals("DETAILS")) {
-
-                    // extract the whole rich text (XML), to show in a WebView activity
-                    try {
-                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-                        ByteArrayOutputStream boas = new ByteArrayOutputStream();
-                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
-                        richTextContent = boas.toString();
-                    } catch (TransformerException e) {
-                        e.printStackTrace();
-                    }
-
-                    // if the node has no text itself, then convert the rich text content to a text
-                    if (text == null || text.equals("")) {
-                        // convert the content (text only) into a string, to show in the normal list view
-                        text = Html.fromHtml(richcontentElement.getTextContent()).toString();
-                    }
-                }
-            }
-        }
-        this.richTextContent = richTextContent;
-        this.text = text;
-
-
-        // extract styles
-        NodeList styleNodeList = tmpElement.getChildNodes();
-        boolean isBold = false;
-        boolean isItalic = false;
-        for (int i = 0; i < styleNodeList.getLength(); i++) {
-            Node n = styleNodeList.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
-                Element fontElement = (Element)n;
-                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
-                    Log.d(MainApplication.TAG, "Found bold node");
-                    isBold = true;
-                }
-                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
-                    isItalic = true;
-                }
-            }
-        }
-        this.isBold = isBold;
-        this.isItalic = isItalic;
-
-        // extract icons
-        iconNames = getIcons();
-
-        // find out if it has sub nodes
-        // TODO: this should just go into a getter
-        isExpandable = (getNumChildMindmapNodes() > 0);
-
-        // extract link
-        String linkAttribute = tmpElement.getAttribute("LINK");
-        if (!linkAttribute.equals("")) {
-            link = Uri.parse(linkAttribute);
-        } else {
-            link = null;
-        }
-
-        // get cloned node's info
-        treeIdAttribute = tmpElement.getAttribute("TREE_ID");
-
-        // get arrow link destinations
-        arrowLinkDestinationIds = new ArrayList<>();
-        arrowLinkDestinationNodes = new ArrayList<>();
-        arrowLinkIncomingNodes = new ArrayList<>();
-        NodeList arrowlinkList = tmpElement.getChildNodes();
-        for (int i = 0; i< arrowlinkList.getLength(); i++) {
-            Node n = arrowlinkList.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("arrowlink")) {
-                Element arrowlinkElement = (Element)n;
-                String destinationId = arrowlinkElement.getAttribute("DESTINATION");
-                arrowLinkDestinationIds.add(destinationId);
-            }
-        }
-
-    }
+//    public MindmapNode(Node node, MindmapNode parentNode, Mindmap mindmap) {
+//
+//        this.mindmap = mindmap;
+//
+//        // store the parentNode
+//        this.parentNode = parentNode;
+//
+//        // convert the XML Node to a XML Element
+//        Element tmpElement;
+//        if (isMindmapNode(node)) {
+//            tmpElement = (Element)node;
+//        } else {
+//            throw new ClassCastException("Can not convert Node to MindmapNode");
+//        }
+//
+//        // store the Node
+//        this.node = node;
+//
+//        // extract the ID of the node
+//        id = tmpElement.getAttribute("ID");
+//
+//        try {
+//            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
+//        } catch (NumberFormatException e) {
+//            numericId = id.hashCode();
+//        }
+//
+//
+//        // extract the string (TEXT attribute) of the nodes
+//        String text = tmpElement.getAttribute("TEXT");
+//
+//        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
+//        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
+//        String richTextContent = null;
+//        // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
+//        NodeList richtextNodeList = tmpElement.getChildNodes();
+//        for (int i = 0; i < richtextNodeList.getLength(); i++) {
+//            Node n = richtextNodeList.item(i);
+//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
+//                Element richcontentElement = (Element)n;
+//                String typeAttribute = richcontentElement.getAttribute("TYPE");
+//                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE") || typeAttribute.equals("DETAILS")) {
+//
+//                    // extract the whole rich text (XML), to show in a WebView activity
+//                    try {
+//                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+//                        ByteArrayOutputStream boas = new ByteArrayOutputStream();
+//                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
+//                        richTextContent = boas.toString();
+//                    } catch (TransformerException e) {
+//                        e.printStackTrace();
+//                    }
+//
+//                    // if the node has no text itself, then convert the rich text content to a text
+//                    if (text == null || text.equals("")) {
+//                        // convert the content (text only) into a string, to show in the normal list view
+//                        text = Html.fromHtml(richcontentElement.getTextContent()).toString();
+//                    }
+//                }
+//            }
+//        }
+//        this.richTextContent = richTextContent;
+//        this.text = text;
+//
+//
+//        // extract styles
+//        NodeList styleNodeList = tmpElement.getChildNodes();
+//        boolean isBold = false;
+//        boolean isItalic = false;
+//        for (int i = 0; i < styleNodeList.getLength(); i++) {
+//            Node n = styleNodeList.item(i);
+//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
+//                Element fontElement = (Element)n;
+//                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
+//                    Log.d(MainApplication.TAG, "Found bold node");
+//                    isBold = true;
+//                }
+//                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
+//                    isItalic = true;
+//                }
+//            }
+//        }
+//        this.isBold = isBold;
+//        this.isItalic = isItalic;
+//
+//        // extract icons
+//        iconNames = getIcons();
+//
+//        // find out if it has sub nodes
+//        // TODO: this should just go into a getter
+//        isExpandable = (getNumChildMindmapNodes() > 0);
+//
+//        // extract link
+//        String linkAttribute = tmpElement.getAttribute("LINK");
+//        if (!linkAttribute.equals("")) {
+//            link = Uri.parse(linkAttribute);
+//        } else {
+//            link = null;
+//        }
+//
+//        // get cloned node's info
+//        treeIdAttribute = tmpElement.getAttribute("TREE_ID");
+//
+//        // get arrow link destinations
+//        arrowLinkDestinationIds = new ArrayList<>();
+//        arrowLinkDestinationNodes = new ArrayList<>();
+//        arrowLinkIncomingNodes = new ArrayList<>();
+//        NodeList arrowlinkList = tmpElement.getChildNodes();
+//        for (int i = 0; i< arrowlinkList.getLength(); i++) {
+//            Node n = arrowlinkList.item(i);
+//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("arrowlink")) {
+//                Element arrowlinkElement = (Element)n;
+//                String destinationId = arrowlinkElement.getAttribute("DESTINATION");
+//                arrowLinkDestinationIds.add(destinationId);
+//            }
+//        }
+//
+//    }
 
 
     /**
@@ -264,109 +254,7 @@ public class MindmapNode {
         return this.selected;
     }
 
-    /**
-     * Checks whether a given node can be converted to a Mindmap node, i.e. whether it has type ELEMENT_NODE and tag
-     * "node"
-     *
-     * @param node
-     * @return
-     */
-    private static boolean isMindmapNode(Node node) {
 
-        if (node.getNodeType() == Node.ELEMENT_NODE) {
-            Element element = (Element)node;
-
-            return element.getTagName().equals("node");
-        }
-        return false;
-    }
-
-
-    /**
-     * Extracts the list of icons from a node and returns the names of the icons as ArrayList.
-     *
-     * @return list of names of the icons
-     */
-    private ArrayList<String> getIcons() {
-
-        ArrayList<String> iconsNames = new ArrayList<>();
-
-        NodeList childNodes = node.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-
-            Node n = childNodes.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE) {
-                Element e = (Element)n;
-
-                if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
-                    iconsNames.add(e.getAttribute("BUILTIN"));
-                }
-            }
-        }
-
-        return iconsNames;
-    }
-
-    /**
-     * Returns the number of child Mindmap nodes
-     *
-     * @return
-     */
-    public int getNumChildMindmapNodes() {
-
-        int numMindmapNodes = 0;
-
-        NodeList childNodes = node.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-
-            Node n = childNodes.item(i);
-            if (isMindmapNode(n)) {
-                numMindmapNodes++;
-            }
-        }
-
-        return numMindmapNodes;
-    }
-
-
-    /**
-     * Generates and returns the child nodes of this MindmapNode. getChildNodes() does lazy loading, i.e. it
-     * generates the child nodes on demand and stores them in childMindmapNodes.
-     *
-     * TODO: not so sure if this is really doing lazy loading. We probably call this already pretty early on. Should check.
-     *
-     * TODO: this should be called differently, to not confuse it with getChildNodes of Node
-     *
-     * @return ArrayList of this MindmapNode's child nodes
-     */
-    public synchronized List<MindmapNode> getChildNodes() {
-
-        // if we haven't loaded the childMindmapNodes before
-        if (this.childMindmapNodes == null) {
-
-            // fetch all child DOM Nodes, convert them to MindmapNodes
-            List<MindmapNode> newChildMindmapNodes = new ArrayList<>();
-            NodeList childNodes = node.getChildNodes();
-            for (int i = 0; i < childNodes.getLength(); i++) {
-                Node tmpNode = childNodes.item(i);
-
-                if (isMindmapNode(tmpNode)) {
-                    MindmapNode mindmapNode = new MindmapNode(tmpNode, this, mindmap);
-                    newChildMindmapNodes.add(mindmapNode);
-                }
-            }
-
-            this.childMindmapNodes = Collections.unmodifiableList(newChildMindmapNodes);
-
-        }
-
-        // we already did that before, so return the previous result
-        else {
-            Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
-        }
-
-        return this.childMindmapNodes;
-    }
 
     public List<String> getIconNames() {
 
@@ -452,5 +340,13 @@ public class MindmapNode {
     public Integer getNumericId() {
 
         return numericId;
+    }
+
+    public List<MindmapNode> getChildMindmapNodes() {
+        return this.childMindmapNodes;
+    }
+
+    public void setChildMindmapNodes(List<MindmapNode> childMindmapNodes) {
+        this.childMindmapNodes = childMindmapNodes;
     }
 }

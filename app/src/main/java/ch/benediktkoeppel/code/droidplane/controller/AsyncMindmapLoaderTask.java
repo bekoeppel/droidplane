@@ -144,7 +144,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         }
 
         // get the root node
-        MindmapNode rootNode = new MindmapNode(
+        MindmapNode rootNode = MindmapNodeFromXmlBuilder.parse(
                 document.getDocumentElement().getElementsByTagName("node").item(0),
                 null,
                 mindmap
@@ -167,12 +167,9 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             }
         });
 
-
         // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
-        // other idea: already finish the mindmap loading, and do this in the background
         MindmapIndexes mindmapIndexes = loadAndIndexNodesByIds(rootNode);
         mindmap.setMindmapIndexes(mindmapIndexes);
-
 
         // Nodes can refer to other nodes with arrowlinks. We want to have the link on both ends of the link, so we can
         // now set the corresponding links
@@ -198,12 +195,11 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 .build()
         );
 
+        // now the full mindmap is loaded
         mindmap.setLoaded(true);
-
         mainActivity.setMindmapIsLoading(false);
 
     }
-
 
 
     /**
@@ -231,9 +227,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             idAndNode.add(new Pair<>(node.getId(), node));
             numericIdAndNode.add(new Pair<>(node.getNumericId(), node));
 
-            for (MindmapNode mindmapNode : node.getChildNodes()) {
+            for (MindmapNode mindmapNode : node.getChildMindmapNodes()) {
                 stack.push(mindmapNode);
             }
+
         }
 
         Map<String, MindmapNode> newNodesById = new HashMap<>(idAndNode.size());
