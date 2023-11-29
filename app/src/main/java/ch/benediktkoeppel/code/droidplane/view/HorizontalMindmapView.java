@@ -367,8 +367,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     private void down(Context context, MindmapNode node) {
 
         // add a new column for this node and add it to the HorizontalMindmapView
-        NodeColumn nodeColumn = new NodeColumn(getContext(), node);
-        addColumn(nodeColumn);
+        NodeColumn nodeColumn;
+        synchronized (node) {
+            nodeColumn = new NodeColumn(getContext(), node);
+            addColumn(nodeColumn);
+        }
 
         // keep track of which list view belongs to which node column. This is necessary because onItemClick will get a
         // ListView (the one that was clicked), and we need to know which NodeColumn this is.
@@ -405,7 +408,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // go upwards from the target node, and keep track of each node leading down to the target node
         List<MindmapNode> nodeHierarchy = new ArrayList<>();
         MindmapNode tmpNode = node;
-        while (tmpNode.getParentNode() != null) {
+        while (tmpNode.getParentNode() != null) {   // TODO: this gives a NPE when rotating the device
             nodeHierarchy.add(tmpNode);
             tmpNode = tmpNode.getParentNode();
         }

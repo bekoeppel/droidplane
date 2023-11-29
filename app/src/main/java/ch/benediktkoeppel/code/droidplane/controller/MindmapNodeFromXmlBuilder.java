@@ -139,6 +139,7 @@ public class MindmapNodeFromXmlBuilder {
 //                .link(link)
 //                .treeIdAttribute(treeIdAttribute)
 //                .arrowLinkDestinationIds(arrowLinkDestinationIds)
+//                .numChildMindmapNodes(getNumChildMindmapNodes())
 //                .build();
     }
 

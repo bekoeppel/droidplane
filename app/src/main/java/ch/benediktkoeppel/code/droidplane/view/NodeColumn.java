@@ -34,6 +34,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
      * The parent node (i.e. the node that is parent to everything we display in this column)
      */
     private final MindmapNode parent;
+    private final Context context;
 
     /**
      * The list of all MindmapNodeLayouts which we display in this column
@@ -61,6 +62,7 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         super(context);
         parent = null;
+        this.context = context;
         if (!isInEditMode()) {
             throw new IllegalArgumentException(
                     "The constructor public NodeColumn(Context context) may only be called by graphical layout tools," +
@@ -80,11 +82,15 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         super(context);
 
+        this.context = context;
+
         this.parent = parent;
+
+        parent.subscribe(this);
 
         // create list items for each child node
         mindmapNodeLayouts = new ArrayList<>();
-        List<MindmapNode> mindmapNodes = parent.getChildNodes();
+        List<MindmapNode> mindmapNodes = parent.getChildMindmapNodes();
         for (MindmapNode mindmapNode : mindmapNodes) {
             mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
         }
@@ -121,6 +127,13 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         // add the listView to the linearView
         this.addView(listView);
+    }
+
+    public void notifyNewMindmapNode(MindmapNode mindmapNode) {
+
+        mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
+        adapter.notifyDataSetChanged();
+
     }
 
     /**

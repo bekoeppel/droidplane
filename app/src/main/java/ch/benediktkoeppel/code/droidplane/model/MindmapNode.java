@@ -2,19 +2,18 @@ package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
 
-import org.w3c.dom.Node;
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Builder;
+import ch.benediktkoeppel.code.droidplane.view.NodeColumn;
 
 
 /**
  * A MindMapNode is a special type of DOM Node. A DOM Node can be converted to a MindMapNode if it has type ELEMENT,
  * and tag "node".
  */
-@Builder
+//@Builder
 public class MindmapNode {
 
     /**
@@ -63,12 +62,6 @@ public class MindmapNode {
     private final List<String> iconNames;
 
     /**
-     * Whether the node is expandable, i.e. whether it has child nodes
-     */
-    // TODO: this is badly named, it should just be called "hasChildren", and then the view can decide that this means it's expandable
-    private boolean isExpandable;
-
-    /**
      * If the node has a LINK attribute, it will be stored in Uri link
      */
     private final Uri link;
@@ -77,7 +70,7 @@ public class MindmapNode {
      * The XML DOM node from which this MindMapNode is derived
      */
     // TODO: MindmapNode should not need this node
-    private final Node node;
+    //private final Node node;
 
     /**
      * Whether the node is selected or not, will be set after it was clicked by the user
@@ -109,6 +102,25 @@ public class MindmapNode {
      * List of incoming arrow MindmapNodes
      */
     private List<MindmapNode> arrowLinkIncomingNodes = new ArrayList<>();
+    private WeakReference<NodeColumn> subscribedNodeColumn = null;
+    private boolean loaded;
+
+    public MindmapNode(Mindmap mindmap, MindmapNode parentNode, String id, int numericId, String text) {
+        this.mindmap = mindmap;
+        this.parentNode = parentNode;
+        this.id = id;
+        this.numericId = numericId;
+        this.text = text;
+        this.childMindmapNodes = new ArrayList<>();
+        richTextContent = null;
+        isBold = false;
+        isItalic = false;
+        iconNames = new ArrayList<>();
+        link = null;
+        treeIdAttribute = null;
+        arrowLinkDestinationIds = new ArrayList<>();
+        //node = null;
+    }
 
     /**
      * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
@@ -287,7 +299,7 @@ public class MindmapNode {
 
     public boolean isExpandable() {
 
-        return isExpandable;
+        return !childMindmapNodes.isEmpty();
     }
 
     public Uri getLink() {
@@ -348,5 +360,30 @@ public class MindmapNode {
 
     public void setChildMindmapNodes(List<MindmapNode> childMindmapNodes) {
         this.childMindmapNodes = childMindmapNodes;
+    }
+
+    public int getNumChildMindmapNodes() {
+        return childMindmapNodes.size();
+    }
+
+    public void subscribe(NodeColumn nodeColumn) {
+        this.subscribedNodeColumn = new WeakReference<>(nodeColumn);
+    }
+
+    public void addChildMindmapNode(MindmapNode newMindmapNode) {
+        this.childMindmapNodes.add(newMindmapNode);
+    }
+
+    public boolean hasSubscribers() {
+        return this.subscribedNodeColumn != null;
+    }
+    public void notifySubscribers(MindmapNode mindmapNode) {
+        if (this.subscribedNodeColumn != null) {
+            subscribedNodeColumn.get().notifyNewMindmapNode(mindmapNode);
+        }
+    }
+
+    public void setLoaded(boolean loaded) {
+        this.loaded = loaded;
     }
 }

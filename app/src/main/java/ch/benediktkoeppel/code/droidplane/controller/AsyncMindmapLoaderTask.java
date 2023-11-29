@@ -10,22 +10,16 @@ import android.util.Pair;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
 
-import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.MainApplication;
@@ -124,48 +118,135 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         // start measuring the document load time
         long loadDocumentStartTime = System.currentTimeMillis();
 
-        // XML document builder
-        DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder docBuilder;
+        MindmapNode rootNode = null;
 
-        // load the Mindmap from the InputStream
-        Document document;
+        Stack<MindmapNode> nodeStack = new Stack<>();
+        int numNodes = 0;
+
         try {
-            docBuilderFactory.setNamespaceAware(false);
-            docBuilderFactory.setValidating(false);
-            docBuilderFactory.setFeature("http://xml.org/sax/features/namespaces", false);
-            docBuilderFactory.setFeature("http://xml.org/sax/features/validation", false);
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            factory.setNamespaceAware(true);
+            XmlPullParser xpp = factory.newPullParser();
 
-            docBuilder = docBuilderFactory.newDocumentBuilder();
-            document = docBuilder.parse(new BufferedInputStream(inputStream));
-        } catch (ParserConfigurationException | SAXException | IOException e) {
-            e.printStackTrace();
-            return;
+            xpp.setInput(inputStream, "UTF-8");
+            int eventType = xpp.getEventType();
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_DOCUMENT) {
+                    //System.out.println("Start document");
+
+                } else if(eventType == XmlPullParser.START_TAG) {
+                    //System.out.println("Start tag "+xpp.getName());
+
+                    if (xpp.getName().equals("node")) {
+
+                        MindmapNode parentNode = null;
+                        if (!nodeStack.empty()) {
+                            parentNode = nodeStack.peek();
+                        }
+
+                        String id = xpp.getAttributeValue(null, "ID");
+                        int numericId;
+                        try {
+                            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
+                        } catch (NumberFormatException e) {
+                            numericId = id.hashCode();
+                        }
+
+                        String text = xpp.getAttributeValue(null, "TEXT");
+
+                        MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text);
+                        numNodes += 1;
+
+                        if (parentNode == null) {
+                            rootNode = newMindmapNode;
+
+                            mindmap.setRootNode(rootNode);
+
+                            // now set up the view
+                            MindmapNode finalRootNode = rootNode;
+                            mainActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    horizontalMindmapView.setMindmap(mindmap);
+
+                                    // by default, the root node is the deepest node that is expanded
+                                    horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
+
+                                    horizontalMindmapView.onRootNodeLoaded();
+
+                                }
+                            });
+
+                        } else {
+                            parentNode.addChildMindmapNode(newMindmapNode);
+                            if (parentNode.hasSubscribers()) {
+                                MindmapNode finalParentNode = parentNode;
+                                mainActivity.runOnUiThread(() -> {
+                                    finalParentNode.notifySubscribers(newMindmapNode);
+                                });
+                            }
+                        }
+
+                        nodeStack.push(newMindmapNode);
+
+                    }
+
+                } else if(eventType == XmlPullParser.END_TAG) {
+                    //System.out.println("End tag "+xpp.getName());
+                    if (xpp.getName().equals("node")) {
+                        MindmapNode completedMindmapNode = nodeStack.pop();
+                        completedMindmapNode.setLoaded(true);
+                    }
+
+                } else if(eventType == XmlPullParser.TEXT) {
+                    //System.out.println("Text "+xpp.getText());
+
+                } else {
+                    System.out.println("Other");
+                }
+                eventType = xpp.next();
+            }
+            //System.out.println("End document");
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
-        // get the root node
-        MindmapNode rootNode = MindmapNodeFromXmlBuilder.parse(
-                document.getDocumentElement().getElementsByTagName("node").item(0),
-                null,
-                mindmap
-        );
+        // stack should now be empty
+        if (!nodeStack.empty()) {
+            throw new RuntimeException("Stack should be empty");
+            // TODO: we could try to be lenient here to allow opening partial documents (which sometimes happens when dropbox doesn't fully sync)
+        }
 
-        mindmap.setRootNode(rootNode);
 
-        // now set up the view
-        mainActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
 
-                horizontalMindmapView.setMindmap(mindmap);
+//        // XML document builder
+//        DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
+//        DocumentBuilder docBuilder;
+//
+//        // load the Mindmap from the InputStream
+//        Document document;
+//        try {
+//            docBuilderFactory.setNamespaceAware(false);
+//            docBuilderFactory.setValidating(false);
+//            docBuilderFactory.setFeature("http://xml.org/sax/features/namespaces", false);
+//            docBuilderFactory.setFeature("http://xml.org/sax/features/validation", false);
+//
+//            docBuilder = docBuilderFactory.newDocumentBuilder();
+//            document = docBuilder.parse(new BufferedInputStream(inputStream));
+//        } catch (ParserConfigurationException | SAXException | IOException e) {
+//            e.printStackTrace();
+//            return;
+//        }
+//
+//        // get the root node
+//        MindmapNode rootNode = MindmapNodeFromXmlBuilder.parse(
+//                document.getDocumentElement().getElementsByTagName("node").item(0),
+//                null,
+//                mindmap
+//        );
 
-                // by default, the root node is the deepest node that is expanded
-                horizontalMindmapView.setDeepestSelectedMindmapNode(rootNode);
-
-                horizontalMindmapView.onRootNodeLoaded();
-
-            }
-        });
 
         // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
         MindmapIndexes mindmapIndexes = loadAndIndexNodesByIds(rootNode);
@@ -186,7 +267,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 .build());
         Log.d(MainApplication.TAG, "Document loaded");
 
-        long numNodes = document.getElementsByTagName("node").getLength();
+        //long numNodes = document.getElementsByTagName("node").getLength();
         tracker.send(new HitBuilders.EventBuilder()
                 .setCategory("document")
                 .setAction("loadDocument")
