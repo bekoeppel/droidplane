@@ -88,6 +88,7 @@ public class MainActivity extends FragmentActivity {
         // if we already have a loaded mindmap, use this; otherwise load from the intent
         if (mindmap.isLoaded()) {
             horizontalMindmapView.setMindmap(mindmap);
+            horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
             horizontalMindmapView.onRootNodeLoaded();
 
         } else {
