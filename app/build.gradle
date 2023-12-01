@@ -1,13 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 32
-    buildToolsVersion '31.0.0'
-
     defaultConfig {
         applicationId "ch.benediktkoeppel.code.droidplane"
         minSdkVersion 19
-        targetSdkVersion 32
+        targetSdkVersion 33
     }
 
     buildTypes {
@@ -17,9 +14,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
+    namespace 'ch.benediktkoeppel.code.droidplane'
+    compileSdk 33
 }
 
 dependencies {
