@@ -110,7 +110,7 @@ public class MindmapNode {
     private WeakReference<MindmapNodeLayout> subscribedNodeLayout = null;
     private boolean loaded;
 
-    public MindmapNode(Mindmap mindmap, MindmapNode parentNode, String id, int numericId, String text) {
+    public MindmapNode(Mindmap mindmap, MindmapNode parentNode, String id, int numericId, String text, Uri link) {
         this.mindmap = mindmap;
         this.parentNode = parentNode;
         this.id = id;
@@ -121,7 +121,7 @@ public class MindmapNode {
         isBold = false;
         isItalic = false;
         iconNames = new ArrayList<>();
-        link = null;
+        this.link = link;
         treeIdAttribute = null;
         arrowLinkDestinationIds = new ArrayList<>();
         //node = null;

@@ -153,7 +153,15 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
                         String text = xpp.getAttributeValue(null, "TEXT");
 
-                        MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text);
+                        String linkAttribute = xpp.getAttributeValue(null, "LINK");
+                        Uri link;
+                        if (linkAttribute != null && !linkAttribute.equals("")) {
+                            link = Uri.parse(linkAttribute);
+                        } else {
+                            link = null;
+                        }
+
+                        MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text, link);
                         newMindmapNode.subscribeNodeRichContentChanged(mainActivity);
                         numNodes += 1;
 

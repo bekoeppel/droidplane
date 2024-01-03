@@ -5,22 +5,6 @@ public class MindmapNodeFromXmlBuilder {
 
 
 //
-//        // extract icons
-//        ArrayList<String> iconNames = getIcons(node);
-//
-//        // find out if it has sub nodes
-//        // TODO: this should just go into a getter
-//        boolean isExpandable = (getNumChildMindmapNodes(node) > 0);
-//
-//        // extract link
-//        String linkAttribute = tmpElement.getAttribute("LINK");
-//        Uri link;
-//        if (!linkAttribute.equals("")) {
-//            link = Uri.parse(linkAttribute);
-//        } else {
-//            link = null;
-//        }
-//
 //        // get cloned node's info
 //        String treeIdAttribute = tmpElement.getAttribute("TREE_ID");
 //
