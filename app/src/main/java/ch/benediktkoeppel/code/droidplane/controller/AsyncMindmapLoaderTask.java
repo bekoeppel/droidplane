@@ -153,6 +153,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
                         String text = xpp.getAttributeValue(null, "TEXT");
 
+                        // get link
                         String linkAttribute = xpp.getAttributeValue(null, "LINK");
                         Uri link;
                         if (linkAttribute != null && !linkAttribute.equals("")) {
@@ -161,7 +162,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                             link = null;
                         }
 
-                        MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text, link);
+                        // get tree ID (of cloned node)
+                        String treeIdAttribute = xpp.getAttributeValue(null, "TREE_ID");
+
+                        MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text, link, treeIdAttribute);
                         newMindmapNode.subscribeNodeRichContentChanged(mainActivity);
                         numNodes += 1;
 
@@ -410,6 +414,19 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                                 finalParentNode.notifySubscribersNodeStyleChanged();
                             });
                         }
+
+                    }
+
+                    else if (xpp.getName().equals("arrowlink")) {
+                        String destinationId = xpp.getAttributeValue(null, "DESTINATION");
+
+                        // if we have no parent node, something went seriously wrong - we can't have icons that is not part of a mindmap node
+                        if (nodeStack.empty()) {
+                            throw new IllegalStateException("Received arrowlink without a parent node");
+                        }
+
+                        MindmapNode parentNode = nodeStack.peek();
+                        parentNode.addArrowLinkDestinationId(destinationId);
 
                     }
 
