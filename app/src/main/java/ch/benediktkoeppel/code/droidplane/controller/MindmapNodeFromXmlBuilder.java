@@ -1,50 +1,11 @@
 package ch.benediktkoeppel.code.droidplane.controller;
 
-import android.util.Log;
-
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import ch.benediktkoeppel.code.droidplane.MainApplication;
-import ch.benediktkoeppel.code.droidplane.model.Mindmap;
-import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
-
 public class MindmapNodeFromXmlBuilder {
 
 
-    public static MindmapNode parse(Node node, MindmapNode parentNode, Mindmap mindmap) {
-        return null;
-
-//        // convert the XML Node to a XML Element
-//        Element tmpElement;
-//        if (isMindmapNode(node)) {
-//            tmpElement = (Element)node;
-//        } else {
-//            throw new ClassCastException("Can not convert Node to MindmapNode");
-//        }
+//    public static MindmapNode parse(Node node, MindmapNode parentNode, Mindmap mindmap) {
+//        return null;
 //
-//        // extract the ID of the node
-//        String id = tmpElement.getAttribute("ID");
-//
-//        int numericId;
-//        try {
-//            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
-//        } catch (NumberFormatException e) {
-//            numericId = id.hashCode();
-//        }
-//
-//        // extract the string (TEXT attribute) of the nodes
-//        String text = tmpElement.getAttribute("TEXT");
-//
-//        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
-//        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
-//        String richTextContent = null;
-//        // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
 //        NodeList richtextNodeList = tmpElement.getChildNodes();
 //        for (int i = 0; i < richtextNodeList.getLength(); i++) {
 //            Node n = richtextNodeList.item(i);
@@ -141,117 +102,100 @@ public class MindmapNodeFromXmlBuilder {
 //                .arrowLinkDestinationIds(arrowLinkDestinationIds)
 //                .numChildMindmapNodes(getNumChildMindmapNodes())
 //                .build();
-    }
-
-
-
-    /**
-     * Generates and returns the child nodes of this MindmapNode. getChildNodes() does lazy loading, i.e. it
-     * generates the child nodes on demand and stores them in childMindmapNodes.
-     *
-     * TODO: not so sure if this is really doing lazy loading. We probably call this already pretty early on. Should check.
-     *
-     * TODO: this should be called differently, to not confuse it with getChildNodes of Node
-     *
-     * @return ArrayList of this MindmapNode's child nodes
-     */
-    public static List<MindmapNode> getChildNodes(Mindmap mindmap, MindmapNode mindmapNode, Node node) {
-
-        synchronized (mindmapNode) {
-
-            // if we haven't loaded the childMindmapNodes before
-            if (mindmapNode.getChildMindmapNodes() == null) {
-
-                // fetch all child DOM Nodes, convert them to MindmapNodes
-                List<MindmapNode> newChildMindmapNodes = new ArrayList<>();
-                NodeList childNodes = node.getChildNodes();
-                for (int i = 0; i < childNodes.getLength(); i++) {
-                    Node tmpNode = childNodes.item(i);
-
-                    if (isMindmapNode(tmpNode)) {
-                        MindmapNode newChildMindmapNode = parse(tmpNode, mindmapNode, mindmap);
-                        newChildMindmapNodes.add(newChildMindmapNode);
-                    }
-                }
-
-                mindmapNode.setChildMindmapNodes(Collections.unmodifiableList(newChildMindmapNodes));
-
-            }
-
-            // we already did that before, so return the previous result
-            else {
-                Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
-            }
-
-            return mindmapNode.getChildMindmapNodes();
-        }
-    }
-
-
-    /**
-     * Checks whether a given node can be converted to a Mindmap node, i.e. whether it has type ELEMENT_NODE and tag
-     * "node"
-     *
-     * @param node
-     * @return
-     */
-    private static boolean isMindmapNode(Node node) {
-
-        if (node.getNodeType() == Node.ELEMENT_NODE) {
-            Element element = (Element)node;
-
-            return element.getTagName().equals("node");
-        }
-        return false;
-    }
-
-
-
-    /**
-     * Extracts the list of icons from a node and returns the names of the icons as ArrayList.
-     *
-     * @return list of names of the icons
-     */
-    private static ArrayList<String> getIcons(Node node) {
-
-        ArrayList<String> iconsNames = new ArrayList<>();
-
-        NodeList childNodes = node.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-
-            Node n = childNodes.item(i);
-            if (n.getNodeType() == Node.ELEMENT_NODE) {
-                Element e = (Element)n;
-
-                if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
-                    iconsNames.add(e.getAttribute("BUILTIN"));
-                }
-            }
-        }
-
-        return iconsNames;
-    }
-
-
-
-    /**
-     * Returns the number of child Mindmap nodes
-     *
-     * @return
-     */
-    public static int getNumChildMindmapNodes(Node node) {
-
-        int numMindmapNodes = 0;
-
-        NodeList childNodes = node.getChildNodes();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-
-            Node n = childNodes.item(i);
-            if (isMindmapNode(n)) {
-                numMindmapNodes++;
-            }
-        }
-
-        return numMindmapNodes;
-    }
+//    }
+//
+//
+//
+//    /**
+//     * Generates and returns the child nodes of this MindmapNode. getChildNodes() does lazy loading, i.e. it
+//     * generates the child nodes on demand and stores them in childMindmapNodes.
+//     *
+//     * TODO: not so sure if this is really doing lazy loading. We probably call this already pretty early on. Should check.
+//     *
+//     * TODO: this should be called differently, to not confuse it with getChildNodes of Node
+//     *
+//     * @return ArrayList of this MindmapNode's child nodes
+//     */
+//    public static List<MindmapNode> getChildNodes(Mindmap mindmap, MindmapNode mindmapNode, Node node) {
+//
+//        synchronized (mindmapNode) {
+//
+//            // if we haven't loaded the childMindmapNodes before
+//            if (mindmapNode.getChildMindmapNodes() == null) {
+//
+//                // fetch all child DOM Nodes, convert them to MindmapNodes
+//                List<MindmapNode> newChildMindmapNodes = new ArrayList<>();
+//                NodeList childNodes = node.getChildNodes();
+//                for (int i = 0; i < childNodes.getLength(); i++) {
+//                    Node tmpNode = childNodes.item(i);
+//
+//                    if (isMindmapNode(tmpNode)) {
+//                        MindmapNode newChildMindmapNode = parse(tmpNode, mindmapNode, mindmap);
+//                        newChildMindmapNodes.add(newChildMindmapNode);
+//                    }
+//                }
+//
+//                mindmapNode.setChildMindmapNodes(Collections.unmodifiableList(newChildMindmapNodes));
+//
+//            }
+//
+//            // we already did that before, so return the previous result
+//            else {
+//                Log.d(MainApplication.TAG, "Returning cached childMindmapNodes");
+//            }
+//
+//            return mindmapNode.getChildMindmapNodes();
+//        }
+//    }
+//
+//
+//
+//
+//    /**
+//     * Extracts the list of icons from a node and returns the names of the icons as ArrayList.
+//     *
+//     * @return list of names of the icons
+//     */
+//    private static ArrayList<String> getIcons(Node node) {
+//
+//        ArrayList<String> iconsNames = new ArrayList<>();
+//
+//        NodeList childNodes = node.getChildNodes();
+//        for (int i = 0; i < childNodes.getLength(); i++) {
+//
+//            Node n = childNodes.item(i);
+//            if (n.getNodeType() == Node.ELEMENT_NODE) {
+//                Element e = (Element)n;
+//
+//                if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
+//                    iconsNames.add(e.getAttribute("BUILTIN"));
+//                }
+//            }
+//        }
+//
+//        return iconsNames;
+//    }
+//
+//
+//
+//    /**
+//     * Returns the number of child Mindmap nodes
+//     *
+//     * @return
+//     */
+//    public static int getNumChildMindmapNodes(Node node) {
+//
+//        int numMindmapNodes = 0;
+//
+//        NodeList childNodes = node.getChildNodes();
+//        for (int i = 0; i < childNodes.getLength(); i++) {
+//
+//            Node n = childNodes.item(i);
+//            if (isMindmapNode(n)) {
+//                numMindmapNodes++;
+//            }
+//        }
+//
+//        return numMindmapNodes;
+//    }
 }

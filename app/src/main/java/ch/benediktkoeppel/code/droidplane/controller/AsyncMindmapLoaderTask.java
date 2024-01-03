@@ -101,6 +101,12 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         return null;
     }
 
+//    enum ParserStatus {
+//        START,  // looking for start of document
+//        RUNNING, // parsing nodes
+//        RICHCONTENT,    // parsing richcontent within a node (this separate state is required to allow having <node> elements within <richcontent>, and treating such <node> elements as richcontent, and not as a separate mindmap node)
+//    }
+
 
     /**
      * Loads a mind map (*.mm) XML document into its internal DOM tree
@@ -120,8 +126,14 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         MindmapNode rootNode = null;
 
+
         Stack<MindmapNode> nodeStack = new Stack<>();
         int numNodes = 0;
+        //ParserStatus parserStatus = ParserStatus.START;
+
+        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
+        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
+        String richTextContent = null;
 
         try {
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
@@ -131,13 +143,12 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             xpp.setInput(inputStream, "UTF-8");
             int eventType = xpp.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_DOCUMENT) {
-                    //System.out.println("Start document");
+                if (eventType == XmlPullParser.START_DOCUMENT /*&& parserStatus.equals(ParserStatus.START)*/) {
+                    //parserStatus = ParserStatus.RUNNING;
 
-                } else if(eventType == XmlPullParser.START_TAG) {
-                    //System.out.println("Start tag "+xpp.getName());
+                } else if (eventType == XmlPullParser.START_TAG) {
 
-                    if (xpp.getName().equals("node")) {
+                    if (xpp.getName().equals("node") /*&& parserStatus.equals(ParserStatus.RUNNING)*/) {
 
                         MindmapNode parentNode = null;
                         if (!nodeStack.empty()) {
@@ -190,16 +201,147 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
                         nodeStack.push(newMindmapNode);
 
+                    } else if (xpp.getName().equals("richcontent") /*&& parserStatus.equals(ParserStatus.RUNNING)*/
+                            && (
+                            xpp.getAttributeValue(null, "TYPE").equals("NODE")
+                                    || xpp.getAttributeValue(null, "TYPE").equals("NOTE")
+                                    || xpp.getAttributeValue(null, "TYPE").equals("DETAILS")
+                    )
+                    ) {
+                        // the "richcontent" node contains some HTML. In order to render it, we need to
+                        // load all of it, and then render HTML. So we need a sub-parser, that runs
+                        // until the whole richcontent node is consumed.
+
+                        // the "richcontent" node just starts the RICHCONTENT parser status; no content is collected yet
+                        richTextContent = "";
+
+                        int startingDepth = xpp.getDepth();
+
+                        // eagerly parse until richcontent node is closed
+                        int richContentSubParserEventType = xpp.next();
+                        // stop parsing once we have come out far enough from the XML to be at the starting depth again
+                        do {
+
+                            // EVENT TYPES as reported by next()
+                            switch (richContentSubParserEventType) {
+                                /**
+                                 * Signalize that parser is at the very beginning of the document
+                                 * and nothing was read yet.
+                                 * This event type can only be observed by calling getEvent()
+                                 * before the first call to next(), nextToken, or nextTag()</a>).
+                                 */
+                                case XmlPullParser.START_DOCUMENT:
+                                    throw new IllegalStateException("Received START_DOCUMENT but were already within the document");
+
+                                /**
+                                 * Logical end of the xml document. Returned from getEventType, next()
+                                 * and nextToken()
+                                 * when the end of the input document has been reached.
+                                 * <p><strong>NOTE:</strong> subsequent calls to
+                                 * <a href="#next()">next()</a> or <a href="#nextToken()">nextToken()</a>
+                                 * may result in exception being thrown.
+                                 */
+                                case XmlPullParser.END_DOCUMENT:
+                                    throw new IllegalStateException("Received END_DOCUMENT but expected to just parse a sub-document");
+
+                                /**
+                                 * Returned from getEventType(),
+                                 * <a href="#next()">next()</a>, <a href="#nextToken()">nextToken()</a> when
+                                 * a start tag was read.
+                                 * The name of start tag is available from getName(), its namespace and prefix are
+                                 * available from getNamespace() and getPrefix()
+                                 * if <a href='#FEATURE_PROCESS_NAMESPACES'>namespaces are enabled</a>.
+                                 * See getAttribute* methods to retrieve element attributes.
+                                 * See getNamespace* methods to retrieve newly declared namespaces.
+                                 */
+                                case XmlPullParser.START_TAG: {
+                                    String tagString = "";
+
+                                    String tagName = xpp.getName();
+                                    tagString += "<" + tagName;
+
+                                    for (int i = 0; i < xpp.getAttributeCount(); i++) {
+                                        String attributeName = xpp.getAttributeName(i);
+                                        String attributeValue = xpp.getAttributeValue(i);
+
+                                        String attributeString = " " + attributeName + "=" + '"' + attributeValue + '"';
+                                        tagString += attributeString;
+                                    }
+
+                                    tagString += ">";
+
+                                    richTextContent += tagString;
+
+                                    break;
+                                }
+
+                                /**
+                                 * Returned from getEventType(), <a href="#next()">next()</a>, or
+                                 * <a href="#nextToken()">nextToken()</a> when an end tag was read.
+                                 * The name of start tag is available from getName(), its
+                                 * namespace and prefix are
+                                 * available from getNamespace() and getPrefix().
+                                 */
+                                case XmlPullParser.END_TAG: {
+                                    String tagName = xpp.getName();
+                                    String tagString = "</" + tagName + ">";
+                                    richTextContent += tagString;
+                                    break;
+                                }
+
+                                /**
+                                 * Character data was read and will is available by calling getText().
+                                 * <p><strong>Please note:</strong> <a href="#next()">next()</a> will
+                                 * accumulate multiple
+                                 * events into one TEXT event, skipping IGNORABLE_WHITESPACE,
+                                 * PROCESSING_INSTRUCTION and COMMENT events,
+                                 * In contrast, <a href="#nextToken()">nextToken()</a> will stop reading
+                                 * text when any other event is observed.
+                                 * Also, when the state was reached by calling next(), the text value will
+                                 * be normalized, whereas getText() will
+                                 * return unnormalized content in the case of nextToken(). This allows
+                                 * an exact roundtrip without changing line ends when examining low
+                                 * level events, whereas for high level applications the text is
+                                 * normalized appropriately.
+                                 */
+                                case XmlPullParser.TEXT: {
+                                    String text = xpp.getText();
+                                    richTextContent += text;
+                                    break;
+                                }
+
+                                default:
+                                    throw new IllegalStateException("Received unexpected event type " + richContentSubParserEventType);
+
+                            }
+
+                            richContentSubParserEventType = xpp.next();
+                        } while (xpp.getDepth() != startingDepth);
+
+                        // if we have no parent node, something went seriously wrong - we can't have a richcontent that is not part of a mindmap node
+                        if (nodeStack.empty()) {
+                            throw new IllegalStateException("Received richtext without a parent node");
+                        }
+
+                        MindmapNode parentNode = nodeStack.peek();
+                        parentNode.setRichTextContent(richTextContent);
+                        //parentNode.notifySubscribers(TODO);
+
+                        // exit from RICHCONTENT mode, back into RUNNING mode
+                        //parserStatus = ParserStatus.RUNNING;
+
+
                     }
 
-                } else if(eventType == XmlPullParser.END_TAG) {
+
+                } else if (eventType == XmlPullParser.END_TAG) {
                     //System.out.println("End tag "+xpp.getName());
                     if (xpp.getName().equals("node")) {
                         MindmapNode completedMindmapNode = nodeStack.pop();
                         completedMindmapNode.setLoaded(true);
                     }
 
-                } else if(eventType == XmlPullParser.TEXT) {
+                } else if (eventType == XmlPullParser.TEXT) {
                     //System.out.println("Text "+xpp.getText());
 
                 } else {
@@ -218,7 +360,6 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             throw new RuntimeException("Stack should be empty");
             // TODO: we could try to be lenient here to allow opening partial documents (which sometimes happens when dropbox doesn't fully sync)
         }
-
 
 
 //        // XML document builder

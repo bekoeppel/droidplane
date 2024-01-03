@@ -44,7 +44,7 @@ public class MindmapNode {
     /**
      * The Rich Text content of the node (if any)
      */
-    private final String richTextContent;
+    private String richTextContent;
 
     /**
      * Bold style
@@ -325,6 +325,10 @@ public class MindmapNode {
     public String getRichTextContent() {
 
         return richTextContent;
+    }
+
+    public void setRichTextContent(String richTextContent) {
+        this.richTextContent = richTextContent;
     }
 
     public List<String> getArrowLinkDestinationIds() {

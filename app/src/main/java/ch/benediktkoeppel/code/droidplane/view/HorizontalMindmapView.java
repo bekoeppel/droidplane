@@ -264,6 +264,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private String getTitleOfRightmostParent() {
 
+        // TODO this needs to update when notify is called
         if (!nodeColumns.isEmpty()) {
 
             MindmapNode parent = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
@@ -369,8 +370,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // add a new column for this node and add it to the HorizontalMindmapView
         NodeColumn nodeColumn;
         synchronized (node) {
-            nodeColumn = new NodeColumn(getContext(), node);
-            addColumn(nodeColumn);
+            if (node.getParentNode() != null) {
+                synchronized (node.getParentNode()) {
+                    nodeColumn = new NodeColumn(getContext(), node);
+                    addColumn(nodeColumn);
+                }
+            } else {
+                nodeColumn = new NodeColumn(getContext(), node);
+                addColumn(nodeColumn);
+            }
         }
 
         // keep track of which list view belongs to which node column. This is necessary because onItemClick will get a
@@ -432,13 +440,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     public void setApplicationTitle(Context context) {
 
+        // TODO: this needs to update when richtext content is loaded
+
         // get the title of the parent of the rightmost column (i.e. the
         // selected node in the 2nd-rightmost column)
         // set the application title to this nodeTitle. If the nodeTitle is
         // empty, we set the default Application title
         String nodeTitle = getTitleOfRightmostParent();
         Log.d(MainApplication.TAG, "nodeTitle = " + nodeTitle);
-        if (nodeTitle.equals("")) {
+        if (nodeTitle == null || nodeTitle.equals("")) {
             Log.d(MainApplication.TAG, "Setting application title to default string: " +
                                        getResources().getString(R.string.app_name));
             AndroidHelper.getActivity(context, Activity.class).setTitle(R.string.app_name);

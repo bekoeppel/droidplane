@@ -136,6 +136,8 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
     }
 
+    // TODO we need a new notifier, if the node itself has updated (if text was updated, or icon was updated)
+
     /**
      * Sets the width of this column to columnWidth
      *
