@@ -6,6 +6,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.view.NodeColumn;
 
 
@@ -44,7 +45,7 @@ public class MindmapNode {
     /**
      * The Rich Text content of the node (if any)
      */
-    private String richTextContent;
+    private final List<String> richTextContents;
 
     /**
      * Bold style
@@ -103,6 +104,7 @@ public class MindmapNode {
      */
     private List<MindmapNode> arrowLinkIncomingNodes = new ArrayList<>();
     private WeakReference<NodeColumn> subscribedNodeColumn = null;
+    private WeakReference<MainActivity> subscribedMainActivity = null;
     private boolean loaded;
 
     public MindmapNode(Mindmap mindmap, MindmapNode parentNode, String id, int numericId, String text) {
@@ -112,7 +114,7 @@ public class MindmapNode {
         this.numericId = numericId;
         this.text = text;
         this.childMindmapNodes = new ArrayList<>();
-        richTextContent = null;
+        this.richTextContents = new ArrayList<>();
         isBold = false;
         isItalic = false;
         iconNames = new ArrayList<>();
@@ -322,13 +324,13 @@ public class MindmapNode {
         return parentNode;
     }
 
-    public String getRichTextContent() {
+    public List<String> getRichTextContents() {
 
-        return richTextContent;
+        return richTextContents;
     }
 
-    public void setRichTextContent(String richTextContent) {
-        this.richTextContent = richTextContent;
+    public void addRichTextContent(String richTextContent) {
+        this.richTextContents.add(richTextContent);
     }
 
     public List<String> getArrowLinkDestinationIds() {
@@ -378,13 +380,28 @@ public class MindmapNode {
         this.childMindmapNodes.add(newMindmapNode);
     }
 
-    public boolean hasSubscribers() {
+    public boolean hasAddedChildMindmapNodeSubscribers() {
         return this.subscribedNodeColumn != null;
     }
-    public void notifySubscribers(MindmapNode mindmapNode) {
+    public void notifySubscribersAddedChildMindmapNode(MindmapNode mindmapNode) {
         if (this.subscribedNodeColumn != null) {
             subscribedNodeColumn.get().notifyNewMindmapNode(mindmapNode);
         }
+    }
+
+    public boolean hasNodeContentChangedSubscribers() {
+        return this.subscribedMainActivity != null;
+    }
+
+    public void notifySubscribersNodeContentChanged() {
+        if (this.subscribedMainActivity != null) {
+            subscribedMainActivity.get().notifyNodeContentChanged();
+        }
+    }
+
+    // TODO: ugly that MainActivity is needed here. Would be better to introduce an listener interface (same for node column above)
+    public void subscribeNodeContentChanged(MainActivity mainActivity) {
+        this.subscribedMainActivity = new WeakReference<>(mainActivity);
     }
 
     public void setLoaded(boolean loaded) {

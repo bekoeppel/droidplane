@@ -101,12 +101,6 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         return null;
     }
 
-//    enum ParserStatus {
-//        START,  // looking for start of document
-//        RUNNING, // parsing nodes
-//        RICHCONTENT,    // parsing richcontent within a node (this separate state is required to allow having <node> elements within <richcontent>, and treating such <node> elements as richcontent, and not as a separate mindmap node)
-//    }
-
 
     /**
      * Loads a mind map (*.mm) XML document into its internal DOM tree
@@ -129,11 +123,6 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         Stack<MindmapNode> nodeStack = new Stack<>();
         int numNodes = 0;
-        //ParserStatus parserStatus = ParserStatus.START;
-
-        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
-        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
-        String richTextContent = null;
 
         try {
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
@@ -143,12 +132,11 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             xpp.setInput(inputStream, "UTF-8");
             int eventType = xpp.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_DOCUMENT /*&& parserStatus.equals(ParserStatus.START)*/) {
-                    //parserStatus = ParserStatus.RUNNING;
+                if (eventType == XmlPullParser.START_DOCUMENT) {
 
                 } else if (eventType == XmlPullParser.START_TAG) {
 
-                    if (xpp.getName().equals("node") /*&& parserStatus.equals(ParserStatus.RUNNING)*/) {
+                    if (xpp.getName().equals("node")) {
 
                         MindmapNode parentNode = null;
                         if (!nodeStack.empty()) {
@@ -166,6 +154,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                         String text = xpp.getAttributeValue(null, "TEXT");
 
                         MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text);
+                        newMindmapNode.subscribeNodeContentChanged(mainActivity);
                         numNodes += 1;
 
                         if (parentNode == null) {
@@ -191,35 +180,35 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
                         } else {
                             parentNode.addChildMindmapNode(newMindmapNode);
-                            if (parentNode.hasSubscribers()) {
+                            if (parentNode.hasAddedChildMindmapNodeSubscribers()) {
                                 MindmapNode finalParentNode = parentNode;
                                 mainActivity.runOnUiThread(() -> {
-                                    finalParentNode.notifySubscribers(newMindmapNode);
+                                    finalParentNode.notifySubscribersAddedChildMindmapNode(newMindmapNode);
                                 });
                             }
                         }
 
                         nodeStack.push(newMindmapNode);
 
-                    } else if (xpp.getName().equals("richcontent") /*&& parserStatus.equals(ParserStatus.RUNNING)*/
+                    } else if (xpp.getName().equals("richcontent")
                             && (
                             xpp.getAttributeValue(null, "TYPE").equals("NODE")
                                     || xpp.getAttributeValue(null, "TYPE").equals("NOTE")
                                     || xpp.getAttributeValue(null, "TYPE").equals("DETAILS")
                     )
                     ) {
-                        // the "richcontent" node contains some HTML. In order to render it, we need to
-                        // load all of it, and then render HTML. So we need a sub-parser, that runs
-                        // until the whole richcontent node is consumed.
 
-                        // the "richcontent" node just starts the RICHCONTENT parser status; no content is collected yet
-                        richTextContent = "";
+                        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
+                        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
+                        String richTextContent = "";
 
+                        // as we are stream processing the XML, we need to consume the full XML until the
+                        // richcontent tag is closed (i.e. until we're back at the current parsing depth)
+                        // eagerly parse until richcontent node is closed
                         int startingDepth = xpp.getDepth();
 
-                        // eagerly parse until richcontent node is closed
                         int richContentSubParserEventType = xpp.next();
-                        // stop parsing once we have come out far enough from the XML to be at the starting depth again
+
                         do {
 
                             // EVENT TYPES as reported by next()
@@ -286,6 +275,28 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                                     String tagName = xpp.getName();
                                     String tagString = "</" + tagName + ">";
                                     richTextContent += tagString;
+
+//                                    if (xpp.isEmptyElementTag()) {
+//                                        String tagString = "";
+//
+//                                        String tagName = xpp.getName();
+//                                        tagString += "<" + tagName;
+//
+//                                        for (int i = 0; i < xpp.getAttributeCount(); i++) {
+//                                            String attributeName = xpp.getAttributeName(i);
+//                                            String attributeValue = xpp.getAttributeValue(i);
+//
+//                                            String attributeString = " " + attributeName + "=" + '"' + attributeValue + '"';
+//                                            tagString += attributeString;
+//                                        }
+//
+//                                        tagString += " />";
+//
+//                                        richTextContent += tagString;
+//
+//                                    } else {
+//
+//                                    }
                                     break;
                                 }
 
@@ -316,6 +327,8 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                             }
 
                             richContentSubParserEventType = xpp.next();
+
+                        // stop parsing once we have come out far enough from the XML to be at the starting depth again
                         } while (xpp.getDepth() != startingDepth);
 
                         // if we have no parent node, something went seriously wrong - we can't have a richcontent that is not part of a mindmap node
@@ -324,32 +337,36 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                         }
 
                         MindmapNode parentNode = nodeStack.peek();
-                        parentNode.setRichTextContent(richTextContent);
-                        //parentNode.notifySubscribers(TODO);
+                        parentNode.addRichTextContent(richTextContent);
 
-                        // exit from RICHCONTENT mode, back into RUNNING mode
-                        //parserStatus = ParserStatus.RUNNING;
+                        // let view know that node content has changed
+                        if (parentNode.hasNodeContentChangedSubscribers()) {
+                            MindmapNode finalParentNode = parentNode;
+                            mainActivity.runOnUiThread(() -> {
+                                finalParentNode.notifySubscribersNodeContentChanged();
+                            });
+                        }
 
 
+                    } else {
+                        // Log.d(MainApplication.TAG, "Received unknown node " + xpp.getName());
                     }
 
 
                 } else if (eventType == XmlPullParser.END_TAG) {
-                    //System.out.println("End tag "+xpp.getName());
                     if (xpp.getName().equals("node")) {
                         MindmapNode completedMindmapNode = nodeStack.pop();
                         completedMindmapNode.setLoaded(true);
                     }
 
                 } else if (eventType == XmlPullParser.TEXT) {
-                    //System.out.println("Text "+xpp.getText());
+                    // TODO: do we have TEXT nodes in the mindmap at all?
 
                 } else {
-                    System.out.println("Other");
+                    throw new IllegalStateException("Received unknown event " + eventType);
                 }
                 eventType = xpp.next();
             }
-            //System.out.println("End document");
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -358,36 +375,11 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         // stack should now be empty
         if (!nodeStack.empty()) {
             throw new RuntimeException("Stack should be empty");
-            // TODO: we could try to be lenient here to allow opening partial documents (which sometimes happens when dropbox doesn't fully sync)
+            // TODO: we could try to be lenient here to allow opening partial documents (which sometimes happens when dropbox doesn't fully sync). Probably doesn't work anyways, as we already throw a runtime exception above if we receive garbage
         }
 
 
-//        // XML document builder
-//        DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-//        DocumentBuilder docBuilder;
-//
-//        // load the Mindmap from the InputStream
-//        Document document;
-//        try {
-//            docBuilderFactory.setNamespaceAware(false);
-//            docBuilderFactory.setValidating(false);
-//            docBuilderFactory.setFeature("http://xml.org/sax/features/namespaces", false);
-//            docBuilderFactory.setFeature("http://xml.org/sax/features/validation", false);
-//
-//            docBuilder = docBuilderFactory.newDocumentBuilder();
-//            document = docBuilder.parse(new BufferedInputStream(inputStream));
-//        } catch (ParserConfigurationException | SAXException | IOException e) {
-//            e.printStackTrace();
-//            return;
-//        }
-//
-//        // get the root node
-//        MindmapNode rootNode = MindmapNodeFromXmlBuilder.parse(
-//                document.getDocumentElement().getElementsByTagName("node").item(0),
-//                null,
-//                mindmap
-//        );
-
+        // TODO: can we do this as we stream through the XML above?
 
         // load all nodes of root node into simplified MindmapNode, and index them by ID for faster lookup
         MindmapIndexes mindmapIndexes = loadAndIndexNodesByIds(rootNode);

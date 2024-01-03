@@ -92,7 +92,7 @@ public class MindmapNodeLayout extends LinearLayout {
         }
 
         // set the rich text icon if it has
-        if (mindmapNode.getRichTextContent() != null) {
+        if (mindmapNode.getRichTextContents() != null && !mindmapNode.getRichTextContents().isEmpty()) {
             iconResourceIds.add(0, resources.getIdentifier("@drawable/richtext", "id", packageName));
         }
 
@@ -217,7 +217,7 @@ public class MindmapNodeLayout extends LinearLayout {
         }
 
         // add menu to show rich text, if the node has
-        if (mindmapNode.getRichTextContent() != null) {
+        if (mindmapNode.getRichTextContents() != null && !mindmapNode.getRichTextContents().isEmpty()) {
             menu.add(CONTEXT_MENU_NORMAL_GROUP_ID, R.id.openrichtext, 0, R.string.openrichtext);
         }
 
@@ -347,7 +347,7 @@ public class MindmapNodeLayout extends LinearLayout {
 
     public void openRichText(MainActivity mainActivity) {
 
-        String richTextContent = getMindmapNode().getRichTextContent();
+        String richTextContent = getMindmapNode().getRichTextContents().get(0);
         Intent intent = new Intent(mainActivity, RichTextViewActivity.class);
         intent.putExtra("richTextContent", richTextContent);
         mainActivity.startActivity(intent);

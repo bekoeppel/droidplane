@@ -90,6 +90,7 @@ public class MainActivity extends FragmentActivity {
             horizontalMindmapView.setMindmap(mindmap);
             horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
             horizontalMindmapView.onRootNodeLoaded();
+            mindmap.getRootNode().subscribeNodeContentChanged(this);
 
         } else {
 
@@ -273,7 +274,7 @@ public class MainActivity extends FragmentActivity {
                     // open RichText content
                     case R.id.openrichtext:
                         Log.d(MainApplication.TAG,
-                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent()
+                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContents()
                         );
                         mindmapNodeLayout.openRichText(this);
 
@@ -377,5 +378,9 @@ public class MainActivity extends FragmentActivity {
 
             runOnUiThread(() -> mindmapLoadingIndicator.setVisible(mindmapIsLoading));
         }
+    }
+
+    public void notifyNodeContentChanged() {
+        this.horizontalMindmapView.notifyNodeContentChanged(this);
     }
 }

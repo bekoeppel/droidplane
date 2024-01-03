@@ -3,6 +3,7 @@ package ch.benediktkoeppel.code.droidplane.view;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
+import android.text.Html;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
@@ -16,13 +17,18 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.MainApplication;
-import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.R;
 import ch.benediktkoeppel.code.droidplane.helper.AndroidHelper;
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
@@ -264,11 +270,18 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private String getTitleOfRightmostParent() {
 
-        // TODO this needs to update when notify is called
         if (!nodeColumns.isEmpty()) {
 
             MindmapNode parent = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
-            return parent.getText();
+            String text = parent.getText();
+            if (text != null && !text.isEmpty()) {
+                return text;
+            } else if (parent.getRichTextContents() != null && !parent.getRichTextContents().isEmpty()) {
+                String richTextContent = parent.getRichTextContents().get(0);
+                return Html.fromHtml(richTextContent).toString();
+            } else {
+                return "";
+            }
 
         }
 
@@ -452,9 +465,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
             Log.d(MainApplication.TAG, "Setting application title to default string: " +
                                        getResources().getString(R.string.app_name));
             AndroidHelper.getActivity(context, Activity.class).setTitle(R.string.app_name);
+
         } else {
             Log.d(MainApplication.TAG, "Setting application title to node name: " + nodeTitle);
             AndroidHelper.getActivity(context, Activity.class).setTitle(nodeTitle);
+            // TODO: java.lang.NullPointerException: Attempt to invoke virtual method 'void android.app.Activity.setTitle(java.lang.CharSequence)' on a null object reference
         }
     }
 
@@ -512,7 +527,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         // if the clicked node has a rich text content (and is a leaf), open the rich text
-        else if (clickedNode.getMindmapNode().getRichTextContent() != null) {
+        else if (clickedNode.getMindmapNode().getRichTextContents() != null && !clickedNode.getMindmapNode().getRichTextContents().isEmpty()) {
             clickedNode.openRichText(mainActivity);
         }
 
@@ -649,6 +664,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
     public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
         this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+    }
+
+    public void notifyNodeContentChanged(Context context) {
+        setApplicationTitle(context);
     }
 
     /**
