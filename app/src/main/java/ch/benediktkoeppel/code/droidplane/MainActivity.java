@@ -90,7 +90,7 @@ public class MainActivity extends FragmentActivity {
             horizontalMindmapView.setMindmap(mindmap);
             horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
             horizontalMindmapView.onRootNodeLoaded();
-            mindmap.getRootNode().subscribeNodeContentChanged(this);
+            mindmap.getRootNode().subscribeNodeRichContentChanged(this);
 
         } else {
 
@@ -380,7 +380,7 @@ public class MainActivity extends FragmentActivity {
         }
     }
 
-    public void notifyNodeContentChanged() {
+    public void notifyNodeRichContentChanged() {
         this.horizontalMindmapView.notifyNodeContentChanged(this);
     }
 }

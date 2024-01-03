@@ -154,7 +154,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                         String text = xpp.getAttributeValue(null, "TEXT");
 
                         MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text);
-                        newMindmapNode.subscribeNodeContentChanged(mainActivity);
+                        newMindmapNode.subscribeNodeRichContentChanged(mainActivity);
                         numNodes += 1;
 
                         if (parentNode == null) {
@@ -344,10 +344,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                             parentNode.addRichTextContent(richTextContent);
 
                             // let view know that node content has changed
-                            if (parentNode.hasNodeContentChangedSubscribers()) {
+                            if (parentNode.hasNodeRichContentChangedSubscribers()) {
                                 MindmapNode finalParentNode = parentNode;
                                 mainActivity.runOnUiThread(() -> {
-                                    finalParentNode.notifySubscribersNodeContentChanged();
+                                    finalParentNode.notifySubscribersNodeRichContentChanged();
                                 });
                             }
                         }

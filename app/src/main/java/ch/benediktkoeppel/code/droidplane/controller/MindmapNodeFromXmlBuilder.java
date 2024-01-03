@@ -3,35 +3,6 @@ package ch.benediktkoeppel.code.droidplane.controller;
 public class MindmapNodeFromXmlBuilder {
 
 
-//    public static MindmapNode parse(Node node, MindmapNode parentNode, Mindmap mindmap) {
-//        return null;
-//
-//        NodeList richtextNodeList = tmpElement.getChildNodes();
-//        for (int i = 0; i < richtextNodeList.getLength(); i++) {
-//            Node n = richtextNodeList.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
-//                Element richcontentElement = (Element)n;
-//                String typeAttribute = richcontentElement.getAttribute("TYPE");
-//                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE") || typeAttribute.equals("DETAILS")) {
-//
-//                    // extract the whole rich text (XML), to show in a WebView activity
-//                    try {
-//                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-//                        ByteArrayOutputStream boas = new ByteArrayOutputStream();
-//                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
-//                        richTextContent = boas.toString();
-//                    } catch (TransformerException e) {
-//                        e.printStackTrace();
-//                    }
-//
-//                    // if the node has no text itself, then convert the rich text content to a text
-//                    if (text == null || text.equals("")) {
-//                        // convert the content (text only) into a string, to show in the normal list view
-//                        text = Html.fromHtml(richcontentElement.getTextContent()).toString();
-//                    }
-//                }
-//            }
-//        }
 //
 //        // extract styles
 //        NodeList styleNodeList = tmpElement.getChildNodes();
