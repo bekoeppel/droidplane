@@ -24,6 +24,7 @@ import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 
 import ch.benediktkoeppel.code.droidplane.controller.AsyncMindmapLoaderTask;
+import ch.benediktkoeppel.code.droidplane.controller.OnRootNodeLoadedListener;
 import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
@@ -94,9 +95,32 @@ public class MainActivity extends FragmentActivity {
 
         } else {
 
+            OnRootNodeLoadedListener onRootNodeLoadedListener = new OnRootNodeLoadedListener() {
+                @Override
+                public void rootNodeLoaded(Mindmap mindmap, MindmapNode rootNode) {
+                    // now set up the view
+                    MindmapNode finalRootNode = rootNode;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            horizontalMindmapView.setMindmap(mindmap);
+
+                            // by default, the root node is the deepest node that is expanded
+                            horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
+
+                            horizontalMindmapView.onRootNodeLoaded();
+
+                        }
+                    });
+
+                }
+            };
+
             // load the file asynchronously
             new AsyncMindmapLoaderTask(
                     this,
+                    onRootNodeLoadedListener,
                     mindmap,
                     horizontalMindmapView,
                     getIntent()
