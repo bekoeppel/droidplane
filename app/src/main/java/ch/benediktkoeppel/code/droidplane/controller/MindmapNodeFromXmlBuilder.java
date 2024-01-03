@@ -105,31 +105,6 @@ public class MindmapNodeFromXmlBuilder {
 //
 //
 //
-//    /**
-//     * Extracts the list of icons from a node and returns the names of the icons as ArrayList.
-//     *
-//     * @return list of names of the icons
-//     */
-//    private static ArrayList<String> getIcons(Node node) {
-//
-//        ArrayList<String> iconsNames = new ArrayList<>();
-//
-//        NodeList childNodes = node.getChildNodes();
-//        for (int i = 0; i < childNodes.getLength(); i++) {
-//
-//            Node n = childNodes.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE) {
-//                Element e = (Element)n;
-//
-//                if (e.getTagName().equals("icon") && e.hasAttribute("BUILTIN")) {
-//                    iconsNames.add(e.getAttribute("BUILTIN"));
-//                }
-//            }
-//        }
-//
-//        return iconsNames;
-//    }
-//
 //
 //
 //    /**

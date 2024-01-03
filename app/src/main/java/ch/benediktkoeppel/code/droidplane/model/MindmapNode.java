@@ -441,4 +441,8 @@ public class MindmapNode {
             this.subscribedNodeLayout.get().notifyNodeStyleChanged();
         }
     }
+
+    public void addIconName(String iconName) {
+        this.iconNames.add(iconName);
+    }
 }

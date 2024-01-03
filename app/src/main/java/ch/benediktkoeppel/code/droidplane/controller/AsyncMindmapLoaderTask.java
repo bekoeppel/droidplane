@@ -375,7 +375,28 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                         }
 
                         // let view know that node content has changed
-                        if (parentNode.hasNodeRichContentChangedSubscribers()) {
+                        if (parentNode.hasNodeStyleChangedSubscribers()) {
+                            MindmapNode finalParentNode = parentNode;
+                            mainActivity.runOnUiThread(() -> {
+                                finalParentNode.notifySubscribersNodeStyleChanged();
+                            });
+                        }
+
+                    }
+
+                    else if (xpp.getName().equals("icon") && xpp.getAttributeValue(null, "BUILTIN") != null) {
+                        String iconName = xpp.getAttributeValue(null, "BUILTIN");
+
+                        // if we have no parent node, something went seriously wrong - we can't have icons that is not part of a mindmap node
+                        if (nodeStack.empty()) {
+                            throw new IllegalStateException("Received icon without a parent node");
+                        }
+
+                        MindmapNode parentNode = nodeStack.peek();
+                        parentNode.addIconName(iconName);
+
+                        // let view know that node content has changed
+                        if (parentNode.hasNodeStyleChangedSubscribers()) {
                             MindmapNode finalParentNode = parentNode;
                             mainActivity.runOnUiThread(() -> {
                                 finalParentNode.notifySubscribersNodeStyleChanged();
