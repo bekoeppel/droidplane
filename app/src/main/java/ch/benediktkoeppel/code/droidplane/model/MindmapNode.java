@@ -1,12 +1,14 @@
 package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
+import android.text.Html;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
+import ch.benediktkoeppel.code.droidplane.view.MindmapNodeLayout;
 import ch.benediktkoeppel.code.droidplane.view.NodeColumn;
 
 
@@ -50,12 +52,12 @@ public class MindmapNode {
     /**
      * Bold style
      */
-    private final boolean isBold;
+    private boolean isBold;
 
     /**
      * Italic style
      */
-    private final boolean isItalic;
+    private boolean isItalic;
 
     /**
      * The names of the icon
@@ -105,6 +107,7 @@ public class MindmapNode {
     private List<MindmapNode> arrowLinkIncomingNodes = new ArrayList<>();
     private WeakReference<NodeColumn> subscribedNodeColumn = null;
     private WeakReference<MainActivity> subscribedMainActivity = null;
+    private WeakReference<MindmapNodeLayout> subscribedNodeLayout = null;
     private boolean loaded;
 
     public MindmapNode(Mindmap mindmap, MindmapNode parentNode, String id, int numericId, String text) {
@@ -275,6 +278,7 @@ public class MindmapNode {
         return iconNames;
     }
 
+    // TODO: this should probably live in a view controller, not here
     public String getText() {
 
         // if this is a cloned node, get the text from the original node
@@ -284,6 +288,14 @@ public class MindmapNode {
             if (linkedNode != null) {
                 return linkedNode.getText();
             }
+        }
+
+        // if this is a rich text node, get the HTML content instead
+        if (this.text == null && this.getRichTextContents() != null && !this.getRichTextContents().isEmpty()) {
+
+            String richTextContent = this.getRichTextContents().get(0);
+            return Html.fromHtml(richTextContent).toString();
+
         }
 
         return text;
@@ -389,22 +401,44 @@ public class MindmapNode {
         }
     }
 
-    public boolean hasNodeContentChangedSubscribers() {
+    public boolean hasNodeRichContentChangedSubscribers() {
         return this.subscribedMainActivity != null;
     }
 
-    public void notifySubscribersNodeContentChanged() {
+    public void notifySubscribersNodeRichContentChanged() {
         if (this.subscribedMainActivity != null) {
-            subscribedMainActivity.get().notifyNodeContentChanged();
+            subscribedMainActivity.get().notifyNodeRichContentChanged();
         }
     }
 
     // TODO: ugly that MainActivity is needed here. Would be better to introduce an listener interface (same for node column above)
-    public void subscribeNodeContentChanged(MainActivity mainActivity) {
+    public void subscribeNodeRichContentChanged(MainActivity mainActivity) {
         this.subscribedMainActivity = new WeakReference<>(mainActivity);
     }
 
     public void setLoaded(boolean loaded) {
         this.loaded = loaded;
+    }
+
+    public void setBold(boolean bold) {
+        isBold = bold;
+    }
+
+    public void setItalic(boolean italic) {
+        isItalic = italic;
+    }
+
+    public boolean hasNodeStyleChangedSubscribers() {
+        return this.subscribedNodeLayout != null;
+    }
+
+    public void subscribeNodeStyleChanged(MindmapNodeLayout nodeLayout) {
+        this.subscribedNodeLayout = new WeakReference<>(nodeLayout);
+    }
+
+    public void notifySubscribersNodeStyleChanged() {
+        if (this.subscribedNodeLayout != null) {
+            this.subscribedNodeLayout.get().notifyNodeStyleChanged();
+        }
     }
 }

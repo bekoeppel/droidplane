@@ -3,24 +3,7 @@ package ch.benediktkoeppel.code.droidplane.controller;
 public class MindmapNodeFromXmlBuilder {
 
 
-//
-//        // extract styles
-//        NodeList styleNodeList = tmpElement.getChildNodes();
-//        boolean isBold = false;
-//        boolean isItalic = false;
-//        for (int i = 0; i < styleNodeList.getLength(); i++) {
-//            Node n = styleNodeList.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
-//                Element fontElement = (Element)n;
-//                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
-//                    Log.d(MainApplication.TAG, "Found bold node");
-//                    isBold = true;
-//                }
-//                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
-//                    isItalic = true;
-//                }
-//            }
-//        }
+
 //
 //        // extract icons
 //        ArrayList<String> iconNames = getIcons(node);

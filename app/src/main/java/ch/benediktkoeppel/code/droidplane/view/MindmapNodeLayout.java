@@ -74,6 +74,7 @@ public class MindmapNodeLayout extends LinearLayout {
         super(context);
 
         this.mindmapNode = mindmapNode;
+        mindmapNode.subscribeNodeStyleChanged(this);
 
         // extract icons
         Resources resources = context.getResources();
@@ -352,5 +353,9 @@ public class MindmapNodeLayout extends LinearLayout {
         intent.putExtra("richTextContent", richTextContent);
         mainActivity.startActivity(intent);
 
+    }
+
+    public void notifyNodeStyleChanged() {
+        this.refreshView();
     }
 }

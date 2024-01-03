@@ -190,7 +190,9 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
                         nodeStack.push(newMindmapNode);
 
-                    } else if (xpp.getName().equals("richcontent")
+                    }
+
+                    else if (xpp.getName().equals("richcontent")
                             && (
                             xpp.getAttributeValue(null, "TYPE").equals("NODE")
                                     || xpp.getAttributeValue(null, "TYPE").equals("NOTE")
@@ -352,7 +354,37 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                             }
                         }
 
-                    } else {
+                    }
+
+                    else if (xpp.getName().equals("font")) {
+                        String boldAttribute = xpp.getAttributeValue(null, "BOLD");
+
+                        // if we have no parent node, something went seriously wrong - we can't have a font node that is not part of a mindmap node
+                        if (nodeStack.empty()) {
+                            throw new IllegalStateException("Received richtext without a parent node");
+                        }
+                        MindmapNode parentNode = nodeStack.peek();
+
+                        if (boldAttribute != null && boldAttribute.equals("true")) {
+                            parentNode.setBold(true);
+                        }
+
+                        String italicsAttribute = xpp.getAttributeValue(null, "ITALIC");
+                        if (italicsAttribute != null && italicsAttribute.equals("true")) {
+                            parentNode.setItalic(true);
+                        }
+
+                        // let view know that node content has changed
+                        if (parentNode.hasNodeRichContentChangedSubscribers()) {
+                            MindmapNode finalParentNode = parentNode;
+                            mainActivity.runOnUiThread(() -> {
+                                finalParentNode.notifySubscribersNodeStyleChanged();
+                            });
+                        }
+
+                    }
+
+                    else {
                         // Log.d(MainApplication.TAG, "Received unknown node " + xpp.getName());
                     }
 
