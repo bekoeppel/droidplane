@@ -1,6 +1,14 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
@@ -12,11 +20,11 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-
-import java.util.*;
+import android.widget.TextView;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -51,8 +59,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     private final Mindmap mindmap;
 
     private final MainActivity mainActivity;
-
-
+    
+    // Search state
+    private String lastSearchString;
+    private List<MindmapNode> searchResultNodes;
+    private int currentSearchResultIndex;
+    
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
      * HorizontalScrollView and create the LinearLayout view inside the HorizontalScrollView.
@@ -604,7 +616,50 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
         return numVisiblePixelsOnColumn;
     }
+    
+    /** Show a dialog to input the search string and fires the search. */
+    void startSearch() {
+        AlertDialog.Builder alert = new AlertDialog.Builder(getContext());
+        EditText input = new EditText(getContext());
+        input.setText(lastSearchString, TextView.BufferType.EDITABLE);
+        alert.setView(input);
+        alert.setPositiveButton("OK", (dialog, which) -> search(input.getText().toString()));
+        alert.create().show();
+    }
+    
+    /** Performs the search, stores the result, and selects the first matching node. */
+    private void search(String searchString) {
+        lastSearchString = searchString;
+        var searchRoot = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
+        searchResultNodes = searchRoot.search(searchString);
+        currentSearchResultIndex = 0;
+        showCurrentSearchResult();
+    }
+    
+    /** Selects the current search result node. */
+    private void showCurrentSearchResult() {
+        if (currentSearchResultIndex >= 0 && currentSearchResultIndex < searchResultNodes.size()) {
+            downTo(getContext(), searchResultNodes.get(currentSearchResultIndex));
+        }
+    }
+    
+    /** Selects the next search result node. */
+    void searchNext() {
+        if (currentSearchResultIndex < searchResultNodes.size() - 1) {
+            currentSearchResultIndex++;
+            showCurrentSearchResult();
+        }
+    }
+    
+    /** Selects the previous search result node. */
+    void searchPrevious() {
+        if (currentSearchResultIndex > 0) {
+            currentSearchResultIndex--;
+            showCurrentSearchResult();
+        }
+    }
 
+    
     /**
      * The HorizontalMindmapViewGestureDetector should detect the onFling event. However, it never receives the
      * onDown event, so when it gets the onFling the event1 is empty, and we can't detect the fling properly.

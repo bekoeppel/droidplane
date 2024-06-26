@@ -1,13 +1,5 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import android.net.Uri;
-import android.text.Html;
-import android.util.Log;
-
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +9,13 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import android.net.Uri;
+import android.text.Html;
+import android.util.Log;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 
 /**
@@ -448,5 +447,17 @@ public class MindmapNode {
     public Integer getNumericId() {
 
         return numericId;
+    }
+	
+    /** Depth-first search in the core text of the nodes in this sub-tree. */
+    List<MindmapNode> search(String searchString) {
+        var res = new ArrayList<MindmapNode>();
+        if (this.text.toUpperCase().contains(searchString.toUpperCase())) {
+            res.add(this);
+        }
+        for (MindmapNode child : childMindmapNodes) {
+            res.addAll(child.search(searchString));
+        }
+        return res;
     }
 }
