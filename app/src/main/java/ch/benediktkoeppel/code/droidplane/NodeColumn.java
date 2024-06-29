@@ -1,22 +1,26 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Point;
-import androidx.annotation.NonNull;
 import android.util.Log;
-import android.view.*;
+import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Display;
+import android.view.View;
 import android.view.View.OnCreateContextMenuListener;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-
-import java.util.ArrayList;
-import java.util.List;
+import androidx.annotation.NonNull;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends LinearLayout, and then embeds a ListView.
@@ -200,6 +204,19 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     public MindmapNodeLayout getNodeAtPosition(int position) {
 
         return mindmapNodeLayouts.get(position);
+    }
+    
+    private int getPositionOf(MindmapNode node) {
+        for (int i = 0; i < mindmapNodeLayouts.size(); i++) {
+            if (mindmapNodeLayouts.get(i).getMindmapNode() == node) {
+                return i;
+            }
+        }
+        return 0;
+    }
+    
+    void scrollTo(MindmapNode node) {
+        post(() -> listView.smoothScrollToPosition(getPositionOf(node)));
     }
 
     /**

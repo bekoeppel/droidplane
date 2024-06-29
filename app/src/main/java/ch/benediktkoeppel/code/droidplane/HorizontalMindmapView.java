@@ -617,13 +617,19 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         return numVisiblePixelsOnColumn;
     }
     
-    /** Show a dialog to input the search string and fires the search. */
+    /** Shows a dialog to input the search string and fires the search. */
     void startSearch() {
         AlertDialog.Builder alert = new AlertDialog.Builder(getContext());
+        var layout = new LinearLayout(getContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        var label = new TextView(getContext());
+        label.setText("Search for:");
+        layout.addView(label);
         EditText input = new EditText(getContext());
         input.setText(lastSearchString, TextView.BufferType.EDITABLE);
-        alert.setView(input);
-        alert.setPositiveButton("OK", (dialog, which) -> search(input.getText().toString()));
+        layout.addView(input);
+        alert.setView(layout);
+        alert.setPositiveButton("Search", (dialog, which) -> search(input.getText().toString()));
         alert.create().show();
     }
     
