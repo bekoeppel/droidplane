@@ -6,18 +6,21 @@
         android:id="@+id/search"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:icon="@android:drawable/ic_menu_search"
         android:showAsAction="ifRoom"
         android:title="@string/search" />
     <item
         android:id="@+id/search_next"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:icon="@android:drawable/arrow_down_float"
         android:showAsAction="ifRoom"
         android:title="@string/search_next" />
     <item
         android:id="@+id/search_prev"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:icon="@android:drawable/arrow_up_float"
         android:showAsAction="ifRoom"
         android:title="@string/search_prev" />
     <item android:id="@+id/up"
