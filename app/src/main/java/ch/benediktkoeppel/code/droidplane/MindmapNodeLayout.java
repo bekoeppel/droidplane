@@ -1,5 +1,10 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -15,12 +20,11 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.MimeTypeMap;
-import android.widget.*;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import android.widget.AbsListView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 
 /**
@@ -258,7 +262,7 @@ public class MindmapNodeLayout extends LinearLayout {
             // we are on currently. We need to go to the Top, and then descend into the mindmap to reach the right
             // point
             HorizontalMindmapView mindmapView = mainActivity.getHorizontalMindmapView();
-            mindmapView.downTo(mainActivity, linkedInternal);
+            mindmapView.downTo(mainActivity, linkedInternal, true);
 
         } else {
             Toast.makeText(getContext(),

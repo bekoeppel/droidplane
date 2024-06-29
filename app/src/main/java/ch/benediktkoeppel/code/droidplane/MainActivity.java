@@ -385,7 +385,7 @@ public class MainActivity extends FragmentActivity {
             case MindmapNodeLayout.CONTEXT_MENU_ARROWLINK_GROUP_ID:
                 int nodeNumericId = item.getItemId();
                 MindmapNode nodeByNumericID = mindmap.getNodeByNumericID(nodeNumericId);
-                horizontalMindmapView.downTo(this, nodeByNumericID);
+                horizontalMindmapView.downTo(this, nodeByNumericID, true);
 
         }
 

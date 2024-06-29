@@ -106,7 +106,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         resizeAllColumns(getContext());
 
         // expand the selected node chain
-        downTo(getContext(), mindmap.getDeepestSelectedMindmapNode());
+        downTo(getContext(), mindmap.getDeepestSelectedMindmapNode(), true);
 
         // and then scroll to the right
         scrollToRight();
@@ -381,7 +381,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * @param context
      * @param node
      */
-    public void downTo(Context context, MindmapNode node) {
+    public void downTo(Context context, MindmapNode node, boolean openLast) {
 
         // first navigate back to the top (essentially closing all other nodes)
         top();
@@ -400,7 +400,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // descent from the root node down to the target node
         for (MindmapNode mindmapNode : nodeHierarchy) {
             mindmapNode.setSelected(true);
-            if (mindmapNode.getNumChildMindmapNodes() > 0) {
+            if ((mindmapNode != node || openLast) && mindmapNode.getNumChildMindmapNodes() > 0) {
                 down(context, mindmapNode);
             }
         }
@@ -639,7 +639,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     /** Selects the current search result node. */
     private void showCurrentSearchResult() {
         if (currentSearchResultIndex >= 0 && currentSearchResultIndex < searchResultNodes.size()) {
-            downTo(getContext(), searchResultNodes.get(currentSearchResultIndex));
+            downTo(getContext(), searchResultNodes.get(currentSearchResultIndex), false);
         }
     }
     
