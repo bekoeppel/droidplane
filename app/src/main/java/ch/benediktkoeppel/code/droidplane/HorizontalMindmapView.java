@@ -62,7 +62,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     
     // Search state
     private String lastSearchString;
-    private List<MindmapNode> searchResultNodes;
+    private List<MindmapNode> searchResultNodes = List.of();
     private int currentSearchResultIndex;
     
     /**
