@@ -400,13 +400,23 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // descent from the root node down to the target node
         for (MindmapNode mindmapNode : nodeHierarchy) {
             mindmapNode.setSelected(true);
+            scrollTo(mindmapNode);
             if ((mindmapNode != node || openLast) && mindmapNode.getNumChildMindmapNodes() > 0) {
                 down(context, mindmapNode);
             }
         }
 
     }
-
+    
+    private void scrollTo(MindmapNode node) {
+        if (nodeColumns.isEmpty()) {
+            return;
+        }
+        var lastCol = nodeColumns.get(nodeColumns.size() - 1);
+        lastCol.scrollTo(node);
+    }
+    
+    
     /**
      * Sets the application title to the name of the parent node of the rightmost column, which is the most recently
      * clicked node.
