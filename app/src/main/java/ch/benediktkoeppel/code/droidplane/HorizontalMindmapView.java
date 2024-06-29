@@ -657,6 +657,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         if (currentSearchResultIndex >= 0 && currentSearchResultIndex < searchResultNodes.size()) {
             downTo(getContext(), searchResultNodes.get(currentSearchResultIndex), false);
         }
+        // Shows/hides the next/prev buttons
+        // FIXME findViewById doesn't work, looks like you need to call invalidateOptionsMenu()
+        // and then hide/show the items in onCreateOptionsMenu(Menu) using menu.findItem().setVisible()
+//        findViewById(R.id.search_prev).setVisibility(currentSearchResultIndex > 0 ? VISIBLE : GONE);
+//        findViewById(R.id.search_next).setVisibility(currentSearchResultIndex < searchResultNodes.size() - 1 ? VISIBLE : GONE);
     }
     
     /** Selects the next search result node. */
