@@ -1,12 +1,5 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -25,6 +18,13 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -630,15 +630,13 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     /** Shows a dialog to input the search string and fires the search. */
     void startSearch() {
         AlertDialog.Builder alert = new AlertDialog.Builder(getContext());
-        var layout = new LinearLayout(getContext());
-        layout.setOrientation(LinearLayout.VERTICAL);
-        var label = new TextView(getContext());
-        label.setText("Search for:");
-        layout.addView(label);
+        alert.setTitle("Search");
+
         EditText input = new EditText(getContext());
         input.setText(lastSearchString, TextView.BufferType.EDITABLE);
-        layout.addView(input);
-        alert.setView(layout);
+        input.setHint("Search");
+
+        alert.setView(input);
         alert.setPositiveButton("Search", (dialog, which) -> search(input.getText().toString()));
         alert.create().show();
     }
