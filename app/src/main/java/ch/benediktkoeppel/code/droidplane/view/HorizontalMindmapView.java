@@ -1,9 +1,10 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
+import android.text.Html;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
@@ -25,6 +26,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import ch.benediktkoeppel.code.droidplane.MainActivity;
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+import ch.benediktkoeppel.code.droidplane.R;
+import ch.benediktkoeppel.code.droidplane.helper.AndroidHelper;
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 public class HorizontalMindmapView extends HorizontalScrollView implements OnTouchListener, OnItemClickListener {
 
@@ -56,26 +64,32 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private final Map<ListView, NodeColumn> listViewToNodeColumn = new HashMap<>();
 
-    private final Mindmap mindmap;
+    private Mindmap mindmap;
 
     private final MainActivity mainActivity;
-    
+
+    /**
+     * The deepest selected mindmap node
+     */
+    private MindmapNode deepestSelectedMindmapNode;
+
+
     // Search state
     private String lastSearchString;
     private List<MindmapNode> searchResultNodes = List.of();
     private int currentSearchResultIndex;
-    
+
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
      * HorizontalScrollView and create the LinearLayout view inside the HorizontalScrollView.
      *
      * @param mainActivity the Application Context
      */
-    public HorizontalMindmapView(Mindmap mindmap, MainActivity mainActivity) {
+    public HorizontalMindmapView(MainActivity mainActivity) {
 
         super(mainActivity);
 
-        this.mindmap = mindmap;
+        // TODO: why does the view need access to the mainActivity?
         this.mainActivity = mainActivity;
 
         // list where all columns are stored
@@ -105,11 +119,24 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // fix the widths of all columns
         resizeAllColumns(getContext());
 
+    }
+
+    public void setMindmap(Mindmap mindmap) {
+        this.mindmap = mindmap;
+    }
+
+    // TODO: comment missing
+    public void onRootNodeLoaded() {
+
         // expand the selected node chain
-        downTo(getContext(), mindmap.getDeepestSelectedMindmapNode(), true);
+        downTo(getContext(), this.getDeepestSelectedMindmapNode(), true);
 
         // and then scroll to the right
         scrollToRight();
+    }
+
+    private MindmapNode getDeepestSelectedMindmapNode() {
+        return this.deepestSelectedMindmapNode;
     }
 
     /**
@@ -251,7 +278,15 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         if (!nodeColumns.isEmpty()) {
 
             MindmapNode parent = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
-            return parent.getText();
+            String text = parent.getText();
+            if (text != null && !text.isEmpty()) {
+                return text;
+            } else if (parent.getRichTextContents() != null && !parent.getRichTextContents().isEmpty()) {
+                String richTextContent = parent.getRichTextContents().get(0);
+                return Html.fromHtml(richTextContent).toString();
+            } else {
+                return "";
+            }
 
         }
 
@@ -351,8 +386,18 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     private void down(Context context, MindmapNode node) {
 
         // add a new column for this node and add it to the HorizontalMindmapView
-        NodeColumn nodeColumn = new NodeColumn(getContext(), node);
-        addColumn(nodeColumn);
+        NodeColumn nodeColumn;
+        synchronized (node) {
+            if (node.getParentNode() != null) {
+                synchronized (node.getParentNode()) {
+                    nodeColumn = new NodeColumn(getContext(), node);
+                    addColumn(nodeColumn);
+                }
+            } else {
+                nodeColumn = new NodeColumn(getContext(), node);
+                addColumn(nodeColumn);
+            }
+        }
 
         // keep track of which list view belongs to which node column. This is necessary because onItemClick will get a
         // ListView (the one that was clicked), and we need to know which NodeColumn this is.
@@ -372,7 +417,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         node.setSelected(true);
 
         // keep track in the mind map which node is currently selected
-        mindmap.setDeepestSelectedMindmapNode(node);
+        this.setDeepestSelectedMindmapNode(node);
 
     }
 
@@ -389,7 +434,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // go upwards from the target node, and keep track of each node leading down to the target node
         List<MindmapNode> nodeHierarchy = new ArrayList<>();
         MindmapNode tmpNode = node;
-        while (tmpNode.getParentNode() != null) {
+        while (tmpNode.getParentNode() != null) {   // TODO: this gives a NPE when rotating the device
             nodeHierarchy.add(tmpNode);
             tmpNode = tmpNode.getParentNode();
         }
@@ -423,26 +468,31 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     public void setApplicationTitle(Context context) {
 
+        // TODO: this needs to update when richtext content is loaded
+
         // get the title of the parent of the rightmost column (i.e. the
         // selected node in the 2nd-rightmost column)
         // set the application title to this nodeTitle. If the nodeTitle is
         // empty, we set the default Application title
         String nodeTitle = getTitleOfRightmostParent();
         Log.d(MainApplication.TAG, "nodeTitle = " + nodeTitle);
-        if (nodeTitle.equals("")) {
+        if (nodeTitle == null || nodeTitle.equals("")) {
             Log.d(MainApplication.TAG, "Setting application title to default string: " +
                                        getResources().getString(R.string.app_name));
             AndroidHelper.getActivity(context, Activity.class).setTitle(R.string.app_name);
+
         } else {
             Log.d(MainApplication.TAG, "Setting application title to node name: " + nodeTitle);
             AndroidHelper.getActivity(context, Activity.class).setTitle(nodeTitle);
+            // TODO: java.lang.NullPointerException: Attempt to invoke virtual method 'void android.app.Activity.setTitle(java.lang.CharSequence)' on a null object reference
         }
     }
 
     /**
      * Enables the Home button in the application if we have enough columns, i.e. if "Up" will remove a column.
      */
-    void enableHomeButtonIfEnoughColumns(Context context) {
+    // TODO: the view should not do this
+    public void enableHomeButtonIfEnoughColumns(Context context) {
         // if we only have one column (i.e. this is the root node), then we
         // disable the home button
         int numberOfColumns = getNumberOfColumns();
@@ -492,7 +542,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         // if the clicked node has a rich text content (and is a leaf), open the rich text
-        else if (clickedNode.getMindmapNode().getRichTextContent() != null) {
+        else if (clickedNode.getMindmapNode().getRichTextContents() != null && !clickedNode.getMindmapNode().getRichTextContents().isEmpty()) {
             clickedNode.openRichText(mainActivity);
         }
 
@@ -628,7 +678,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
     
     /** Shows a dialog to input the search string and fires the search. */
-    void startSearch() {
+    public void startSearch() {
         AlertDialog.Builder alert = new AlertDialog.Builder(getContext());
         alert.setTitle("Search");
 
@@ -640,11 +690,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         alert.setPositiveButton("Search", (dialog, which) -> search(input.getText().toString()));
         alert.create().show();
     }
-    
+
     /** Performs the search, stores the result, and selects the first matching node. */
     private void search(String searchString) {
         lastSearchString = searchString;
-        var searchRoot = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
+        MindmapNode searchRoot = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
         searchResultNodes = searchRoot.search(searchString);
         currentSearchResultIndex = 0;
         showCurrentSearchResult();
@@ -663,7 +713,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
     
     /** Selects the next search result node. */
-    void searchNext() {
+    public void searchNext() {
         if (currentSearchResultIndex < searchResultNodes.size() - 1) {
             currentSearchResultIndex++;
             showCurrentSearchResult();
@@ -671,14 +721,21 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
     
     /** Selects the previous search result node. */
-    void searchPrevious() {
+    public void searchPrevious() {
         if (currentSearchResultIndex > 0) {
             currentSearchResultIndex--;
             showCurrentSearchResult();
         }
     }
 
-    
+    public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
+        this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+    }
+
+    public void notifyNodeContentChanged(Context context) {
+        setApplicationTitle(context);
+    }
+
     /**
      * The HorizontalMindmapViewGestureDetector should detect the onFling event. However, it never receives the
      * onDown event, so when it gets the onFling the event1 is empty, and we can't detect the fling properly.

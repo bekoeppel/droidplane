@@ -1,4 +1,4 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,6 +25,16 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import ch.benediktkoeppel.code.droidplane.MainActivity;
+import ch.benediktkoeppel.code.droidplane.MainApplication;
+import ch.benediktkoeppel.code.droidplane.R;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 
 /**
@@ -69,6 +79,7 @@ public class MindmapNodeLayout extends LinearLayout {
         super(context);
 
         this.mindmapNode = mindmapNode;
+        mindmapNode.subscribeNodeStyleChanged(this);
 
         // extract icons
         Resources resources = context.getResources();
@@ -87,7 +98,7 @@ public class MindmapNodeLayout extends LinearLayout {
         }
 
         // set the rich text icon if it has
-        if (mindmapNode.getRichTextContent() != null) {
+        if (mindmapNode.getRichTextContents() != null && !mindmapNode.getRichTextContents().isEmpty()) {
             iconResourceIds.add(0, resources.getIdentifier("@drawable/richtext", "id", packageName));
         }
 
@@ -212,7 +223,7 @@ public class MindmapNodeLayout extends LinearLayout {
         }
 
         // add menu to show rich text, if the node has
-        if (mindmapNode.getRichTextContent() != null) {
+        if (mindmapNode.getRichTextContents() != null && !mindmapNode.getRichTextContents().isEmpty()) {
             menu.add(CONTEXT_MENU_NORMAL_GROUP_ID, R.id.openrichtext, 0, R.string.openrichtext);
         }
 
@@ -342,10 +353,14 @@ public class MindmapNodeLayout extends LinearLayout {
 
     public void openRichText(MainActivity mainActivity) {
 
-        String richTextContent = getMindmapNode().getRichTextContent();
+        String richTextContent = getMindmapNode().getRichTextContents().get(0);
         Intent intent = new Intent(mainActivity, RichTextViewActivity.class);
         intent.putExtra("richTextContent", richTextContent);
         mainActivity.startActivity(intent);
 
+    }
+
+    public void notifyNodeStyleChanged() {
+        this.refreshView();
     }
 }
