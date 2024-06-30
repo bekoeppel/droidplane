@@ -242,6 +242,16 @@ public class MainActivity extends FragmentActivity {
             case android.R.id.home:
                 horizontalMindmapView.up();
                 break;
+                
+            case R.id.search:
+                horizontalMindmapView.startSearch();
+                break;
+            case R.id.search_next:
+                horizontalMindmapView.searchNext();
+                break;
+            case R.id.search_prev:
+                horizontalMindmapView.searchPrevious();
+                break;
         }
 
         return true;
@@ -314,7 +324,7 @@ public class MainActivity extends FragmentActivity {
             case MindmapNodeLayout.CONTEXT_MENU_ARROWLINK_GROUP_ID:
                 int nodeNumericId = item.getItemId();
                 MindmapNode nodeByNumericID = mindmap.getNodeByNumericID(nodeNumericId);
-                horizontalMindmapView.downTo(this, nodeByNumericID);
+                horizontalMindmapView.downTo(this, nodeByNumericID, true);
 
         }
 

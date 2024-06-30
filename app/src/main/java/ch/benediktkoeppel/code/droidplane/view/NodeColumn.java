@@ -1,5 +1,9 @@
 package ch.benediktkoeppel.code.droidplane.view;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Point;
@@ -15,9 +19,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-
-import java.util.ArrayList;
-import java.util.List;
+import androidx.annotation.NonNull;
 
 import ch.benediktkoeppel.code.droidplane.MainApplication;
 import ch.benediktkoeppel.code.droidplane.R;
@@ -218,6 +220,19 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
     public MindmapNodeLayout getNodeAtPosition(int position) {
 
         return mindmapNodeLayouts.get(position);
+    }
+    
+    private int getPositionOf(MindmapNode node) {
+        for (int i = 0; i < mindmapNodeLayouts.size(); i++) {
+            if (mindmapNodeLayouts.get(i).getMindmapNode() == node) {
+                return i;
+            }
+        }
+        return 0;
+    }
+    
+    void scrollTo(MindmapNode node) {
+        post(() -> listView.smoothScrollToPosition(getPositionOf(node)));
     }
 
     /**

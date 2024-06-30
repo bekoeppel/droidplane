@@ -16,4 +16,8 @@
     <string name="help">Help</string>
     <string name="title_activity_rich_text_view">Rich Text View</string>
     <string name="mindmap_loading">Loading</string>
+    <string name="search">Search</string>
+    <string name="search_next">Search Next</string>
+    <string name="search_prev">Search Prev.</string>
+    <string name="open">Open</string>
 </resources>

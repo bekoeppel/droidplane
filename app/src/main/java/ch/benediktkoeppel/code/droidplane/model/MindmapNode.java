@@ -449,4 +449,17 @@ public class MindmapNode {
     public void addArrowLinkDestinationId(String destinationId) {
         this.arrowLinkDestinationIds.add(destinationId);
     }
+
+    /** Depth-first search in the core text of the nodes in this sub-tree. */
+    // TODO: this doesn't work while mindmap is still loading
+    public List<MindmapNode> search(String searchString) {
+        var res = new ArrayList<MindmapNode>();
+        if (this.getText().toUpperCase().contains(searchString.toUpperCase())) { // TODO: npe here when text is null, because text is a rich text
+            res.add(this);
+        }
+        for (MindmapNode child : childMindmapNodes) {
+            res.addAll(child.search(searchString));
+        }
+        return res;
+    }
 }

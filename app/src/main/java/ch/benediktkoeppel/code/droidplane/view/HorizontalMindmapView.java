@@ -1,6 +1,7 @@
 package ch.benediktkoeppel.code.droidplane.view;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
 import android.text.Html;
@@ -13,9 +14,11 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,14 +68,16 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
     private final MainActivity mainActivity;
 
-
-
-
     /**
      * The deepest selected mindmap node
      */
     private MindmapNode deepestSelectedMindmapNode;
 
+
+    // Search state
+    private String lastSearchString;
+    private List<MindmapNode> searchResultNodes = List.of();
+    private int currentSearchResultIndex;
 
     /**
      * Setting up a HorizontalMindmapView. We initialize the nodeColumns, define the layout parameters for the
@@ -124,7 +129,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     public void onRootNodeLoaded() {
 
         // expand the selected node chain
-        downTo(getContext(), this.getDeepestSelectedMindmapNode());
+        downTo(getContext(), this.getDeepestSelectedMindmapNode(), true);
 
         // and then scroll to the right
         scrollToRight();
@@ -421,7 +426,7 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      * @param context
      * @param node
      */
-    public void downTo(Context context, MindmapNode node) {
+    public void downTo(Context context, MindmapNode node, boolean openLast) {
 
         // first navigate back to the top (essentially closing all other nodes)
         top();
@@ -440,13 +445,23 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // descent from the root node down to the target node
         for (MindmapNode mindmapNode : nodeHierarchy) {
             mindmapNode.setSelected(true);
-            if (mindmapNode.getNumChildMindmapNodes() > 0) {
+            scrollTo(mindmapNode);
+            if ((mindmapNode != node || openLast) && mindmapNode.getNumChildMindmapNodes() > 0) {
                 down(context, mindmapNode);
             }
         }
 
     }
-
+    
+    private void scrollTo(MindmapNode node) {
+        if (nodeColumns.isEmpty()) {
+            return;
+        }
+        var lastCol = nodeColumns.get(nodeColumns.size() - 1);
+        lastCol.scrollTo(node);
+    }
+    
+    
     /**
      * Sets the application title to the name of the parent node of the rightmost column, which is the most recently
      * clicked node.
@@ -660,6 +675,57 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
 
         return numVisiblePixelsOnColumn;
+    }
+    
+    /** Shows a dialog to input the search string and fires the search. */
+    public void startSearch() {
+        AlertDialog.Builder alert = new AlertDialog.Builder(getContext());
+        alert.setTitle("Search");
+
+        EditText input = new EditText(getContext());
+        input.setText(lastSearchString, TextView.BufferType.EDITABLE);
+        input.setHint("Search");
+
+        alert.setView(input);
+        alert.setPositiveButton("Search", (dialog, which) -> search(input.getText().toString()));
+        alert.create().show();
+    }
+
+    /** Performs the search, stores the result, and selects the first matching node. */
+    private void search(String searchString) {
+        lastSearchString = searchString;
+        MindmapNode searchRoot = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
+        searchResultNodes = searchRoot.search(searchString);
+        currentSearchResultIndex = 0;
+        showCurrentSearchResult();
+    }
+    
+    /** Selects the current search result node. */
+    private void showCurrentSearchResult() {
+        if (currentSearchResultIndex >= 0 && currentSearchResultIndex < searchResultNodes.size()) {
+            downTo(getContext(), searchResultNodes.get(currentSearchResultIndex), false);
+        }
+        // Shows/hides the next/prev buttons
+        // FIXME findViewById doesn't work, looks like you need to call invalidateOptionsMenu()
+        // and then hide/show the items in onCreateOptionsMenu(Menu) using menu.findItem().setVisible()
+//        findViewById(R.id.search_prev).setVisibility(currentSearchResultIndex > 0 ? VISIBLE : GONE);
+//        findViewById(R.id.search_next).setVisibility(currentSearchResultIndex < searchResultNodes.size() - 1 ? VISIBLE : GONE);
+    }
+    
+    /** Selects the next search result node. */
+    public void searchNext() {
+        if (currentSearchResultIndex < searchResultNodes.size() - 1) {
+            currentSearchResultIndex++;
+            showCurrentSearchResult();
+        }
+    }
+    
+    /** Selects the previous search result node. */
+    public void searchPrevious() {
+        if (currentSearchResultIndex > 0) {
+            currentSearchResultIndex--;
+            showCurrentSearchResult();
+        }
     }
 
     public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
