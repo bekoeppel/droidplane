@@ -1,26 +1,30 @@
 package ch.benediktkoeppel.code.droidplane;
 
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import androidx.lifecycle.ViewModelProviders;
-import android.content.*;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import androidx.fragment.app.FragmentActivity;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.ViewModelProviders;
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
-
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open intent. If the MainApplication was
@@ -299,6 +303,16 @@ public class MainActivity extends FragmentActivity {
             case android.R.id.home:
                 horizontalMindmapView.up();
                 break;
+                
+            case R.id.search:
+                horizontalMindmapView.startSearch();
+                break;
+            case R.id.search_next:
+                horizontalMindmapView.searchNext();
+                break;
+            case R.id.search_prev:
+                horizontalMindmapView.searchPrevious();
+                break;
         }
 
         return true;
@@ -371,7 +385,7 @@ public class MainActivity extends FragmentActivity {
             case MindmapNodeLayout.CONTEXT_MENU_ARROWLINK_GROUP_ID:
                 int nodeNumericId = item.getItemId();
                 MindmapNode nodeByNumericID = mindmap.getNodeByNumericID(nodeNumericId);
-                horizontalMindmapView.downTo(this, nodeByNumericID);
+                horizontalMindmapView.downTo(this, nodeByNumericID, true);
 
         }
 
