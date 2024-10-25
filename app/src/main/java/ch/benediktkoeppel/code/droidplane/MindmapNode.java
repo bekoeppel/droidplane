@@ -167,7 +167,7 @@ public class MindmapNode {
                     try {
                         Transformer transformer = TransformerFactory.newInstance().newTransformer();
                         ByteArrayOutputStream boas = new ByteArrayOutputStream();
-                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
+                        transformer.transform(new DOMSource(richtextNodeList.item(i)), new StreamResult(boas));
                         richTextContent = boas.toString();
                     } catch (TransformerException e) {
                         e.printStackTrace();
