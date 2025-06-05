@@ -28,6 +28,8 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
     private final MainActivity mainActivity;
     private boolean warned = false;
 
+    private static final String[] XML_BUILTINS = {"lt", "gt", "amp", "apos", "quot"};
+
     HtmlEntitySanitizingInputStream(InputStream in, MainActivity activity) {
         // The pushback buffer should be able to hold the longest replacement we
         // ever push back. Numeric representations of multi-byte characters can
@@ -35,6 +37,27 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
         super(new PushbackInputStream(in, 32));
         this.pushback = (PushbackInputStream) super.in;
         this.mainActivity = activity;
+    }
+
+    private boolean isXmlBuiltin(String name) {
+        for (String b : XML_BUILTINS) {
+            if (b.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNumericEntity(String name) {
+        if (!name.startsWith("#")) {
+            return false;
+        }
+        String digits = name.substring(1);
+        if (digits.startsWith("x") || digits.startsWith("X")) {
+            digits = digits.substring(1);
+            return digits.matches("[0-9A-Fa-f]+");
+        }
+        return digits.matches("[0-9]+");
     }
 
     private void notifyUser() {
@@ -47,7 +70,7 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
         }
     }
 
-    private byte[] toNumericBytes(String text) {
+    private byte[] toNumericBytes(String text) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         for (int i = 0; i < text.length(); i++) {
             String entity = "&#" + (int) text.charAt(i) + ";";
@@ -72,6 +95,14 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
 
             String entity = new String(nameBuf, 0, n, StandardCharsets.UTF_8);
             if (n > 0 && entity.endsWith(";")) {
+                String name = entity.substring(0, entity.length() - 1);
+
+                if (isXmlBuiltin(name) || isNumericEntity(name)) {
+                    // Built-in XML entities and numeric references are left as is.
+                    pushback.unread(entity.getBytes(StandardCharsets.UTF_8));
+                    return '&';
+                }
+
                 String encoded = "&" + entity;
                 String decoded = Html.fromHtml(encoded).toString();
                 if (!encoded.equals(decoded)) {
