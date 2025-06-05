@@ -77,10 +77,18 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
         }
     }
 
+    /**
+     * Convert the given text into UTF-8 bytes containing numeric character
+     * references for each Unicode code point. This avoids issues with
+     * surrogate pairs by working on full code points rather than 16‑bit
+     * code units.
+     */
     private byte[] toNumericBytes(String text) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        for (int i = 0; i < text.length(); i++) {
-            String entity = "&#" + (int) text.charAt(i) + ";";
+        for (int offset = 0; offset < text.length(); ) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+            String entity = "&#" + codePoint + ";";
             out.write(entity.getBytes(StandardCharsets.UTF_8));
         }
         return out.toByteArray();
