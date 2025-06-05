@@ -30,6 +30,7 @@ import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.model.MindmapIndexes;
 import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
+import ch.benediktkoeppel.code.droidplane.controller.HtmlEntitySanitizingInputStream;
 
 public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
@@ -119,6 +120,14 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         // show loading indicator
         mainActivity.setMindmapIsLoading(true);
+
+        // Sanitize the input stream for invalid XML entities. Some mindmap
+        // files created by older Freeplane/Freemind versions contain HTML
+        // entities such as "&nbsp;" which are not valid in XML. The sanitizer
+        // replaces such entities on the fly so the parser does not abort.
+        if (inputStream != null) {
+            inputStream = sanitizeInputStream(inputStream);
+        }
 
         // start measuring the document load time
         long loadDocumentStartTime = System.currentTimeMillis();
@@ -522,6 +531,16 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         return new MindmapIndexes(newNodesById, newNodesByNumericId);
 
+    }
+
+    /**
+     * Wrap the given stream with a filter that replaces invalid or unsupported
+     * HTML entities on the fly. The sanitizer decodes any HTML entities it
+     * recognizes and writes them back using numeric references so that the XML
+     * parser does not fail. This avoids loading the entire document into memory.
+     */
+    private InputStream sanitizeInputStream(InputStream inputStream) {
+        return new HtmlEntitySanitizingInputStream(inputStream, mainActivity);
     }
 
     private void fillArrowLinks() {

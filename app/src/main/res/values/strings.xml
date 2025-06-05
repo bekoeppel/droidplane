@@ -20,4 +20,6 @@
     <string name="search_next">Search Next</string>
     <string name="search_prev">Search Prev.</string>
     <string name="open">Open</string>
+    <!-- warning shown when invalid XML entities were corrected -->
+    <string name="invalid_xml_entities">Fixed invalid characters in mindmap file</string>
 </resources>
