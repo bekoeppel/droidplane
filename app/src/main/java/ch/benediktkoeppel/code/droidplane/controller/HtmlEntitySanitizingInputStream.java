@@ -8,6 +8,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.io.BufferedInputStream;
 import java.nio.charset.StandardCharsets;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
@@ -30,11 +31,17 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
 
     private static final String[] XML_BUILTINS = {"lt", "gt", "amp", "apos", "quot"};
 
+    /** Simple fast-path for the non-breaking space entity. */
+    private static final String NBSP = "nbsp";
+
     HtmlEntitySanitizingInputStream(InputStream in, MainActivity activity) {
         // The pushback buffer should be able to hold the longest replacement we
         // ever push back. Numeric representations of multi-byte characters can
         // be quite long, so allocate a generous buffer.
-        super(new PushbackInputStream(in, 32));
+        // Wrap the stream in a buffer so that the byte-by-byte processing below
+        // does not trigger actual disk reads for every single byte. The
+        // pushback stream allows us to "unread" the transformed entity bytes.
+        super(new PushbackInputStream(new BufferedInputStream(in), 32));
         this.pushback = (PushbackInputStream) super.in;
         this.mainActivity = activity;
     }
@@ -101,6 +108,12 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
                     // Built-in XML entities and numeric references are left as is.
                     pushback.unread(entity.getBytes(StandardCharsets.UTF_8));
                     return '&';
+                }
+
+                if (NBSP.equals(name)) {
+                    notifyUser();
+                    pushback.unread(toNumericBytes("\u00A0"));
+                    return pushback.read();
                 }
 
                 String encoded = "&" + entity;
