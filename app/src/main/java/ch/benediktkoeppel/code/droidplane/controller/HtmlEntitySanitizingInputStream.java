@@ -31,8 +31,6 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
 
     private static final String[] XML_BUILTINS = {"lt", "gt", "amp", "apos", "quot"};
 
-    /** Simple fast-path for the non-breaking space entity. */
-    private static final String NBSP = "nbsp";
 
     HtmlEntitySanitizingInputStream(InputStream in, MainActivity activity) {
         // The pushback buffer should be able to hold the longest replacement we
@@ -118,11 +116,6 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
                     return '&';
                 }
 
-                if (NBSP.equals(name)) {
-                    notifyUser();
-                    pushback.unread(toNumericBytes("\u00A0"));
-                    return pushback.read();
-                }
 
                 String encoded = "&" + entity;
                 String decoded = Html.fromHtml(encoded).toString();
