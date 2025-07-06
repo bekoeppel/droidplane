@@ -5,6 +5,9 @@ android {
         applicationId "ch.benediktkoeppel.code.droidplane"
         minSdkVersion 21
         targetSdkVersion 34
+
+        versionCode 19
+        versionName "1.0.19"
     }
 
     buildTypes {
@@ -17,8 +20,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
     namespace 'ch.benediktkoeppel.code.droidplane'
     compileSdk 34
+
 }
 
 dependencies {
@@ -28,3 +33,6 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.7'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
 }
+
+tasks.register("printVersion") { doLast { println android.defaultConfig.versionName } }
+
