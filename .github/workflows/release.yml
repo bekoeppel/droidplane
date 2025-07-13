@@ -35,22 +35,24 @@ jobs:
 
     - name: Read version from Gradle
       run: |
-        VERSION=$(./gradlew -q printVersion)
-        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+        VERSION_NAME=$(./gradlew -q printVersionName)
+        VERSION_CODE=$(./gradlew -q printVersionCode)
+        echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+        echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
     - name: Zipalign and Rename
       run: |
         LATEST_BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
         UNSIGNED=$(ls app/build/outputs/apk/release/*-unsigned.apk)
-        OUT="DroidPlane-${VERSION}-release-unsigned.apk"
+        OUT="DroidPlane-${VERSION_NAME}-release-unsigned.apk"
         # -p : rewrite in place, -f : overwrite, 4-byte boundary
         "$ANDROID_HOME/build-tools/$LATEST_BUILD_TOOLS/zipalign" -p -f 4 "$UNSIGNED" "$OUT"
         echo "APK_OUT=$OUT" >> $GITHUB_ENV
 
     - uses: softprops/action-gh-release@v2
       with:
-        tag_name: "v${{ env.VERSION }}"
-        name:     "v${{ env.VERSION }}"
+        tag_name: "v${{ env.VERSION_NAME }}"
+        name:     "v${{ env.VERSION_NAME }}"
         files:    ${{ env.APK_OUT }}
         draft:    false
         prerelease: false
@@ -65,22 +67,24 @@ jobs:
           cp.execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
 
           const bump = core.getInput('bump') || 'patch';
-          const [major,minor,patch] = process.env.VERSION.split('.').map(Number);
-          const next =
+          const [major,minor,patch] = process.env.VERSION_NAME.split('.').map(Number);
+          const nextName =
             bump==='major' ? `${major+1}.0.0` :
             bump==='minor' ? `${major}.${minor+1}.0` : `${major}.${minor}.${patch+1}`;
+          const nextCode = process.env.VERSION_CODE.map(Number) + 1
 
-          cp.execSync(`git switch -c bump/${next}`);
+          cp.execSync(`git switch -c bump/${nextName}`);
           const g = fs.readFileSync('app/build.gradle','utf8')
-                       .replace(/versionName\s+"[^"]+"/,`versionName "${next}"`);
+                       .replace(/versionName\s+"[^"]+"/,`versionName "${nextName}"`)
+                       .replace(/versionCode\s+\d+/,`versionCode ${nextCode})
           fs.writeFileSync('app/build.gradle', g);
-          cp.execSync('git commit -am "chore: bump version to '+next+'"');
+          cp.execSync('git commit -am "chore: bump version to '+nextName+'"');
           cp.execSync('git push -u origin HEAD');
           const base = context.payload.repository.default_branch;
           await github.rest.pulls.create({
             ...context.repo,
-            head: 'bump/'+next,
+            head: 'bump/'+nextName,
             base,
-            title: `Bump version to ${next}`,
+            title: `Bump version to ${nextName}`,
             body:  'Automated post-release version bump'
           });
