@@ -71,12 +71,12 @@ jobs:
           const nextName =
             bump==='major' ? `${major+1}.0.0` :
             bump==='minor' ? `${major}.${minor+1}.0` : `${major}.${minor}.${patch+1}`;
-          const nextCode = process.env.VERSION_CODE.map(Number) + 1
+          const nextCode = Number(process.env.VERSION_CODE) + 1
 
           cp.execSync(`git switch -c bump/${nextName}`);
           const g = fs.readFileSync('app/build.gradle','utf8')
                        .replace(/versionName\s+"[^"]+"/,`versionName "${nextName}"`)
-                       .replace(/versionCode\s+\d+/,`versionCode ${nextCode})
+                       .replace(/versionCode\s+\d+/,`versionCode ${nextCode}`);
           fs.writeFileSync('app/build.gradle', g);
           cp.execSync('git commit -am "chore: bump version to '+nextName+'"');
           cp.execSync('git push -u origin HEAD');
