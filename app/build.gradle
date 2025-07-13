@@ -3,8 +3,11 @@ apply plugin: 'com.android.application'
 android {
     defaultConfig {
         applicationId "ch.benediktkoeppel.code.droidplane"
-        minSdkVersion 19
-        targetSdkVersion 33
+        minSdkVersion 21
+        targetSdk 36
+
+        versionCode 19
+        versionName "1.0.19"
     }
 
     buildTypes {
@@ -17,25 +20,19 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
     namespace 'ch.benediktkoeppel.code.droidplane'
-    compileSdk 33
+    compileSdk 36
+
 }
 
 dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'com.google.android.gms:play-services-analytics:18.0.4'
+    implementation 'com.google.android.gms:play-services-analytics:18.1.1'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.6.2'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    annotationProcessor "org.projectlombok:lombok:1.18.30"
-
-    // see https://stackoverflow.com/a/75298544/1067124
-    constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
-            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
-        }
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
-            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
-        }
-    }
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.7'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
 }
+
+tasks.register("printVersion") { doLast { println android.defaultConfig.versionName } }
+

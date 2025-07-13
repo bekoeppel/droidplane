@@ -22,6 +22,10 @@ import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
 
 import ch.benediktkoeppel.code.droidplane.controller.AsyncMindmapLoaderTask;
 import ch.benediktkoeppel.code.droidplane.controller.OnRootNodeLoadedListener;
@@ -69,6 +73,14 @@ public class MainActivity extends FragmentActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Edge-to-edge: disable decor fitting system windows
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
+            Insets sysBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(sysBars.left, sysBars.top, sysBars.right, sysBars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         // initialize android stuff
         // Google Analytics
@@ -374,7 +386,7 @@ public class MainActivity extends FragmentActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
-
+        super.onActivityResult(requestCode, resultCode, resultData);
         // The ACTION_OPEN_DOCUMENT intent was sent with the request code READ_REQUEST_CODE. If the request code seen
         // here doesn't match, it's the response to some other intent, and the code below shouldn't run at all.
 
