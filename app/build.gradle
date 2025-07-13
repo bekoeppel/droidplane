@@ -6,8 +6,8 @@ android {
         minSdkVersion 21
         targetSdk 36
 
-        versionCode 19
-        versionName "1.0.19"
+        versionCode 20
+        versionName "1.0.20"
     }
 
     buildTypes {
@@ -34,5 +34,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
 }
 
-tasks.register("printVersion") { doLast { println android.defaultConfig.versionName } }
+tasks.register("printVersionName") { doLast { println android.defaultConfig.versionName } }
+tasks.register("printVersionCode") { doLast { println android.defaultConfig.versionCode } }
 
