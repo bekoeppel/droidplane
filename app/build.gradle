@@ -4,7 +4,7 @@ android {
     defaultConfig {
         applicationId "ch.benediktkoeppel.code.droidplane"
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdk 36
 
         versionCode 19
         versionName "1.0.19"
@@ -22,7 +22,7 @@ android {
     }
 
     namespace 'ch.benediktkoeppel.code.droidplane'
-    compileSdk 34
+    compileSdk 36
 
 }
 

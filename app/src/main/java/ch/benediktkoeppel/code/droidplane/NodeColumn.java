@@ -21,6 +21,9 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import androidx.annotation.NonNull;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
 
 /**
  * A column of MindmapNodes, i.e. one level in the mind map. It extends LinearLayout, and then embeds a ListView.
@@ -101,6 +104,12 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
         // create a ListView
         listView = new ListView(context);
+        listView.setClipToPadding(false);
+        ViewCompat.setOnApplyWindowInsetsListener(listView, (v, insets) -> {
+            Insets sysBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(sysBars.left, sysBars.top, sysBars.right, sysBars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         // define the layout of the listView
         // should be as high as the parent (i.e. full screen height)
