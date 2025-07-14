@@ -30,16 +30,18 @@ jobs:
 
     - name: Read version from Gradle
       run: |
-        VERSION=$(./gradlew -q printVersion)
-        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+        VERSION_NAME=$(./gradlew -q printVersionName)
+        VERSION_CODE=$(./gradlew -q printVersionCode)
+        echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+        echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
     - name: Rename APK
       run: |
         APK_OUT=$(ls app/build/outputs/apk/debug/app-debug.apk)
-        mv "$APK_OUT" "app/build/outputs/apk/debug/DroidPlane-${VERSION}-dev.apk"
+        mv "$APK_OUT" "app/build/outputs/apk/debug/DroidPlane-${VERSION_NAME}-dev.apk"
 
     - uses: actions/upload-artifact@v4
       with:
-        name: DroidPlane-${{ env.VERSION }}-dev
-        path: app/build/outputs/apk/debug/DroidPlane-${{ env.VERSION }}-dev.apk
+        name: DroidPlane-${{ env.VERSION_NAME }}-dev
+        path: app/build/outputs/apk/debug/DroidPlane-${{ env.VERSION_NAME }}-dev.apk
 

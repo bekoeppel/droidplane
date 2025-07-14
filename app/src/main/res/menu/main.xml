@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
-    
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
     <!-- TODO: add icons -->
+    <item
+        android:id="@+id/mindmap_loading"
+        android:title="@string/mindmap_loading"
+        android:showAsAction="always"
+        android:actionLayout="@layout/action_bar_progress"
+        android:visible="false"
+    />
+
     <item
         android:id="@+id/search"
         android:layout_width="wrap_content"
@@ -23,6 +31,7 @@
         android:icon="@android:drawable/arrow_up_float"
         android:showAsAction="ifRoom"
         android:title="@string/search_prev" />
+
     <item android:id="@+id/up"
         android:title="@string/up"
         android:showAsAction="ifRoom" />
@@ -35,5 +44,5 @@
     <item android:id="@+id/help"
         android:title="@string/help"
         android:showAsAction="never" />
-    
+
 </menu>

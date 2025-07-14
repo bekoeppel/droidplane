@@ -1,34 +1,38 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProviders;
+
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
+
+import ch.benediktkoeppel.code.droidplane.controller.AsyncMindmapLoaderTask;
+import ch.benediktkoeppel.code.droidplane.controller.OnRootNodeLoadedListener;
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
+import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
+import ch.benediktkoeppel.code.droidplane.view.MindmapNodeLayout;
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open intent. If the MainApplication was
@@ -47,6 +51,8 @@ public class MainActivity extends FragmentActivity {
      * HorizontalMindmapView that contains all NodeColumns
      */
     private HorizontalMindmapView horizontalMindmapView;
+    private Menu menu;
+    private boolean mindmapIsLoading;
 
     @Override
     public void onStart() {
@@ -85,40 +91,53 @@ public class MainActivity extends FragmentActivity {
         // enable the Android home button
         enableHomeButton();
 
+        // set up horizontal mindmap view first
+        setUpHorizontalMindmapView();
+
         // get the Mindmap ViewModel
         mindmap = ViewModelProviders.of(this).get(Mindmap.class);
 
-        // intents (how we are called)
-        Intent intent = getIntent();
-        String action = intent.getAction();
+        // then populate view with mindmap
+        // if we already have a loaded mindmap, use this; otherwise load from the intent
+        if (mindmap.isLoaded()) {
+            horizontalMindmapView.setMindmap(mindmap);
+            horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
+            horizontalMindmapView.onRootNodeLoaded();
+            mindmap.getRootNode().subscribeNodeRichContentChanged(this);
 
-        // we didn't load a mindmap yet, we open it
-        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
-        if (mindmap.getRootNode() == null) {
+        } else {
 
-            // create a ProgressDialog, and load the file asynchronously
-            ProgressDialog progressDialog = ProgressDialog.show(
-                    this,
-                    "DroidPlane",
-                    "Opening Mindmap File...",
-                    true,
-                    false
-            );
-
-            // Once the FileOpenTask is complete, we want to set up the horizontal mindmap view. If we already have
-            // a mindmap, we run it immediately.
-            Runnable onPostExecuteTask = new Runnable() {
+            OnRootNodeLoadedListener onRootNodeLoadedListener = new OnRootNodeLoadedListener() {
                 @Override
-                public void run() {
-                    setUpHorizontalMindmapView();
+                public void rootNodeLoaded(Mindmap mindmap, MindmapNode rootNode) {
+                    // now set up the view
+                    MindmapNode finalRootNode = rootNode;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            horizontalMindmapView.setMindmap(mindmap);
+
+                            // by default, the root node is the deepest node that is expanded
+                            horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
+
+                            horizontalMindmapView.onRootNodeLoaded();
+
+                        }
+                    });
+
                 }
             };
 
-            // open file
-            new FileOpenTask(intent, action, progressDialog, onPostExecuteTask).execute();
+            // load the file asynchronously
+            new AsyncMindmapLoaderTask(
+                    this,
+                    onRootNodeLoadedListener,
+                    mindmap,
+                    horizontalMindmapView,
+                    getIntent()
+            ).execute();
 
-        } else {
-            setUpHorizontalMindmapView();
         }
 
     }
@@ -126,7 +145,7 @@ public class MainActivity extends FragmentActivity {
     private void setUpHorizontalMindmapView() {
 
         // create a new HorizontalMindmapView
-        horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
+        horizontalMindmapView = new HorizontalMindmapView(this);
 
         ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
 
@@ -142,95 +161,12 @@ public class MainActivity extends FragmentActivity {
         return horizontalMindmapView;
     }
 
-    private class FileOpenTask extends AsyncTask<String, Void, Object> {
-
-        private final Intent intent;
-        private final String action;
-        private final ProgressDialog progressDialog;
-        private final Runnable onPostExecuteTask;
-
-        FileOpenTask(
-                Intent intent,
-                String action,
-                ProgressDialog progressDialog,
-                Runnable onPostExecuteTask
-        ) {
-
-            this.intent = intent;
-            this.action = action;
-            this.progressDialog = progressDialog;
-            this.onPostExecuteTask = onPostExecuteTask;
-        }
-
-        @Override
-        protected Object doInBackground(String... strings) {
-
-            // prepare loading of the Mindmap file
-            InputStream mm = null;
-
-            // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the
-            // launcher started from ACTION_EDIT/VIEW intent
-            if ((Intent.ACTION_EDIT.equals(action) || Intent.ACTION_VIEW.equals(action)) ||
-                Intent.ACTION_OPEN_DOCUMENT.equals(action)
-            ) {
-
-                Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
-
-                // get the URI to the target document (the Mindmap we are opening) and open the InputStream
-                Uri uri = intent.getData();
-                if (uri != null) {
-                    ContentResolver cr = getContentResolver();
-                    try {
-                        mm = cr.openInputStream(uri);
-                    } catch (FileNotFoundException e) {
-
-                        abortWithPopup(R.string.filenotfound);
-                        e.printStackTrace();
-                    }
-                } else {
-                    abortWithPopup(R.string.novalidfile);
-                }
-
-                // store the Uri. Next time the MainActivity is started, we'll
-                // check whether the Uri has changed (-> load new document) or
-                // remained the same (-> reuse previous document)
-                mindmap.setUri(uri);
-            }
-
-            // started from the launcher
-            else {
-                Log.d(MainApplication.TAG, "started from app launcher intent");
-
-                // display the default Mindmap "example.mm", from the resources
-                mm = getApplicationContext().getResources().openRawResource(R.raw.example);
-            }
-
-            // load the mindmap
-            Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm);
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-
-            if (onPostExecuteTask != null) {
-                onPostExecuteTask.run();
-            }
-
-            if (progressDialog != null) {
-                progressDialog.dismiss();
-            }
-        }
-    }
-
 
     /**
      * Enables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void enableHomeButton() {
+    public void enableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {
@@ -242,7 +178,7 @@ public class MainActivity extends FragmentActivity {
      * Disables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void disableHomeButton() {
+    public void disableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {
@@ -260,6 +196,8 @@ public class MainActivity extends FragmentActivity {
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
+        this.menu = menu;
+        updateLoadingIndicatorOnUiThread();
         return true;
     }
 
@@ -273,6 +211,7 @@ public class MainActivity extends FragmentActivity {
 
         horizontalMindmapView.upOrClose();
     }
+
 
     /*
      * (non-Javadoc)
@@ -311,7 +250,7 @@ public class MainActivity extends FragmentActivity {
                 performFileSearch();
                 break;
 
-                // App button (top left corner)
+            // App button (top left corner)
             case android.R.id.home:
                 horizontalMindmapView.up();
                 break;
@@ -381,7 +320,7 @@ public class MainActivity extends FragmentActivity {
                     // open RichText content
                     case R.id.openrichtext:
                         Log.d(MainApplication.TAG,
-                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent()
+                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContents()
                         );
                         mindmapNodeLayout.openRichText(this);
 
@@ -409,7 +348,7 @@ public class MainActivity extends FragmentActivity {
      *
      * @param stringResourceId
      */
-    private void abortWithPopup(int stringResourceId) {
+    public void abortWithPopup(int stringResourceId) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(stringResourceId);
@@ -467,5 +406,27 @@ public class MainActivity extends FragmentActivity {
 
             }
         }
+    }
+
+
+    public void setMindmapIsLoading(boolean mindmapIsLoading) {
+
+        this.mindmapIsLoading = mindmapIsLoading;
+
+        // update the loading indicator in the menu
+        updateLoadingIndicatorOnUiThread();
+    }
+
+    private void updateLoadingIndicatorOnUiThread() {
+        if (menu != null && menu.findItem(R.id.mindmap_loading) != null) {
+
+            MenuItem mindmapLoadingIndicator = menu.findItem(R.id.mindmap_loading);
+
+            runOnUiThread(() -> mindmapLoadingIndicator.setVisible(mindmapIsLoading));
+        }
+    }
+
+    public void notifyNodeRichContentChanged() {
+        this.horizontalMindmapView.notifyNodeContentChanged(this);
     }
 }
