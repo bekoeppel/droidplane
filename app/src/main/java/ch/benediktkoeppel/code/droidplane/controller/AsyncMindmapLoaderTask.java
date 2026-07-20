@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.util.Pair;
+import android.widget.Toast;
 
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
@@ -81,11 +82,11 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                     mm = cr.openInputStream(uri);
                 } catch (FileNotFoundException e) {
 
-                    mainActivity.abortWithPopup(R.string.filenotfound);
+                    abortWithPopupOnUiThread(R.string.filenotfound);
                     e.printStackTrace();
                 }
             } else {
-                mainActivity.abortWithPopup(R.string.novalidfile);
+                abortWithPopupOnUiThread(R.string.novalidfile);
             }
 
             // store the Uri. Next time the MainActivity is started, we'll
@@ -102,12 +103,25 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             mm = mainActivity.getApplicationContext().getResources().openRawResource(R.raw.example);
         }
 
+        // we could not open the document, and have already told the user about it
+        if (mm == null) {
+            return null;
+        }
+
         // load the mindmap
         Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
 
         loadDocument(mm);
 
         return null;
+    }
+
+    /**
+     * Shows the error popup (which has to happen on the UI thread) for the given message
+     */
+    private void abortWithPopupOnUiThread(int stringResourceId) {
+
+        mainActivity.runOnUiThread(() -> mainActivity.abortWithPopup(stringResourceId));
     }
 
 
@@ -136,6 +150,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         Stack<MindmapNode> nodeStack = new Stack<>();
         int numNodes = 0;
 
+        // whether we managed to parse the document until its end. Mindmap files are sometimes incomplete (e.g. when
+        // Dropbox has not fully synced them yet), in which case we still show as much as we could parse.
+        boolean isComplete = true;
+
         try {
             // set up XML pull parsing
             XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
@@ -146,6 +164,14 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             // stream parse the XML
             int eventType = xpp.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
+
+                // we are cancelled when another document is being loaded. Stop, so that we don't write into that
+                // document's mindmap.
+                if (isCancelled()) {
+                    Log.d(MainApplication.TAG, "Mindmap loading was cancelled");
+                    return;
+                }
+
                 if (eventType == XmlPullParser.START_DOCUMENT) {
                     Log.d(MainApplication.TAG, "Received XML Start Document");
 
@@ -317,13 +343,37 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException(e);
+
+            // don't crash on a broken (or incompletely synced) document - we show whatever we have parsed so far
+            Log.e(MainApplication.TAG, "Could not parse the mindmap document", e);
+            isComplete = false;
         }
 
-        // stack should now be empty
+        if (isCancelled()) {
+            return;
+        }
+
+        // the stack should now be empty. If it isn't, the document ended in the middle of a node.
         if (!nodeStack.empty()) {
-            throw new RuntimeException("Stack should be empty");
-            // TODO: we could try to be lenient here to allow opening partial documents (which sometimes happens when dropbox doesn't fully sync). Probably doesn't work anyways, as we already throw a runtime exception above if we receive garbage
+            Log.w(MainApplication.TAG, "Mindmap document ended with " + nodeStack.size() + " unclosed nodes");
+            isComplete = false;
+            while (!nodeStack.empty()) {
+                nodeStack.pop().setLoaded(true);
+            }
+        }
+
+        // if we could not even parse the root node, we have nothing to show at all
+        if (rootNode == null) {
+            mainActivity.setMindmapIsLoading(false);
+            abortWithPopupOnUiThread(R.string.cantloadfile);
+            return;
+        }
+
+        if (!isComplete) {
+            mainActivity.runOnUiThread(() -> Toast.makeText(mainActivity,
+                    R.string.incompletefile,
+                    Toast.LENGTH_LONG
+            ).show());
         }
 
 
@@ -356,6 +406,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 .setValue(numNodes)
                 .build()
         );
+
+        if (isCancelled()) {
+            return;
+        }
 
         // now the full mindmap is loaded
         mindmap.setLoaded(true);

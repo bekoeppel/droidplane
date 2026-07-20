@@ -334,8 +334,31 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // remove all ListView layouts in linearLayout parent_list_view
         removeAllColumns();
 
+        // there is nothing to show if no mindmap (or not even its root node) was loaded yet
+        if (mindmap == null || mindmap.getRootNode() == null) {
+            return;
+        }
+
         // go down into the root node
         down(getContext(), mindmap.getRootNode());
+    }
+
+    /**
+     * Throws away everything that is currently displayed. Used when a new mindmap is about to be loaded.
+     */
+    public void clear() {
+
+        removeAllColumns();
+
+        mindmap = null;
+        deepestSelectedMindmapNode = null;
+
+        lastSearchString = null;
+        searchResultNodes = List.of();
+        currentSearchResultIndex = 0;
+
+        setApplicationTitle(getContext());
+        enableHomeButtonIfEnoughColumns(getContext());
     }
 
     /**
@@ -693,6 +716,9 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
     /** Performs the search, stores the result, and selects the first matching node. */
     private void search(String searchString) {
+        if (nodeColumns.isEmpty()) {
+            return;
+        }
         lastSearchString = searchString;
         MindmapNode searchRoot = nodeColumns.get(nodeColumns.size() - 1).getParentNode();
         searchResultNodes = searchRoot.search(searchString);

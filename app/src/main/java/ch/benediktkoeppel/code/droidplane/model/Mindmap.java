@@ -64,11 +64,29 @@ public class Mindmap extends ViewModel {
      * @return
      */
     public MindmapNode getNodeByID(String id) {
+        // the indexes are only built once the document is fully parsed, so while loading we can't resolve anything yet
+        if (mindmapIndexes == null) {
+            return null;
+        }
         return mindmapIndexes.getNodesByIdIndex().get(id);
     }
 
     public MindmapNode getNodeByNumericID(Integer numericId) {
+        if (mindmapIndexes == null) {
+            return null;
+        }
         return mindmapIndexes.getNodesByNumericIndex().get(numericId);
+    }
+
+    /**
+     * Forgets the currently loaded document, so that a new document can be loaded into this Mindmap
+     */
+    public void reset() {
+
+        uri = null;
+        rootNode = null;
+        mindmapIndexes = null;
+        isLoaded = false;
     }
 
     public boolean isLoaded() {

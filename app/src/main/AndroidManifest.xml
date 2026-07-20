@@ -12,9 +12,13 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:theme="@style/AppTheme">
+        <!-- singleTop, so that we get an onNewIntent() when a file is opened while DroidPlane is already running.
+             Without it, the system just brings our task to the front, and we would keep showing the previously
+             loaded (and by now possibly outdated) mindmap. -->
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -17,6 +17,8 @@ import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
 
+import java.util.Objects;
+
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -53,6 +55,11 @@ public class MainActivity extends FragmentActivity {
     private HorizontalMindmapView horizontalMindmapView;
     private Menu menu;
     private boolean mindmapIsLoading;
+
+    /**
+     * The task that is currently loading a mindmap (if any)
+     */
+    private AsyncMindmapLoaderTask asyncMindmapLoaderTask;
 
     @Override
     public void onStart() {
@@ -98,48 +105,106 @@ public class MainActivity extends FragmentActivity {
         mindmap = ViewModelProviders.of(this).get(Mindmap.class);
 
         // then populate view with mindmap
-        // if we already have a loaded mindmap, use this; otherwise load from the intent
-        if (mindmap.isLoaded()) {
-            horizontalMindmapView.setMindmap(mindmap);
-            horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
-            horizontalMindmapView.onRootNodeLoaded();
-            mindmap.getRootNode().subscribeNodeRichContentChanged(this);
+        // if we already have exactly this document loaded (i.e. we were re-created, e.g. after a screen rotation),
+        // we re-use it. Otherwise we load the document from the intent.
+        if (mindmap.isLoaded() && mindmap.getRootNode() != null && isAlreadyLoaded(getIntent())) {
+            showLoadedMindmap();
 
         } else {
-
-            OnRootNodeLoadedListener onRootNodeLoadedListener = new OnRootNodeLoadedListener() {
-                @Override
-                public void rootNodeLoaded(Mindmap mindmap, MindmapNode rootNode) {
-                    // now set up the view
-                    MindmapNode finalRootNode = rootNode;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            horizontalMindmapView.setMindmap(mindmap);
-
-                            // by default, the root node is the deepest node that is expanded
-                            horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
-
-                            horizontalMindmapView.onRootNodeLoaded();
-
-                        }
-                    });
-
-                }
-            };
-
-            // load the file asynchronously
-            new AsyncMindmapLoaderTask(
-                    this,
-                    onRootNodeLoadedListener,
-                    mindmap,
-                    horizontalMindmapView,
-                    getIntent()
-            ).execute();
-
+            loadMindmap(getIntent());
         }
 
+    }
+
+    /* (non-Javadoc)
+     * We are a singleTop activity, so when a document is opened while DroidPlane is already running, we don't get a
+     * new MainActivity, but this callback instead. The file may well have changed since we loaded it (e.g. Dropbox
+     * has synced new content in the meantime), so we always load the document again.
+     * @see android.app.Activity#onNewIntent(android.content.Intent)
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+
+        super.onNewIntent(intent);
+
+        // getIntent() should return the intent that we are currently showing
+        setIntent(intent);
+
+        // a plain launcher intent (the user tapped the app icon while DroidPlane was already running) should not
+        // throw away the mindmap that the user is looking at
+        boolean opensDocument = intent.getData() != null || intent.getBooleanExtra(INTENT_START_HELP, false);
+        if (opensDocument) {
+            loadMindmap(intent);
+        }
+    }
+
+    /**
+     * Returns whether the document that the intent asks for is the one we have already loaded
+     */
+    private boolean isAlreadyLoaded(Intent intent) {
+
+        return Objects.equals(intent.getData(), mindmap.getUri());
+    }
+
+    /**
+     * Shows the mindmap that is already loaded in the Mindmap view model
+     */
+    private void showLoadedMindmap() {
+
+        horizontalMindmapView.setMindmap(mindmap);
+        horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
+        horizontalMindmapView.onRootNodeLoaded();
+        mindmap.getRootNode().subscribeNodeRichContentChanged(this);
+    }
+
+    /**
+     * Discards whatever mindmap we are currently showing, and loads the document of the given intent
+     *
+     * @param intent the intent that specifies which document to load
+     */
+    private void loadMindmap(Intent intent) {
+
+        // stop a load that is possibly still running, so that it can not write into the mindmap that we are about to
+        // load
+        if (asyncMindmapLoaderTask != null) {
+            asyncMindmapLoaderTask.cancel(true);
+        }
+
+        // throw away the mindmap (and its view) that we have loaded so far
+        horizontalMindmapView.clear();
+        mindmap.reset();
+
+        OnRootNodeLoadedListener onRootNodeLoadedListener = new OnRootNodeLoadedListener() {
+            @Override
+            public void rootNodeLoaded(Mindmap mindmap, MindmapNode rootNode) {
+                // now set up the view
+                MindmapNode finalRootNode = rootNode;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        horizontalMindmapView.setMindmap(mindmap);
+
+                        // by default, the root node is the deepest node that is expanded
+                        horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
+
+                        horizontalMindmapView.onRootNodeLoaded();
+
+                    }
+                });
+
+            }
+        };
+
+        // load the file asynchronously
+        asyncMindmapLoaderTask = new AsyncMindmapLoaderTask(
+                this,
+                onRootNodeLoadedListener,
+                mindmap,
+                horizontalMindmapView,
+                intent
+        );
+        asyncMindmapLoaderTask.execute();
     }
 
     private void setUpHorizontalMindmapView() {
