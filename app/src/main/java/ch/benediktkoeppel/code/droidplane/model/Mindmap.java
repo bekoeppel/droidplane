@@ -1,6 +1,7 @@
 package ch.benediktkoeppel.code.droidplane.model;
 
 import android.net.Uri;
+import android.os.AsyncTask;
 
 import androidx.lifecycle.ViewModel;
 
@@ -26,6 +27,19 @@ public class Mindmap extends ViewModel {
 
     // whether the mindmap has finished loading
     private boolean isLoaded = false;
+
+    /**
+     * The deepest node that the user has expanded. This lives here (and not in the view) so that we can restore the
+     * user's position when the activity is re-created, e.g. after a screen rotation.
+     */
+    private MindmapNode deepestSelectedMindmapNode;
+
+    /**
+     * The task that is currently loading this mindmap, if any. This lives here (and not in the activity) because it
+     * outlives the activity: when the screen is rotated while a document is loading, the new activity has to be able
+     * to stop the load that the previous activity had started.
+     */
+    private AsyncTask<?, ?, ?> loadingTask;
 
     /**
      * Returns the Uri which is currently loaded in document.
@@ -78,6 +92,22 @@ public class Mindmap extends ViewModel {
         return mindmapIndexes.getNodesByNumericIndex().get(numericId);
     }
 
+    public MindmapNode getDeepestSelectedMindmapNode() {
+        return deepestSelectedMindmapNode;
+    }
+
+    public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
+        this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+    }
+
+    public AsyncTask<?, ?, ?> getLoadingTask() {
+        return loadingTask;
+    }
+
+    public void setLoadingTask(AsyncTask<?, ?, ?> loadingTask) {
+        this.loadingTask = loadingTask;
+    }
+
     /**
      * Forgets the currently loaded document, so that a new document can be loaded into this Mindmap
      */
@@ -86,6 +116,7 @@ public class Mindmap extends ViewModel {
         uri = null;
         rootNode = null;
         mindmapIndexes = null;
+        deepestSelectedMindmapNode = null;
         isLoaded = false;
     }
 

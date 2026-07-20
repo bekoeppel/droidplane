@@ -2,7 +2,6 @@ package ch.benediktkoeppel.code.droidplane.model;
 
 import java.util.Map;
 
-import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 public class MindmapIndexes {
 

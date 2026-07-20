@@ -9,6 +9,7 @@ import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -55,11 +56,6 @@ public class MainActivity extends FragmentActivity {
     private HorizontalMindmapView horizontalMindmapView;
     private Menu menu;
     private boolean mindmapIsLoading;
-
-    /**
-     * The task that is currently loading a mindmap (if any)
-     */
-    private AsyncMindmapLoaderTask asyncMindmapLoaderTask;
 
     @Override
     public void onStart() {
@@ -152,7 +148,13 @@ public class MainActivity extends FragmentActivity {
     private void showLoadedMindmap() {
 
         horizontalMindmapView.setMindmap(mindmap);
-        horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
+
+        // continue where the user was before this activity was re-created (e.g. before the screen was rotated). We
+        // only fall back to the root node if we have never expanded anything.
+        if (mindmap.getDeepestSelectedMindmapNode() == null) {
+            horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
+        }
+
         horizontalMindmapView.onRootNodeLoaded();
         mindmap.getRootNode().subscribeNodeRichContentChanged(this);
     }
@@ -164,10 +166,13 @@ public class MainActivity extends FragmentActivity {
      */
     private void loadMindmap(Intent intent) {
 
-        // stop a load that is possibly still running, so that it can not write into the mindmap that we are about to
-        // load
-        if (asyncMindmapLoaderTask != null) {
-            asyncMindmapLoaderTask.cancel(true);
+        // Stop a load that is possibly still running, so that it can not write into the mindmap that we are about to
+        // load. The task is kept in the view model, because it outlives this activity: when the screen is rotated
+        // while a document is loading, the new activity has to stop the load that the previous one started -
+        // otherwise two parsers write into the same (retained) Mindmap.
+        AsyncTask<?, ?, ?> runningLoaderTask = mindmap.getLoadingTask();
+        if (runningLoaderTask != null) {
+            runningLoaderTask.cancel(true);
         }
 
         // throw away the mindmap (and its view) that we have loaded so far
@@ -197,14 +202,18 @@ public class MainActivity extends FragmentActivity {
         };
 
         // load the file asynchronously
-        asyncMindmapLoaderTask = new AsyncMindmapLoaderTask(
+        AsyncMindmapLoaderTask asyncMindmapLoaderTask = new AsyncMindmapLoaderTask(
                 this,
                 onRootNodeLoadedListener,
                 mindmap,
-                horizontalMindmapView,
                 intent
         );
-        asyncMindmapLoaderTask.execute();
+        mindmap.setLoadingTask(asyncMindmapLoaderTask);
+
+        // run on the thread pool rather than on AsyncTask's default serial executor: a load that we just cancelled
+        // may still be stuck in a blocking read on a slow content provider, and it would keep this load from ever
+        // starting
+        asyncMindmapLoaderTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     private void setUpHorizontalMindmapView() {

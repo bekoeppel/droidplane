@@ -68,11 +68,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
     private final MainActivity mainActivity;
 
-    /**
-     * The deepest selected mindmap node
-     */
-    private MindmapNode deepestSelectedMindmapNode;
-
 
     // Search state
     private String lastSearchString;
@@ -135,8 +130,12 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         scrollToRight();
     }
 
+    /**
+     * The deepest node that the user has expanded. It is kept in the Mindmap view model, so that it survives a
+     * re-creation of this view (e.g. when the screen is rotated).
+     */
     private MindmapNode getDeepestSelectedMindmapNode() {
-        return this.deepestSelectedMindmapNode;
+        return mindmap != null ? mindmap.getDeepestSelectedMindmapNode() : null;
     }
 
     /**
@@ -351,7 +350,6 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         removeAllColumns();
 
         mindmap = null;
-        deepestSelectedMindmapNode = null;
 
         lastSearchString = null;
         searchResultNodes = List.of();
@@ -755,7 +753,9 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
     }
 
     public void setDeepestSelectedMindmapNode(MindmapNode deepestSelectedMindmapNode) {
-        this.deepestSelectedMindmapNode = deepestSelectedMindmapNode;
+        if (mindmap != null) {
+            mindmap.setDeepestSelectedMindmapNode(deepestSelectedMindmapNode);
+        }
     }
 
     public void notifyNodeContentChanged(Context context) {

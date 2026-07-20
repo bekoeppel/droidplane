@@ -30,8 +30,6 @@ import ch.benediktkoeppel.code.droidplane.R;
 import ch.benediktkoeppel.code.droidplane.model.Mindmap;
 import ch.benediktkoeppel.code.droidplane.model.MindmapIndexes;
 import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
-import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
-import ch.benediktkoeppel.code.droidplane.controller.HtmlEntitySanitizingInputStream;
 
 public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
@@ -40,24 +38,42 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
     private final Intent intent;
     private final String action;
 
-    // TODO: why is HorizontalMindmapView needed here?
-    private final HorizontalMindmapView horizontalMindmapView;
-
     private final Mindmap mindmap;
     private final OnRootNodeLoadedListener onRootNodeLoadedListener;
 
     public AsyncMindmapLoaderTask(MainActivity mainActivity,
                                   OnRootNodeLoadedListener onRootNodeLoadedListener,
                                   Mindmap mindmap,
-                                  HorizontalMindmapView horizontalMindmapView,
                                   Intent intent) {
 
         this.mainActivity = mainActivity;
         this.onRootNodeLoadedListener = onRootNodeLoadedListener;
         this.intent = intent;
         this.action = intent.getAction();
-        this.horizontalMindmapView = horizontalMindmapView;
         this.mindmap = mindmap;
+    }
+
+    @Override
+    protected void onPostExecute(Object result) {
+
+        releaseFromMindmap();
+    }
+
+    @Override
+    protected void onCancelled(Object result) {
+
+        releaseFromMindmap();
+    }
+
+    /**
+     * Lets the Mindmap forget about this task once it is done. The task holds on to the activity, and the Mindmap
+     * outlives the activity, so leaving a finished task in there would leak the activity.
+     */
+    private void releaseFromMindmap() {
+
+        if (mindmap.getLoadingTask() == this) {
+            mindmap.setLoadingTask(null);
+        }
     }
 
     @Override
