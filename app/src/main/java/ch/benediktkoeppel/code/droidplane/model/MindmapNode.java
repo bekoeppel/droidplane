@@ -6,6 +6,7 @@ import android.text.Html;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.view.MindmapNodeLayout;
@@ -116,11 +117,14 @@ public class MindmapNode {
         this.id = id;
         this.numericId = numericId;
         this.text = text;
-        this.childMindmapNodes = new ArrayList<>();
-        this.richTextContents = new ArrayList<>();
+        // the mindmap is parsed on a background thread, while the views read these lists on the UI thread. Copy on
+        // write lists are cheap enough here (these lists are short and only ever appended to) and give the UI thread
+        // a consistent view of them.
+        this.childMindmapNodes = new CopyOnWriteArrayList<>();
+        this.richTextContents = new CopyOnWriteArrayList<>();
         isBold = false;
         isItalic = false;
-        iconNames = new ArrayList<>();
+        iconNames = new CopyOnWriteArrayList<>();
         this.link = link;
         this.treeIdAttribute = treeIdAttribute;
         arrowLinkDestinationIds = new ArrayList<>();
@@ -396,8 +400,9 @@ public class MindmapNode {
         return this.subscribedNodeColumn != null;
     }
     public void notifySubscribersAddedChildMindmapNode(MindmapNode mindmapNode) {
-        if (this.subscribedNodeColumn != null) {
-            subscribedNodeColumn.get().notifyNewMindmapNode(mindmapNode);
+        NodeColumn nodeColumn = this.subscribedNodeColumn != null ? this.subscribedNodeColumn.get() : null;
+        if (nodeColumn != null) {
+            nodeColumn.notifyNewMindmapNode(mindmapNode);
         }
     }
 
@@ -406,8 +411,9 @@ public class MindmapNode {
     }
 
     public void notifySubscribersNodeRichContentChanged() {
-        if (this.subscribedMainActivity != null) {
-            subscribedMainActivity.get().notifyNodeRichContentChanged();
+        MainActivity mainActivity = this.subscribedMainActivity != null ? this.subscribedMainActivity.get() : null;
+        if (mainActivity != null) {
+            mainActivity.notifyNodeRichContentChanged();
         }
     }
 
@@ -437,8 +443,9 @@ public class MindmapNode {
     }
 
     public void notifySubscribersNodeStyleChanged() {
-        if (this.subscribedNodeLayout != null) {
-            this.subscribedNodeLayout.get().notifyNodeStyleChanged();
+        MindmapNodeLayout nodeLayout = this.subscribedNodeLayout != null ? this.subscribedNodeLayout.get() : null;
+        if (nodeLayout != null) {
+            nodeLayout.notifyNodeStyleChanged();
         }
     }
 

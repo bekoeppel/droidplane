@@ -56,6 +56,11 @@ public class MindmapNodeLayout extends LinearLayout {
     private List<Integer> iconResourceIds;
 
     /**
+     * Whether the mindmap_node_list_item layout was already inflated into this view
+     */
+    private boolean isInflated;
+
+    /**
      * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always
      * throw a IllegalArgumentException.
      *
@@ -81,35 +86,58 @@ public class MindmapNodeLayout extends LinearLayout {
         this.mindmapNode = mindmapNode;
         mindmapNode.subscribeNodeStyleChanged(this);
 
-        // extract icons
+        updateIconResourceIds();
+    }
+
+    /**
+     * (Re-)calculates the Android resource IDs of the icons of this node. This has to happen every time the view is
+     * refreshed: while the mindmap is still streaming in, a node is created (and this layout with it) before its
+     * &lt;icon&gt; and &lt;richcontent&gt; children were parsed. So the icons of a node are typically only known
+     * after this layout was created.
+     */
+    private void updateIconResourceIds() {
+
+        Context context = getContext();
         Resources resources = context.getResources();
         String packageName = context.getPackageName();
 
-        List<String> iconNames = mindmapNode.getIconNames();
-        iconResourceIds = new ArrayList<>();
-        for (String iconName : iconNames) {
+        List<Integer> newIconResourceIds = new ArrayList<>();
+        for (String iconName : mindmapNode.getIconNames()) {
             String drawableName = getDrawableNameFromMindmapIcon(iconName, context);
-            iconResourceIds.add(resources.getIdentifier("@drawable/" + drawableName, "id", packageName));
+            int iconResourceId = resources.getIdentifier("@drawable/" + drawableName, "id", packageName);
+
+            // getIdentifier returns 0 if we don't ship a drawable for this mindmap icon. Skip it, otherwise it would
+            // take up the space of an icon that we can actually display.
+            if (iconResourceId != 0) {
+                newIconResourceIds.add(iconResourceId);
+            }
         }
 
         // set link icon if node has a link. The link icon will be the first icon shown
         if (mindmapNode.getLink() != null) {
-            iconResourceIds.add(0, resources.getIdentifier("@drawable/link", "id", packageName));
+            newIconResourceIds.add(0, resources.getIdentifier("@drawable/link", "id", packageName));
         }
 
         // set the rich text icon if it has
-        if (mindmapNode.getRichTextContents() != null && !mindmapNode.getRichTextContents().isEmpty()) {
-            iconResourceIds.add(0, resources.getIdentifier("@drawable/richtext", "id", packageName));
+        if (!mindmapNode.getRichTextContents().isEmpty()) {
+            newIconResourceIds.add(0, resources.getIdentifier("@drawable/richtext", "id", packageName));
         }
 
+        iconResourceIds = newIconResourceIds;
     }
 
     @SuppressLint("InlinedApi")
     public void refreshView() {
 
-        // inflate the layout if we haven't done so yet
-        inflate(getContext(), R.layout.mindmap_node_list_item, this);
+        // inflate the layout if we haven't done so yet. Inflating it more than once would stack multiple copies of
+        // the layout into this view, and all further updates would only ever reach the first copy.
+        if (!isInflated) {
+            inflate(getContext(), R.layout.mindmap_node_list_item, this);
+            isInflated = true;
+        }
 
+        // the node might have received icons or rich text content since we last drew it
+        updateIconResourceIds();
 
         // the mindmap_node_list_item consists of a ImageView (icon), a TextView (node text), and another TextView
 		// ("+" button)
@@ -118,17 +146,18 @@ public class MindmapNodeLayout extends LinearLayout {
 
         if (iconResourceIds.size() > 0) {
             icon0View.setImageResource(iconResourceIds.get(0));
+            icon0View.setVisibility(VISIBLE);
 
         } else {
 
             // don't waste space, there are no icons
             icon0View.setVisibility(GONE);
-            icon1View.setVisibility(GONE);
         }
 
         // second icon
         if (iconResourceIds.size() > 1) {
             icon1View.setImageResource(iconResourceIds.get(1));
+            icon1View.setVisibility(VISIBLE);
 
         } else {
 
@@ -138,7 +167,10 @@ public class MindmapNodeLayout extends LinearLayout {
 
         TextView textView = findViewById(R.id.label);
         textView.setTextColor(getContext().getResources().getColor(android.R.color.primary_text_light));
-        SpannableString spannableString = new SpannableString(mindmapNode.getText());
+        // while the mindmap is still loading, a node can have no text yet (e.g. if its rich text content was not
+        // parsed yet). We'll be called again once the content arrives.
+        String nodeText = mindmapNode.getText();
+        SpannableString spannableString = new SpannableString(nodeText != null ? nodeText : "");
         if (mindmapNode.isBold()) {
             spannableString.setSpan(new StyleSpan(Typeface.BOLD), 0, spannableString.length(), 0);
         }
@@ -154,6 +186,10 @@ public class MindmapNodeLayout extends LinearLayout {
             } else {
                 expandable.setImageResource(R.drawable.plus_alt);
             }
+        } else {
+
+            // the node might have had children when we last drew it (this view is re-used while the mindmap loads)
+            expandable.setImageDrawable(null);
         }
 
         // if the node is selected, give it a special background

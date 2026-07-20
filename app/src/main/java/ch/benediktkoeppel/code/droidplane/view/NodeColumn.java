@@ -142,7 +142,14 @@ public class NodeColumn extends LinearLayout implements OnCreateContextMenuListe
 
     public void notifyNewMindmapNode(MindmapNode mindmapNode) {
 
-        mindmapNodeLayouts.add(new MindmapNodeLayout(context, mindmapNode));
+        // we don't just append the new node: this column subscribes to the parent node before it takes the snapshot
+        // of its child nodes, so a node that was added in between is announced here although we already have a
+        // layout for it. As child nodes are only ever appended, we simply catch up with the parent's child list.
+        List<MindmapNode> childMindmapNodes = parent.getChildMindmapNodes();
+        for (int i = mindmapNodeLayouts.size(); i < childMindmapNodes.size(); i++) {
+            mindmapNodeLayouts.add(new MindmapNodeLayout(context, childMindmapNodes.get(i)));
+        }
+
         adapter.notifyDataSetChanged();
 
     }

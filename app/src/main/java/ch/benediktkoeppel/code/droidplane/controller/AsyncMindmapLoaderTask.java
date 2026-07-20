@@ -178,6 +178,13 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                                     finalParentNode.notifySubscribersAddedChildMindmapNode(newMindmapNode);
                                 });
                             }
+
+                            // with its first child, the parent node becomes expandable, so the node itself (which is
+                            // drawn in the column to the left) has to redraw to show the expandable indicator
+                            if (parentNode.getNumChildMindmapNodes() == 1 && parentNode.hasNodeStyleChangedSubscribers()) {
+                                MindmapNode finalParentNode = parentNode;
+                                mainActivity.runOnUiThread(finalParentNode::notifySubscribersNodeStyleChanged);
+                            }
                         }
 
                     }
@@ -216,6 +223,13 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                                 mainActivity.runOnUiThread(() -> {
                                     finalParentNode.notifySubscribersNodeRichContentChanged();
                                 });
+                            }
+
+                            // the node itself has to redraw as well: its text (for nodes which only have rich text
+                            // content) and its rich text icon only become known now
+                            if (parentNode.hasNodeStyleChangedSubscribers()) {
+                                MindmapNode finalParentNode = parentNode;
+                                mainActivity.runOnUiThread(finalParentNode::notifySubscribersNodeStyleChanged);
                             }
                         }
                     }
