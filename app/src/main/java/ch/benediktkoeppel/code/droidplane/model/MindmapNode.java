@@ -461,7 +461,11 @@ public class MindmapNode {
     // TODO: this doesn't work while mindmap is still loading
     public List<MindmapNode> search(String searchString) {
         var res = new ArrayList<MindmapNode>();
-        if (this.getText().toUpperCase().contains(searchString.toUpperCase())) { // TODO: npe here when text is null, because text is a rich text
+
+        // a node has no text if it has neither a TEXT attribute nor rich text content (e.g. a node that only holds
+        // an icon, or a clone whose original we could not resolve)
+        String nodeText = this.getText();
+        if (nodeText != null && nodeText.toUpperCase().contains(searchString.toUpperCase())) {
             res.add(this);
         }
         for (MindmapNode child : childMindmapNodes) {

@@ -216,11 +216,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                     }
 
                     else if (xpp.getName().equals("richcontent")
-                            && (
-                            xpp.getAttributeValue(null, "TYPE").equals("NODE")
-                                    || xpp.getAttributeValue(null, "TYPE").equals("NOTE")
-                                    || xpp.getAttributeValue(null, "TYPE").equals("DETAILS")
-                    )
+                            && isSupportedRichContentType(xpp.getAttributeValue(null, "TYPE"))
                     ) {
 
                         // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
@@ -417,12 +413,22 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
     }
 
+    /**
+     * Whether we display the given richcontent TYPE. The attribute is optional, so it can be null.
+     *
+     * @param type the TYPE attribute of a richcontent tag, or null if it has none
+     */
+    private boolean isSupportedRichContentType(String type) {
+
+        return "NODE".equals(type) || "NOTE".equals(type) || "DETAILS".equals(type);
+    }
+
     private String loadRichContentNodes(XmlPullParser xpp) throws IOException, XmlPullParserException {
         // as we are stream processing the XML, we need to consume the full XML until the
         // richcontent tag is closed (i.e. until we're back at the current parsing depth)
         // eagerly parse until richcontent node is closed
         int startingDepth = xpp.getDepth();
-        String richTextContent = "";
+        StringBuilder richTextContent = new StringBuilder();
 
         int richContentSubParserEventType = xpp.next();
 
@@ -461,22 +467,21 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                  * See getNamespace* methods to retrieve newly declared namespaces.
                  */
                 case XmlPullParser.START_TAG: {
-                    String tagString = "";
 
-                    String tagName = xpp.getName();
-                    tagString += "<" + tagName;
+                    richTextContent.append("<").append(xpp.getName());
 
                     for (int i = 0; i < xpp.getAttributeCount(); i++) {
                         String attributeName = xpp.getAttributeName(i);
                         String attributeValue = xpp.getAttributeValue(i);
 
-                        String attributeString = " " + attributeName + "=" + '"' + attributeValue + '"';
-                        tagString += attributeString;
+                        // the parser hands us the decoded attribute value, so we have to escape it again - otherwise
+                        // a value containing a quote or an ampersand would produce broken markup
+                        richTextContent.append(" ").append(attributeName).append("=\"");
+                        appendEscaped(richTextContent, attributeValue, true);
+                        richTextContent.append("\"");
                     }
 
-                    tagString += ">";
-
-                    richTextContent += tagString;
+                    richTextContent.append(">");
 
                     break;
                 }
@@ -489,9 +494,7 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                  * available from getNamespace() and getPrefix().
                  */
                 case XmlPullParser.END_TAG: {
-                    String tagName = xpp.getName();
-                    String tagString = "</" + tagName + ">";
-                    richTextContent += tagString;
+                    richTextContent.append("</").append(xpp.getName()).append(">");
                     break;
                 }
 
@@ -511,8 +514,10 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                  * normalized appropriately.
                  */
                 case XmlPullParser.TEXT: {
-                    String text = xpp.getText();
-                    richTextContent += text;
+
+                    // the parser hands us the decoded text, so "&amp;" arrives as "&" here. We have to escape it
+                    // again, otherwise it would be re-interpreted as markup when we render the rich text.
+                    appendEscaped(richTextContent, xpp.getText(), false);
                     break;
                 }
 
@@ -525,11 +530,62 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
         // stop parsing once we have come out far enough from the XML to be at the starting depth again
         } while (xpp.getDepth() != startingDepth);
-        return richTextContent;
+        return richTextContent.toString();
+    }
+
+    /**
+     * Appends text to the rich text we are re-assembling, escaping the characters that would otherwise be read back
+     * as markup.
+     *
+     * @param target       where to append to
+     * @param text         the (already decoded) text to append
+     * @param isAttribute  whether we are writing an attribute value, which additionally needs its quotes escaped
+     */
+    private void appendEscaped(StringBuilder target, String text, boolean isAttribute) {
+
+        if (text == null) {
+            return;
+        }
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '&':
+                    target.append("&amp;");
+                    break;
+                case '<':
+                    target.append("&lt;");
+                    break;
+                case '>':
+                    target.append("&gt;");
+                    break;
+                case '"':
+                    if (isAttribute) {
+                        target.append("&quot;");
+                    } else {
+                        target.append(c);
+                    }
+                    break;
+                case '\'':
+                    if (isAttribute) {
+                        target.append("&#39;");
+                    } else {
+                        target.append(c);
+                    }
+                    break;
+                default:
+                    target.append(c);
+            }
+        }
     }
 
     private MindmapNode parseNodeTag(XmlPullParser xpp, MindmapNode parentNode) {
+        // the ID attribute is optional - Freeplane always writes one, but hand-edited files sometimes don't have it
         String id = xpp.getAttributeValue(null, "ID");
+        if (id == null) {
+            id = "";
+        }
+
         int numericId;
         try {
             numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
