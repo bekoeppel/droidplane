@@ -500,7 +500,7 @@ public class MainActivity extends FragmentActivity {
         }
     }
 
-    public void notifyNodeRichContentChanged() {
-        this.horizontalMindmapView.notifyNodeContentChanged(this);
+    public void notifyNodeRichContentChanged(MindmapNode mindmapNode) {
+        this.horizontalMindmapView.notifyNodeContentChanged(this, mindmapNode);
     }
 }

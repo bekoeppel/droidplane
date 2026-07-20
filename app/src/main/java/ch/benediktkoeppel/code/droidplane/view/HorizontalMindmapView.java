@@ -406,19 +406,11 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     private void down(Context context, MindmapNode node) {
 
-        // add a new column for this node and add it to the HorizontalMindmapView
-        NodeColumn nodeColumn;
-        synchronized (node) {
-            if (node.getParentNode() != null) {
-                synchronized (node.getParentNode()) {
-                    nodeColumn = new NodeColumn(getContext(), node);
-                    addColumn(nodeColumn);
-                }
-            } else {
-                nodeColumn = new NodeColumn(getContext(), node);
-                addColumn(nodeColumn);
-            }
-        }
+        // Add a new column for this node and add it to the HorizontalMindmapView. The loader appends child nodes
+        // from its own thread while we do this; the node's child list is copy-on-write, so we always see a
+        // consistent state, and NodeColumn catches up with whatever was added in between.
+        NodeColumn nodeColumn = new NodeColumn(getContext(), node);
+        addColumn(nodeColumn);
 
         // keep track of which list view belongs to which node column. This is necessary because onItemClick will get a
         // ListView (the one that was clicked), and we need to know which NodeColumn this is.
@@ -758,8 +750,20 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         }
     }
 
-    public void notifyNodeContentChanged(Context context) {
-        setApplicationTitle(context);
+    /**
+     * Called when the rich text content of a node arrived. Every node in the document reports this while the mindmap
+     * is loading, so we only do the (not exactly cheap) title update for the one node whose text is actually shown
+     * as the application title.
+     */
+    public void notifyNodeContentChanged(Context context, MindmapNode mindmapNode) {
+
+        if (nodeColumns.isEmpty()) {
+            return;
+        }
+
+        if (nodeColumns.get(nodeColumns.size() - 1).getParentNode() == mindmapNode) {
+            setApplicationTitle(context);
+        }
     }
 
     /**

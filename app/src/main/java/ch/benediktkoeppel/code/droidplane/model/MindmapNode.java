@@ -413,7 +413,7 @@ public class MindmapNode {
     public void notifySubscribersNodeRichContentChanged() {
         MainActivity mainActivity = this.subscribedMainActivity != null ? this.subscribedMainActivity.get() : null;
         if (mainActivity != null) {
-            mainActivity.notifyNodeRichContentChanged();
+            mainActivity.notifyNodeRichContentChanged(this);
         }
     }
 

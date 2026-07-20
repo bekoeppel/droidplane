@@ -1,10 +1,5 @@
 package ch.benediktkoeppel.code.droidplane.view;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -28,8 +23,10 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.MainApplication;
@@ -59,6 +56,19 @@ public class MindmapNodeLayout extends LinearLayout {
      * Whether the mindmap_node_list_item layout was already inflated into this view
      */
     private boolean isInflated;
+
+    /**
+     * How many icons and rich text contents the node had when we last calculated iconResourceIds. While the mindmap
+     * is loading these only ever grow, so this tells us whether we have to calculate them again.
+     */
+    private int renderedIconNamesCount = -1;
+    private int renderedRichTextContentsCount = -1;
+
+    /**
+     * Resources.getIdentifier() is a slow, string based lookup, and the same handful of icons appears over and over
+     * in a mindmap, so we resolve each drawable name only once. Only ever accessed from the UI thread.
+     */
+    private static final Map<String, Integer> drawableIdsByName = new HashMap<>();
 
     /**
      * This constructor is only used to make graphical GUI layout tools happy. If used in running code, it will always
@@ -98,13 +108,20 @@ public class MindmapNodeLayout extends LinearLayout {
     private void updateIconResourceIds() {
 
         Context context = getContext();
-        Resources resources = context.getResources();
-        String packageName = context.getPackageName();
+        List<String> iconNames = mindmapNode.getIconNames();
+        int richTextContentsCount = mindmapNode.getRichTextContents().size();
+
+        // this runs on every single bind of every visible row, so don't calculate anything if nothing was added to
+        // the node since we last did
+        if (iconResourceIds != null
+                && iconNames.size() == renderedIconNamesCount
+                && richTextContentsCount == renderedRichTextContentsCount) {
+            return;
+        }
 
         List<Integer> newIconResourceIds = new ArrayList<>();
-        for (String iconName : mindmapNode.getIconNames()) {
-            String drawableName = getDrawableNameFromMindmapIcon(iconName, context);
-            int iconResourceId = resources.getIdentifier("@drawable/" + drawableName, "id", packageName);
+        for (String iconName : iconNames) {
+            int iconResourceId = getDrawableId(getDrawableNameFromMindmapIcon(iconName, context), context);
 
             // getIdentifier returns 0 if we don't ship a drawable for this mindmap icon. Skip it, otherwise it would
             // take up the space of an icon that we can actually display.
@@ -115,15 +132,35 @@ public class MindmapNodeLayout extends LinearLayout {
 
         // set link icon if node has a link. The link icon will be the first icon shown
         if (mindmapNode.getLink() != null) {
-            newIconResourceIds.add(0, resources.getIdentifier("@drawable/link", "id", packageName));
+            newIconResourceIds.add(0, getDrawableId("link", context));
         }
 
         // set the rich text icon if it has
-        if (!mindmapNode.getRichTextContents().isEmpty()) {
-            newIconResourceIds.add(0, resources.getIdentifier("@drawable/richtext", "id", packageName));
+        if (richTextContentsCount > 0) {
+            newIconResourceIds.add(0, getDrawableId("richtext", context));
         }
 
         iconResourceIds = newIconResourceIds;
+        renderedIconNamesCount = iconNames.size();
+        renderedRichTextContentsCount = richTextContentsCount;
+    }
+
+    /**
+     * Resolves a drawable name to its resource ID, remembering the result
+     *
+     * @return the resource ID, or 0 if we don't have a drawable with that name
+     */
+    private static int getDrawableId(String drawableName, Context context) {
+
+        Integer cachedId = drawableIdsByName.get(drawableName);
+        if (cachedId != null) {
+            return cachedId;
+        }
+
+        Resources resources = context.getResources();
+        int drawableId = resources.getIdentifier("@drawable/" + drawableName, "id", context.getPackageName());
+        drawableIdsByName.put(drawableName, drawableId);
+        return drawableId;
     }
 
     @SuppressLint("InlinedApi")
