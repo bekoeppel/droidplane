@@ -10,6 +10,8 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.io.BufferedInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import ch.benediktkoeppel.code.droidplane.MainActivity;
 import ch.benediktkoeppel.code.droidplane.R;
@@ -22,24 +24,36 @@ import ch.benediktkoeppel.code.droidplane.R;
  */
 class HtmlEntitySanitizingInputStream extends FilterInputStream {
 
-    /** Maximum length of an HTML entity name we try to read. */
-    private static final int MAX_ENTITY_LENGTH = 10;
+    /**
+     * Maximum length of an HTML entity name we try to read. The longest HTML5 entity name
+     * ("CounterClockwiseContourIntegral") is 31 characters, plus the closing semicolon.
+     */
+    private static final int MAX_ENTITY_LENGTH = 32;
+
+    /**
+     * Size of the pushback buffer. It has to hold the longest replacement we ever push back: an entity that decodes
+     * to several code points becomes one numeric reference of up to 10 bytes per code point.
+     */
+    private static final int PUSHBACK_BUFFER_SIZE = 512;
 
     private final PushbackInputStream pushback;
     private final MainActivity mainActivity;
     private boolean warned = false;
 
+    /**
+     * Decoding an entity means running a full HTML parse, and mindmaps tend to contain the same few entities
+     * thousands of times, so we remember what we replaced an entity name with.
+     */
+    private final Map<String, byte[]> replacementCache = new HashMap<>();
+
     private static final String[] XML_BUILTINS = {"lt", "gt", "amp", "apos", "quot"};
 
 
     HtmlEntitySanitizingInputStream(InputStream in, MainActivity activity) {
-        // The pushback buffer should be able to hold the longest replacement we
-        // ever push back. Numeric representations of multi-byte characters can
-        // be quite long, so allocate a generous buffer.
         // Wrap the stream in a buffer so that the byte-by-byte processing below
         // does not trigger actual disk reads for every single byte. The
         // pushback stream allows us to "unread" the transformed entity bytes.
-        super(new PushbackInputStream(new BufferedInputStream(in), 32));
+        super(new PushbackInputStream(new BufferedInputStream(in), PUSHBACK_BUFFER_SIZE));
         this.pushback = (PushbackInputStream) super.in;
         this.mainActivity = activity;
     }
@@ -95,43 +109,73 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
     @Override
     public int read() throws IOException {
         int b = pushback.read();
-        if (b == '&') {
-            byte[] nameBuf = new byte[MAX_ENTITY_LENGTH];
-            int n = 0;
-            int ch;
-            while (n < nameBuf.length && (ch = pushback.read()) != -1) {
-                nameBuf[n++] = (byte) ch;
-                if (ch == ';') {
-                    break;
-                }
-            }
-
-            String entity = new String(nameBuf, 0, n, StandardCharsets.UTF_8);
-            if (n > 0 && entity.endsWith(";")) {
-                String name = entity.substring(0, entity.length() - 1);
-
-                if (isXmlBuiltin(name) || isNumericEntity(name)) {
-                    // Built-in XML entities and numeric references are left as is.
-                    pushback.unread(entity.getBytes(StandardCharsets.UTF_8));
-                    return '&';
-                }
-
-
-                String encoded = "&" + entity;
-                String decoded = Html.fromHtml(encoded).toString();
-                if (!encoded.equals(decoded)) {
-                    notifyUser();
-                    pushback.unread(toNumericBytes(decoded));
-                    return pushback.read();
-                }
-            }
-
-            if (n > 0) {
-                pushback.unread(nameBuf, 0, n);
-            }
-            return '&';
+        if (b != '&') {
+            return b;
         }
-        return b;
+
+        byte[] nameBuf = new byte[MAX_ENTITY_LENGTH];
+        int n = 0;
+        int ch;
+        while (n < nameBuf.length && (ch = pushback.read()) != -1) {
+            nameBuf[n++] = (byte) ch;
+            if (ch == ';') {
+                break;
+            }
+        }
+
+        String entity = new String(nameBuf, 0, n, StandardCharsets.UTF_8);
+        if (n > 0 && entity.endsWith(";")) {
+            String name = entity.substring(0, entity.length() - 1);
+
+            byte[] replacement = getReplacement(name);
+            if (replacement != null) {
+                notifyUser();
+                pushback.unread(replacement);
+                return pushback.read();
+            }
+        }
+
+        // nothing to replace: put the bytes we consumed back and hand out the ampersand
+        if (n > 0) {
+            pushback.unread(nameBuf, 0, n);
+        }
+        return '&';
+    }
+
+    /**
+     * Returns the bytes that should replace the entity "&amp;name;", or null if it can stay as it is.
+     *
+     * @param name the entity name, without the leading ampersand and the trailing semicolon
+     */
+    private byte[] getReplacement(String name) throws IOException {
+
+        // built-in XML entities and numeric references are understood by the XML parser
+        if (isXmlBuiltin(name) || isNumericEntity(name)) {
+            return null;
+        }
+
+        if (replacementCache.containsKey(name)) {
+            return replacementCache.get(name);
+        }
+
+        String encoded = "&" + name + ";";
+        String decoded = Html.fromHtml(encoded).toString();
+
+        byte[] replacement;
+        if (decoded.isEmpty() || encoded.equals(decoded)) {
+
+            // We could not decode this - either it is an entity that Html does not know, or it is not an entity at
+            // all but a literal ampersand (e.g. "AT&T; more text"). Escaping the ampersand keeps the document
+            // well-formed for the XML parser and keeps the text visible. Dropping it, which is what emitting the
+            // empty decoding would do, would silently delete content.
+            replacement = ("&amp;" + name + ";").getBytes(StandardCharsets.UTF_8);
+
+        } else {
+            replacement = toNumericBytes(decoded);
+        }
+
+        replacementCache.put(name, replacement);
+        return replacement;
     }
 
     @Override
