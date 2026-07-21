@@ -33,13 +33,26 @@ import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
 
 public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
+    /**
+     * The load that is currently running, if any.
+     * <p>
+     * Loading a mindmap costs a lot of memory, so there must never be more than one load in flight - two parses of a
+     * large document at the same time run the device out of memory. The activity can not keep track of this on its
+     * own: it is destroyed and re-created on a screen rotation, and the launcher can start a second instance of it,
+     * and in both cases the load that the previous instance started keeps running.
+     */
+    private static AsyncMindmapLoaderTask runningTask;
+
     // TODO: why is MainActivty needed here?
-    private final MainActivity mainActivity;
+    // not final: when the activity is re-created (e.g. on a screen rotation) while we are loading, the new activity
+    // attaches itself to this running load instead of starting the whole parse again
+    private volatile MainActivity mainActivity;
+    private volatile OnRootNodeLoadedListener onRootNodeLoadedListener;
+
     private final Intent intent;
     private final String action;
 
     private final Mindmap mindmap;
-    private final OnRootNodeLoadedListener onRootNodeLoadedListener;
 
     public AsyncMindmapLoaderTask(MainActivity mainActivity,
                                   OnRootNodeLoadedListener onRootNodeLoadedListener,
@@ -53,27 +66,89 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         this.mindmap = mindmap;
     }
 
+    /**
+     * The load that is currently running, or null if no mindmap is being loaded
+     */
+    public static synchronized AsyncMindmapLoaderTask getRunningTask() {
+
+        return runningTask;
+    }
+
+    /**
+     * Stops the load that is currently running, if any
+     */
+    public static synchronized void cancelRunningTask() {
+
+        if (runningTask != null) {
+            runningTask.cancel(true);
+            runningTask = null;
+        }
+    }
+
+    private static synchronized void setRunningTask(AsyncMindmapLoaderTask task) {
+
+        runningTask = task;
+    }
+
+    private static synchronized void clearRunningTask(AsyncMindmapLoaderTask task) {
+
+        if (runningTask == task) {
+            runningTask = null;
+        }
+    }
+
+    /**
+     * Stops whatever else was loading and starts this load.
+     */
+    public void start() {
+
+        cancelRunningTask();
+        setRunningTask(this);
+
+        // Run on the thread pool rather than on AsyncTask's default serial executor: a load that we just cancelled
+        // may still be stuck in a blocking read on a slow content provider, and it would keep this load from ever
+        // starting.
+        executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
+
+    /**
+     * Hands this running load over to a re-created activity, so that it can show the document that is already being
+     * parsed instead of starting the whole parse from the beginning.
+     *
+     * @param mainActivity             the new activity
+     * @param onRootNodeLoadedListener the new activity's listener
+     */
+    public void attachTo(MainActivity mainActivity, OnRootNodeLoadedListener onRootNodeLoadedListener) {
+
+        this.mainActivity = mainActivity;
+        this.onRootNodeLoadedListener = onRootNodeLoadedListener;
+
+        // the new activity does not know yet that it is waiting for a document
+        mainActivity.setMindmapIsLoading(true);
+
+        // let it display what we have parsed so far. Everything that we parse from now on reaches it through the
+        // subscriptions that its node columns set up.
+        MindmapNode rootNode = mindmap.getRootNode();
+        if (rootNode != null) {
+            onRootNodeLoadedListener.rootNodeLoaded(mindmap, rootNode);
+        }
+    }
+
+    public Mindmap getMindmap() {
+
+        return mindmap;
+    }
+
     @Override
     protected void onPostExecute(Object result) {
 
-        releaseFromMindmap();
+        clearRunningTask(this);
     }
 
     @Override
     protected void onCancelled(Object result) {
 
-        releaseFromMindmap();
-    }
-
-    /**
-     * Lets the Mindmap forget about this task once it is done. The task holds on to the activity, and the Mindmap
-     * outlives the activity, so leaving a finished task in there would leak the activity.
-     */
-    private void releaseFromMindmap() {
-
-        if (mindmap.getLoadingTask() == this) {
-            mindmap.setLoadingTask(null);
-        }
+        clearRunningTask(this);
     }
 
     @Override
@@ -353,6 +428,22 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 }
                 eventType = xpp.next();
             }
+
+        } catch (OutOfMemoryError e) {
+
+            // The document does not fit into memory on this device. Everything we parsed so far is useless: building
+            // the indexes and displaying it would only run out of memory again, so we drop the whole tree and tell
+            // the user. An OutOfMemoryError is an Error, not an Exception, so the catch below never saw it and the
+            // app died instead.
+            Log.e(MainApplication.TAG, "Ran out of memory while loading the mindmap", e);
+
+            rootNode = null;
+            nodeStack.clear();
+            mindmap.setRootNode(null);
+
+            mainActivity.setMindmapIsLoading(false);
+            abortWithPopupOnUiThread(R.string.mindmaptoobig);
+            return;
 
         } catch (Exception e) {
 

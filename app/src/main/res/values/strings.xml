@@ -11,6 +11,8 @@
     <string name="noicon">no icon</string>
     <string name="novalidfile">Please start DroidPlane by opening a *.mm file"</string>
     <string name="cantloadfile">Sorry, I could not read this mindmap file. It seems to be incomplete or corrupted.</string>
+    <!-- shown when the device ran out of memory while loading -->
+    <string name="mindmaptoobig">Sorry, this mindmap is too big to open on this device.</string>
     <!-- shown when only a part of the mindmap file could be parsed -->
     <string name="incompletefile">This mindmap file is incomplete, showing only the part that could be read.</string>
     <string name="copynodetext">Copy Node Text</string>

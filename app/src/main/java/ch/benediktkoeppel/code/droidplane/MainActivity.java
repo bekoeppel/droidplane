@@ -9,7 +9,6 @@ import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -103,8 +102,18 @@ public class MainActivity extends FragmentActivity {
         // then populate view with mindmap
         // if we already have exactly this document loaded (i.e. we were re-created, e.g. after a screen rotation),
         // we re-use it. Otherwise we load the document from the intent.
+        AsyncMindmapLoaderTask runningLoad = AsyncMindmapLoaderTask.getRunningTask();
+
         if (mindmap.isLoaded() && mindmap.getRootNode() != null && isAlreadyLoaded(getIntent())) {
             showLoadedMindmap();
+
+        }
+
+        // We were re-created (e.g. the screen was rotated) while this very document was still streaming in. Take
+        // over the running load instead of parsing everything again from the beginning - that would not only lose
+        // all the progress, but also keep the old parse running alongside the new one.
+        else if (runningLoad != null && runningLoad.getMindmap() == mindmap && isAlreadyLoaded(getIntent())) {
+            runningLoad.attachTo(this, createOnRootNodeLoadedListener());
 
         } else {
             loadMindmap(getIntent());
@@ -113,9 +122,10 @@ public class MainActivity extends FragmentActivity {
     }
 
     /* (non-Javadoc)
-     * We are a singleTop activity, so when a document is opened while DroidPlane is already running, we don't get a
-     * new MainActivity, but this callback instead. The file may well have changed since we loaded it (e.g. Dropbox
-     * has synced new content in the meantime), so we always load the document again.
+     * We are a singleTask activity, so when a document is opened (or the app is started from the launcher) while
+     * DroidPlane is already running, we don't get a new MainActivity, but this callback instead. A file may well
+     * have changed since we loaded it (e.g. Dropbox has synced new content in the meantime), so we load a document
+     * again whenever we are asked to open one.
      * @see android.app.Activity#onNewIntent(android.content.Intent)
      */
     @Override
@@ -123,15 +133,19 @@ public class MainActivity extends FragmentActivity {
 
         super.onNewIntent(intent);
 
+        // A plain launcher intent (the user tapped the app icon while DroidPlane was already running) should not
+        // throw away the mindmap that the user is looking at. We must not remember such an intent as ours either:
+        // it names no document, so the next time we are re-created (e.g. when the screen is rotated) we would not
+        // recognize the document we are showing any more, and would load the default mindmap over it.
+        boolean opensDocument = intent.getData() != null || intent.getBooleanExtra(INTENT_START_HELP, false);
+        if (!opensDocument) {
+            return;
+        }
+
         // getIntent() should return the intent that we are currently showing
         setIntent(intent);
 
-        // a plain launcher intent (the user tapped the app icon while DroidPlane was already running) should not
-        // throw away the mindmap that the user is looking at
-        boolean opensDocument = intent.getData() != null || intent.getBooleanExtra(INTENT_START_HELP, false);
-        if (opensDocument) {
-            loadMindmap(intent);
-        }
+        loadMindmap(intent);
     }
 
     /**
@@ -167,53 +181,40 @@ public class MainActivity extends FragmentActivity {
     private void loadMindmap(Intent intent) {
 
         // Stop a load that is possibly still running, so that it can not write into the mindmap that we are about to
-        // load. The task is kept in the view model, because it outlives this activity: when the screen is rotated
-        // while a document is loading, the new activity has to stop the load that the previous one started -
-        // otherwise two parsers write into the same (retained) Mindmap.
-        AsyncTask<?, ?, ?> runningLoaderTask = mindmap.getLoadingTask();
-        if (runningLoaderTask != null) {
-            runningLoaderTask.cancel(true);
-        }
+        // load, and so that we never hold two parsed documents in memory at the same time. This is tracked by the
+        // loader itself and not by this activity, because a load outlives the activity that started it.
+        AsyncMindmapLoaderTask.cancelRunningTask();
 
         // throw away the mindmap (and its view) that we have loaded so far
         horizontalMindmapView.clear();
         mindmap.reset();
 
-        OnRootNodeLoadedListener onRootNodeLoadedListener = new OnRootNodeLoadedListener() {
-            @Override
-            public void rootNodeLoaded(Mindmap mindmap, MindmapNode rootNode) {
-                // now set up the view
-                MindmapNode finalRootNode = rootNode;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        horizontalMindmapView.setMindmap(mindmap);
-
-                        // by default, the root node is the deepest node that is expanded
-                        horizontalMindmapView.setDeepestSelectedMindmapNode(finalRootNode);
-
-                        horizontalMindmapView.onRootNodeLoaded();
-
-                    }
-                });
-
-            }
-        };
-
         // load the file asynchronously
-        AsyncMindmapLoaderTask asyncMindmapLoaderTask = new AsyncMindmapLoaderTask(
+        new AsyncMindmapLoaderTask(
                 this,
-                onRootNodeLoadedListener,
+                createOnRootNodeLoadedListener(),
                 mindmap,
                 intent
-        );
-        mindmap.setLoadingTask(asyncMindmapLoaderTask);
+        ).start();
+    }
 
-        // run on the thread pool rather than on AsyncTask's default serial executor: a load that we just cancelled
-        // may still be stuck in a blocking read on a slow content provider, and it would keep this load from ever
-        // starting
-        asyncMindmapLoaderTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    /**
+     * Creates the listener that populates the view once the loader has parsed the root node
+     */
+    private OnRootNodeLoadedListener createOnRootNodeLoadedListener() {
+
+        return (loadedMindmap, rootNode) -> runOnUiThread(() -> {
+
+            horizontalMindmapView.setMindmap(loadedMindmap);
+
+            // by default, the root node is the deepest node that is expanded - but if we are taking over a load
+            // that was started before this activity was re-created, we continue where the user was
+            if (loadedMindmap.getDeepestSelectedMindmapNode() == null) {
+                horizontalMindmapView.setDeepestSelectedMindmapNode(rootNode);
+            }
+
+            horizontalMindmapView.onRootNodeLoaded();
+        });
     }
 
     private void setUpHorizontalMindmapView() {
