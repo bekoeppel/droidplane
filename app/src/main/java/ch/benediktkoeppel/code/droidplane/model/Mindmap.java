@@ -22,7 +22,7 @@ public class Mindmap extends ViewModel {
     /**
      * A map that resolves node IDs to Node objects
      */
-    MindmapIndexes mindmapIndexes;
+    private MindmapIndexes mindmapIndexes;
 
     // whether the mindmap has finished loading
     private boolean isLoaded = false;

@@ -54,6 +54,16 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
 
     private final Mindmap mindmap;
 
+    /**
+     * Hands out the numeric IDs of the nodes of this document. They only have to be unique within the document.
+     */
+    private int nextNumericId = 1;
+
+    /**
+     * The nodes of this document that clone another node, i.e. that show the text of a node they point at
+     */
+    private final List<MindmapNode> clonedNodes = new ArrayList<>();
+
     public AsyncMindmapLoaderTask(MainActivity mainActivity,
                                   OnRootNodeLoadedListener onRootNodeLoadedListener,
                                   Mindmap mindmap,
@@ -496,6 +506,16 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         // now set the corresponding links
         fillArrowLinks();
 
+        // Nodes that clone another node could not show its text while we were parsing, because the node they clone
+        // may appear anywhere in the document and the index did not exist yet. It does now, so let them redraw.
+        if (!clonedNodes.isEmpty()) {
+            mainActivity.runOnUiThread(() -> {
+                for (MindmapNode clonedNode : clonedNodes) {
+                    clonedNode.notifySubscribersNodeStyleChanged();
+                }
+            });
+        }
+
 
         long loadDocumentEndTime = System.currentTimeMillis();
         Tracker tracker = MainApplication.getTracker();
@@ -699,12 +719,12 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
             id = "";
         }
 
-        int numericId;
-        try {
-            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
-        } catch (NumberFormatException e) {
-            numericId = id.hashCode();
-        }
+        // A numeric ID, because that is what a context menu item can carry: the arrow link entries of the context
+        // menu use it to say which node they lead to. It only has to be unique within the document, so we simply
+        // count. Deriving it from the ID attribute (by dropping the non-digits, falling back to the string's hash)
+        // produced the same number for different nodes - "ID_1_2" and "ID_12" both became 12 - and then the menu
+        // entry led to whichever of them the index had kept.
+        int numericId = nextNumericId++;
 
         String text = xpp.getAttributeValue(null, "TEXT");
 
@@ -721,6 +741,13 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
         String treeIdAttribute = xpp.getAttributeValue(null, "TREE_ID");
 
         MindmapNode newMindmapNode = new MindmapNode(mindmap, parentNode, id, numericId, text, link, treeIdAttribute);
+
+        // a node that clones another one shows the text of the node it clones, which we can only look up once the
+        // whole document is parsed and indexed
+        if (treeIdAttribute != null && !treeIdAttribute.isEmpty()) {
+            clonedNodes.add(newMindmapNode);
+        }
+
         return newMindmapNode;
     }
 

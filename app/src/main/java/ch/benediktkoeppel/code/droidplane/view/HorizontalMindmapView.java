@@ -452,10 +452,16 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // first navigate back to the top (essentially closing all other nodes)
         top();
 
+        // There may be nothing to descend to: no document is loaded (yet), or the node we were asked for could not
+        // be resolved - an arrow link or an internal link whose target is not in this document, for instance.
+        if (node == null) {
+            return;
+        }
+
         // go upwards from the target node, and keep track of each node leading down to the target node
         List<MindmapNode> nodeHierarchy = new ArrayList<>();
         MindmapNode tmpNode = node;
-        while (tmpNode.getParentNode() != null) {   // TODO: this gives a NPE when rotating the device
+        while (tmpNode.getParentNode() != null) {
             nodeHierarchy.add(tmpNode);
             tmpNode = tmpNode.getParentNode();
         }
@@ -495,17 +501,24 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // selected node in the 2nd-rightmost column)
         // set the application title to this nodeTitle. If the nodeTitle is
         // empty, we set the default Application title
+        // the context does not always lead to an activity - it does not once the activity this view belonged to was
+        // destroyed, which is exactly when a load that is still running reports back
+        Activity activity = AndroidHelper.getActivity(context, Activity.class);
+        if (activity == null) {
+            Log.d(MainApplication.TAG, "Not setting the application title, this view has no activity any more");
+            return;
+        }
+
         String nodeTitle = getTitleOfRightmostParent();
         Log.d(MainApplication.TAG, "nodeTitle = " + nodeTitle);
         if (nodeTitle == null || nodeTitle.equals("")) {
             Log.d(MainApplication.TAG, "Setting application title to default string: " +
                                        getResources().getString(R.string.app_name));
-            AndroidHelper.getActivity(context, Activity.class).setTitle(R.string.app_name);
+            activity.setTitle(R.string.app_name);
 
         } else {
             Log.d(MainApplication.TAG, "Setting application title to node name: " + nodeTitle);
-            AndroidHelper.getActivity(context, Activity.class).setTitle(nodeTitle);
-            // TODO: java.lang.NullPointerException: Attempt to invoke virtual method 'void android.app.Activity.setTitle(java.lang.CharSequence)' on a null object reference
+            activity.setTitle(nodeTitle);
         }
     }
 
@@ -514,13 +527,19 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
      */
     // TODO: the view should not do this
     public void enableHomeButtonIfEnoughColumns(Context context) {
+
+        MainActivity activity = AndroidHelper.getActivity(context, MainActivity.class);
+        if (activity == null) {
+            return;
+        }
+
         // if we only have one column (i.e. this is the root node), then we
         // disable the home button
         int numberOfColumns = getNumberOfColumns();
         if (numberOfColumns >= 2) {
-            AndroidHelper.getActivity(context, MainActivity.class).enableHomeButton();
+            activity.enableHomeButton();
         } else {
-            AndroidHelper.getActivity(context, MainActivity.class).disableHomeButton();
+            activity.disableHomeButton();
         }
     }
 

@@ -131,131 +131,6 @@ public class MindmapNode {
         //node = null;
     }
 
-    /**
-     * Creates a new MindMapNode from Node. The node needs to be of type ELEMENT and have tag "node". Throws a
-     * {@link ClassCastException} if the Node can not be converted to a MindmapNode.
-     *
-     * @param node
-     */
-//    public MindmapNode(Node node, MindmapNode parentNode, Mindmap mindmap) {
-//
-//        this.mindmap = mindmap;
-//
-//        // store the parentNode
-//        this.parentNode = parentNode;
-//
-//        // convert the XML Node to a XML Element
-//        Element tmpElement;
-//        if (isMindmapNode(node)) {
-//            tmpElement = (Element)node;
-//        } else {
-//            throw new ClassCastException("Can not convert Node to MindmapNode");
-//        }
-//
-//        // store the Node
-//        this.node = node;
-//
-//        // extract the ID of the node
-//        id = tmpElement.getAttribute("ID");
-//
-//        try {
-//            numericId = Integer.parseInt(id.replaceAll("\\D+", ""));
-//        } catch (NumberFormatException e) {
-//            numericId = id.hashCode();
-//        }
-//
-//
-//        // extract the string (TEXT attribute) of the nodes
-//        String text = tmpElement.getAttribute("TEXT");
-//
-//        // extract the richcontent (HTML) of the node. This works both for nodes with a rich text content
-//        // (TYPE="NODE"), for "Notes" (TYPE="NOTE"), for "Details" (TYPE="DETAILS").
-//        String richTextContent = null;
-//        // find 'richcontent TYPE="NODE"' subnode, which will contain the rich text content
-//        NodeList richtextNodeList = tmpElement.getChildNodes();
-//        for (int i = 0; i < richtextNodeList.getLength(); i++) {
-//            Node n = richtextNodeList.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("richcontent")) {
-//                Element richcontentElement = (Element)n;
-//                String typeAttribute = richcontentElement.getAttribute("TYPE");
-//                if (typeAttribute.equals("NODE") || typeAttribute.equals("NOTE") || typeAttribute.equals("DETAILS")) {
-//
-//                    // extract the whole rich text (XML), to show in a WebView activity
-//                    try {
-//                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-//                        ByteArrayOutputStream boas = new ByteArrayOutputStream();
-//                        transformer.transform(new DOMSource(richtextNodeList.item(0)), new StreamResult(boas));
-//                        richTextContent = boas.toString();
-//                    } catch (TransformerException e) {
-//                        e.printStackTrace();
-//                    }
-//
-//                    // if the node has no text itself, then convert the rich text content to a text
-//                    if (text == null || text.equals("")) {
-//                        // convert the content (text only) into a string, to show in the normal list view
-//                        text = Html.fromHtml(richcontentElement.getTextContent()).toString();
-//                    }
-//                }
-//            }
-//        }
-//        this.richTextContent = richTextContent;
-//        this.text = text;
-//
-//
-//        // extract styles
-//        NodeList styleNodeList = tmpElement.getChildNodes();
-//        boolean isBold = false;
-//        boolean isItalic = false;
-//        for (int i = 0; i < styleNodeList.getLength(); i++) {
-//            Node n = styleNodeList.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("font")) {
-//                Element fontElement = (Element)n;
-//                if (fontElement.hasAttribute("BOLD") && fontElement.getAttribute("BOLD").equals("true")) {
-//                    Log.d(MainApplication.TAG, "Found bold node");
-//                    isBold = true;
-//                }
-//                if (fontElement.hasAttribute("ITALIC") && fontElement.getAttribute("ITALIC").equals("true")) {
-//                    isItalic = true;
-//                }
-//            }
-//        }
-//        this.isBold = isBold;
-//        this.isItalic = isItalic;
-//
-//        // extract icons
-//        iconNames = getIcons();
-//
-//        // find out if it has sub nodes
-//        // TODO: this should just go into a getter
-//        isExpandable = (getNumChildMindmapNodes() > 0);
-//
-//        // extract link
-//        String linkAttribute = tmpElement.getAttribute("LINK");
-//        if (!linkAttribute.equals("")) {
-//            link = Uri.parse(linkAttribute);
-//        } else {
-//            link = null;
-//        }
-//
-//        // get cloned node's info
-//        treeIdAttribute = tmpElement.getAttribute("TREE_ID");
-//
-//        // get arrow link destinations
-//        arrowLinkDestinationIds = new ArrayList<>();
-//        arrowLinkDestinationNodes = new ArrayList<>();
-//        arrowLinkIncomingNodes = new ArrayList<>();
-//        NodeList arrowlinkList = tmpElement.getChildNodes();
-//        for (int i = 0; i< arrowlinkList.getLength(); i++) {
-//            Node n = arrowlinkList.item(i);
-//            if (n.getNodeType() == Node.ELEMENT_NODE && n.getNodeName().equals("arrowlink")) {
-//                Element arrowlinkElement = (Element)n;
-//                String destinationId = arrowlinkElement.getAttribute("DESTINATION");
-//                arrowLinkDestinationIds.add(destinationId);
-//            }
-//        }
-//
-//    }
-
 
     /**
      * Selects or deselects this node
@@ -285,9 +160,10 @@ public class MindmapNode {
     // TODO: this should probably live in a view controller, not here
     public String getText() {
 
-        // if this is a cloned node, get the text from the original node
+        // If this is a cloned node, get the text from the original node. While the document is still being parsed
+        // this returns nothing: the node we clone can be anywhere in the document, so it can only be resolved once
+        // the whole document is indexed. The loader lets us redraw when that has happened.
         if (treeIdAttribute != null && !treeIdAttribute.equals("")) {
-            // TODO this now fails when loading, because the background indexing is not done yet - so we maybe should mark this as "pending", and put it into a queue, to be updated once the linked node is there
             MindmapNode linkedNode = mindmap.getNodeByID(treeIdAttribute);
             if (linkedNode != null) {
                 return linkedNode.getText();

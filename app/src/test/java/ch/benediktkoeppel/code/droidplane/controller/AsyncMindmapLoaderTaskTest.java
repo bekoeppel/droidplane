@@ -1,6 +1,7 @@
 package ch.benediktkoeppel.code.droidplane.controller;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -86,9 +87,47 @@ public class AsyncMindmapLoaderTaskTest {
 
         load("<map><node TEXT='root' ID='ID_1'><node TEXT='child' ID='ID_77'/></node></map>");
 
-        assertEquals("child", mindmap.getNodeByID("ID_77").getText());
-        assertEquals("child", mindmap.getNodeByNumericID(77).getText());
+        MindmapNode child = mindmap.getNodeByID("ID_77");
+        assertEquals("child", child.getText());
+
+        // the numeric ID is what a context menu entry carries, and it has to lead back to the same node
+        assertEquals(child, mindmap.getNodeByNumericID(child.getNumericId()));
         assertTrue(mindmap.isLoaded());
+    }
+
+    @Test
+    public void givesNodesDistinctNumericIdsEvenWhenTheirIdsLookAlike() {
+
+        // regression: the numeric ID used to be the ID attribute with the non-digits dropped, so "ID_1_2" and
+        // "ID_12" both became 12 and the arrow link menu led to the wrong node
+        load("<map><node TEXT='root' ID='ID_1'>"
+                + "<node TEXT='a' ID='ID_1_2'/>"
+                + "<node TEXT='b' ID='ID_12'/>"
+                + "<node TEXT='c' ID='no-digits-at-all'/>"
+                + "</node></map>");
+
+        MindmapNode a = mindmap.getNodeByID("ID_1_2");
+        MindmapNode b = mindmap.getNodeByID("ID_12");
+        MindmapNode c = mindmap.getNodeByID("no-digits-at-all");
+
+        assertNotEquals(a.getNumericId(), b.getNumericId());
+        assertEquals(a, mindmap.getNodeByNumericID(a.getNumericId()));
+        assertEquals(b, mindmap.getNodeByNumericID(b.getNumericId()));
+        assertEquals(c, mindmap.getNodeByNumericID(c.getNumericId()));
+    }
+
+    @Test
+    public void resolvesTheTextOfAClonedNodeOnceTheDocumentIsIndexed() {
+
+        // a clone has no text of its own - it shows the text of the node it points at, which can be anywhere in the
+        // document and so is only resolvable once the whole file is parsed
+        MindmapNode root = load(
+                "<map><node TEXT='root' ID='ID_1'>"
+                        + "<node TREE_ID='ID_original' ID='ID_2'/>"
+                        + "<node TEXT='the original' ID='ID_original'/>"
+                        + "</node></map>");
+
+        assertEquals("the original", child(root, 0).getText());
     }
 
     @Test

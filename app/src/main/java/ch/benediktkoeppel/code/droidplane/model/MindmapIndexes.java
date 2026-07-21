@@ -1,8 +1,12 @@
 package ch.benediktkoeppel.code.droidplane.model;
 
+import java.util.Collections;
 import java.util.Map;
 
 
+/**
+ * Resolves node IDs to nodes. Built once, after the whole document was parsed, and only read from then on.
+ */
 public class MindmapIndexes {
 
     private final Map<String, MindmapNode> nodesById;
@@ -13,11 +17,14 @@ public class MindmapIndexes {
         this.nodesByNumericId = nodesByNumericId;
     }
 
+    // The indexes are handed to the whole app, but they describe the document that was loaded, so a caller must not
+    // be able to quietly add or drop nodes. These wrap, they do not copy - the maps hold one entry per node.
+
     public Map<String, MindmapNode> getNodesByIdIndex() {
-        return this.nodesById;
+        return Collections.unmodifiableMap(this.nodesById);
     }
 
     public Map<Integer, MindmapNode> getNodesByNumericIndex() {
-        return this.nodesByNumericId;
+        return Collections.unmodifiableMap(this.nodesByNumericId);
     }
 }
