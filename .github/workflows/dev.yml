@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - '**/*.md'
       - '.github/**'
+  # a push that only touches .github is ignored above, so allow starting this by hand
+  workflow_dispatch:
 
 env: 
   JAVA_VERSION: '21'
@@ -25,6 +27,22 @@ jobs:
         distribution: temurin
         java-version: ${{ env.JAVA_VERSION }}
         cache: gradle
+
+    # Robolectric downloads the Android runtime it tests against on first use, so cache it between runs
+    - uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository/org/robolectric
+        key: robolectric-${{ runner.os }}
+
+    # before building, so that a failing test does not produce an APK
+    - run: ./gradlew testDebugUnitTest --stacktrace
+
+    - name: Upload test report
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: app/build/reports/tests/testDebugUnitTest
 
     - run: ./gradlew assembleDebug --stacktrace
 
