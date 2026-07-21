@@ -127,35 +127,42 @@ class HtmlEntitySanitizingInputStream extends FilterInputStream {
         if (n > 0 && entity.endsWith(";")) {
             String name = entity.substring(0, entity.length() - 1);
 
-            byte[] replacement = getReplacement(name);
-            if (replacement != null) {
-                notifyUser();
-                pushback.unread(replacement);
-                return pushback.read();
+            // built-in XML entities and numeric references are what we are converting to, and the parser reads them
+            // happily - leave them exactly as they are
+            if (isXmlBuiltin(name) || isNumericEntity(name)) {
+                pushback.unread(nameBuf, 0, n);
+                return '&';
             }
+
+            notifyUser();
+            pushback.unread(getReplacement(name));
+            return pushback.read();
         }
 
-        // nothing to replace: put the bytes we consumed back and hand out the ampersand
+        // This ampersand does not start an entity that we could rewrite - there was no semicolon close enough, or
+        // the name between them means nothing. Put back everything we consumed while looking, and escape the
+        // ampersand itself: a bare "&" is not valid XML, and the parser would abort on it. (unread() pushes to the
+        // front, so the "amp;" we push last is what comes out first.)
         if (n > 0) {
             pushback.unread(nameBuf, 0, n);
         }
+
+        notifyUser();
+        pushback.unread("amp;".getBytes(StandardCharsets.UTF_8));
         return '&';
     }
 
     /**
-     * Returns the bytes that should replace the entity "&amp;name;", or null if it can stay as it is.
+     * Returns the bytes that should replace the entity "&amp;name;". Not for the entities that XML defines itself
+     * and not for numeric references - those are handled by the caller and stay as they are.
      *
      * @param name the entity name, without the leading ampersand and the trailing semicolon
      */
     private byte[] getReplacement(String name) throws IOException {
 
-        // built-in XML entities and numeric references are understood by the XML parser
-        if (isXmlBuiltin(name) || isNumericEntity(name)) {
-            return null;
-        }
-
-        if (replacementCache.containsKey(name)) {
-            return replacementCache.get(name);
+        byte[] cachedReplacement = replacementCache.get(name);
+        if (cachedReplacement != null) {
+            return cachedReplacement;
         }
 
         String encoded = "&" + name + ";";
