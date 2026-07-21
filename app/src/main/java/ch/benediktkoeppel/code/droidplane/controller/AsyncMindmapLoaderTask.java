@@ -163,7 +163,13 @@ public class AsyncMindmapLoaderTask extends AsyncTask<String, Void, Object> {
                 Intent.ACTION_OPEN_DOCUMENT.equals(action)
         ) {
 
-            Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
+            // Log which document we are asked to open, and how it was announced to us. Which app can open a .mm
+            // file, and whether the user's "always open with" sticks, depends entirely on the URI and the MIME type
+            // that the sending app puts into the intent - and the system log redacts the URI of a start request, so
+            // this is the only place where we can see it.
+            Log.d(MainApplication.TAG,
+                    "started from " + action + " intent, data " + intent.getData() + ", type " + intent.getType()
+            );
 
             // get the URI to the target document (the Mindmap we are opening) and open the InputStream
             Uri uri = intent.getData();
