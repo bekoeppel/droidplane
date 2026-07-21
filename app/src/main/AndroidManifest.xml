@@ -65,6 +65,66 @@
                 <data android:host="*" />
                 <data android:mimeType="application/x-freemind" />
             </intent-filter>
+
+            <!--
+                Anything whose name ends in .mm, whatever type the sending app claims it is.
+
+                Apps disagree about the MIME type of a mindmap: Dropbox announces the same file as
+                "application/x-freemind" from its file preview screen, but as a generic type from its offline and
+                recent file lists - which is why DroidPlane used to be offered in one place and not in the other,
+                and why "always open with DroidPlane" never stuck (Android remembers that choice per MIME type).
+
+                Matching on the file name instead means we are offered in both cases, without registering for every
+                unknown binary file on the device. Note the host: in IntentFilter.matchData the path is only
+                examined when the filter declares an authority, so without "*" these path rules would be ignored and
+                this filter would match everything.
+
+                pathPattern is not a regular expression - its ".*" does not backtrack, so it needs one pattern per
+                possible number of dots in the name. pathSuffix does the same thing properly, but only from API 31
+                on, so the patterns stay for older devices.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+
+                <data android:mimeType="*/*" />
+
+                <data android:pathSuffix=".mm" />
+                <data android:pathPattern=".*\\.mm" />
+                <data android:pathPattern=".*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mm" />
+            </intent-filter>
+
+            <!--
+                The same, for senders that pass no MIME type at all. A filter that declares a mimeType never matches
+                an intent without one, and ".mm" is not in Android's extension-to-MIME table, so this is not a rare
+                case.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+
+                <data android:pathSuffix=".mm" />
+                <data android:pathPattern=".*\\.mm" />
+                <data android:pathPattern=".*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mm" />
+            </intent-filter>
         </activity>
 
 
