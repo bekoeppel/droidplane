@@ -210,6 +210,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
         // then remove all columns
         nodeColumns.clear();
         linearLayout.removeAllViews();
+
+        // a column holds on to its parent node, and from there the whole mindmap is reachable, so a column we no
+        // longer display must not stay in this map
+        listViewToNodeColumn.clear();
     }
 
     /**
@@ -241,6 +245,10 @@ public class HorizontalMindmapView extends HorizontalScrollView implements OnTou
 
             // remove it from the nodeColumns list
             nodeColumns.remove(nodeColumns.size() - 1);
+
+            // and stop tracking its list view, otherwise the column (and with it the whole mindmap it belongs to)
+            // would be kept alive for as long as this view exists
+            listViewToNodeColumn.remove(rightmostColumn.getListView());
 
             // then deselect all nodes on the now newly rightmost column and let the column redraw
             nodeColumns.get(nodeColumns.size() - 1).deselectAllNodes();

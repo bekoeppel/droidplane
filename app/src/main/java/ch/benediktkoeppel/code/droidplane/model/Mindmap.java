@@ -28,6 +28,13 @@ public class Mindmap extends ViewModel {
     private boolean isLoaded = false;
 
     /**
+     * Size and modification time of the document as it was when we loaded it. We use this to tell whether a document
+     * that is opened again is still the one we have in memory, or whether it has changed in the meantime (e.g.
+     * because Dropbox has synced new content) and has to be parsed again.
+     */
+    private String documentVersion;
+
+    /**
      * The deepest node that the user has expanded. This lives here (and not in the view) so that we can restore the
      * user's position when the activity is re-created, e.g. after a screen rotation.
      */
@@ -84,6 +91,14 @@ public class Mindmap extends ViewModel {
         return mindmapIndexes.getNodesByNumericIndex().get(numericId);
     }
 
+    public String getDocumentVersion() {
+        return documentVersion;
+    }
+
+    public void setDocumentVersion(String documentVersion) {
+        this.documentVersion = documentVersion;
+    }
+
     public MindmapNode getDeepestSelectedMindmapNode() {
         return deepestSelectedMindmapNode;
     }
@@ -98,6 +113,7 @@ public class Mindmap extends ViewModel {
     public void reset() {
 
         uri = null;
+        documentVersion = null;
         rootNode = null;
         mindmapIndexes = null;
         deepestSelectedMindmapNode = null;

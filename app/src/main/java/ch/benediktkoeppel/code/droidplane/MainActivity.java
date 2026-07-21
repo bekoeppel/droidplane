@@ -8,8 +8,11 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -17,6 +20,7 @@ import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
 
+import java.io.File;
 import java.util.Objects;
 
 import androidx.fragment.app.FragmentActivity;
@@ -145,15 +149,88 @@ public class MainActivity extends FragmentActivity {
         // getIntent() should return the intent that we are currently showing
         setIntent(intent);
 
+        // We are already showing this document, and it has not changed since we read it - so keep it, together with
+        // wherever the user has navigated to. Re-opening an unchanged file from Dropbox is common, and parsing a
+        // large mindmap all over again for it is both slow and, until the whole old document has been collected,
+        // twice the memory.
+        AsyncMindmapLoaderTask runningLoad = AsyncMindmapLoaderTask.getRunningTask();
+        boolean isLoadingThisDocument = runningLoad != null && runningLoad.getMindmap() == mindmap;
+
+        if ((mindmap.isLoaded() || isLoadingThisDocument) && isAlreadyLoaded(intent)) {
+            Log.d(MainApplication.TAG, "Document is unchanged, keeping the mindmap we have");
+            return;
+        }
+
         loadMindmap(intent);
     }
 
     /**
-     * Returns whether the document that the intent asks for is the one we have already loaded
+     * Returns whether the intent asks for the document that we have loaded, at the version that we have loaded
      */
     private boolean isAlreadyLoaded(Intent intent) {
 
-        return Objects.equals(intent.getData(), mindmap.getUri());
+        Uri uri = intent.getData();
+        if (!Objects.equals(uri, mindmap.getUri())) {
+            return false;
+        }
+
+        // no URI means the example mindmap from our own resources, which never changes
+        if (uri == null) {
+            return true;
+        }
+
+        // The same file can have new content - that is exactly what happens when Dropbox syncs a mindmap that was
+        // edited elsewhere. If we can find out how big the document is and when it was last modified, we only
+        // re-use what we have if both still match. If we can't tell, we play safe and load it again.
+        String documentVersion = getDocumentVersion(intent.getData());
+        return documentVersion != null && documentVersion.equals(mindmap.getDocumentVersion());
+    }
+
+    /**
+     * Reads size and modification time of a document, as a string that changes whenever the document changes.
+     *
+     * @param uri the document, or null if we are not opening a document (i.e. we show the example mindmap)
+     * @return the version string, or null if the document does not tell us
+     */
+    private String getDocumentVersion(Uri uri) {
+
+        if (uri == null) {
+            return null;
+        }
+
+        // a plain file does not go through a content provider
+        if ("file".equals(uri.getScheme()) && uri.getPath() != null) {
+            File file = new File(uri.getPath());
+            if (!file.exists()) {
+                return null;
+            }
+            return file.length() + "@" + file.lastModified();
+        }
+
+        String[] columns = {OpenableColumns.SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED};
+        try (Cursor cursor = getContentResolver().query(uri, columns, null, null, null)) {
+
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+
+            int sizeColumn = cursor.getColumnIndex(OpenableColumns.SIZE);
+            int lastModifiedColumn = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED);
+
+            // without both of these we can not tell one version of the document from another
+            if (sizeColumn < 0 || lastModifiedColumn < 0
+                    || cursor.isNull(sizeColumn) || cursor.isNull(lastModifiedColumn)) {
+                return null;
+            }
+
+            return cursor.getLong(sizeColumn) + "@" + cursor.getLong(lastModifiedColumn);
+
+        } catch (Exception e) {
+
+            // not every content provider answers this query
+            Log.d(MainApplication.TAG, "Could not determine the version of " + uri, e);
+            return null;
+        }
     }
 
     /**
@@ -188,6 +265,10 @@ public class MainActivity extends FragmentActivity {
         // throw away the mindmap (and its view) that we have loaded so far
         horizontalMindmapView.clear();
         mindmap.reset();
+
+        // remember which version of the document we are about to read, so that we can tell next time whether it has
+        // changed in the meantime
+        mindmap.setDocumentVersion(getDocumentVersion(intent.getData()));
 
         // load the file asynchronously
         new AsyncMindmapLoaderTask(
