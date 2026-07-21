@@ -12,9 +12,15 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:theme="@style/AppTheme">
+        <!-- singleTask, so that there is only ever one MainActivity, and it gets an onNewIntent() when a file is
+             opened while DroidPlane is already running. With the default launch mode, the system either drops that
+             intent (and we keep showing the previously loaded, by now outdated mindmap) or starts a second activity
+             instance - which comes with a second, empty Mindmap view model, so a large document that is still
+             loading would be parsed a second time, next to the first one. -->
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -59,13 +65,73 @@
                 <data android:host="*" />
                 <data android:mimeType="application/x-freemind" />
             </intent-filter>
+
+            <!--
+                Anything whose name ends in .mm, whatever type the sending app claims it is.
+
+                Apps disagree about the MIME type of a mindmap: Dropbox announces the same file as
+                "application/x-freemind" from its file preview screen, but as a generic type from its offline and
+                recent file lists - which is why DroidPlane used to be offered in one place and not in the other,
+                and why "always open with DroidPlane" never stuck (Android remembers that choice per MIME type).
+
+                Matching on the file name instead means we are offered in both cases, without registering for every
+                unknown binary file on the device. Note the host: in IntentFilter.matchData the path is only
+                examined when the filter declares an authority, so without "*" these path rules would be ignored and
+                this filter would match everything.
+
+                pathPattern is not a regular expression - its ".*" does not backtrack, so it needs one pattern per
+                possible number of dots in the name. pathSuffix does the same thing properly, but only from API 31
+                on, so the patterns stay for older devices.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+
+                <data android:mimeType="*/*" />
+
+                <data android:pathSuffix=".mm" />
+                <data android:pathPattern=".*\\.mm" />
+                <data android:pathPattern=".*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mm" />
+            </intent-filter>
+
+            <!--
+                The same, for senders that pass no MIME type at all. A filter that declares a mimeType never matches
+                an intent without one, and ".mm" is not in Android's extension-to-MIME table, so this is not a rare
+                case.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+
+                <data android:pathSuffix=".mm" />
+                <data android:pathPattern=".*\\.mm" />
+                <data android:pathPattern=".*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.mm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.mm" />
+            </intent-filter>
         </activity>
 
 
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 
         <activity
-            android:name=".RichTextViewActivity"
+            android:name=".view.RichTextViewActivity"
             android:label="@string/title_activity_rich_text_view"></activity>
     </application>
 

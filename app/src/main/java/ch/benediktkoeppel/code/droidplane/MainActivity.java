@@ -1,34 +1,44 @@
 package ch.benediktkoeppel.code.droidplane;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
+import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.LinearLayout;
+
+import java.io.File;
+import java.util.Objects;
+
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProviders;
+
 import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.Tracker;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
+
+import ch.benediktkoeppel.code.droidplane.controller.AsyncMindmapLoaderTask;
+import ch.benediktkoeppel.code.droidplane.controller.OnRootNodeLoadedListener;
+import ch.benediktkoeppel.code.droidplane.model.Mindmap;
+import ch.benediktkoeppel.code.droidplane.model.MindmapNode;
+import ch.benediktkoeppel.code.droidplane.view.HorizontalMindmapView;
+import ch.benediktkoeppel.code.droidplane.view.MindmapNodeLayout;
 
 /**
  * The MainActivity can be started from the App Launcher, or with a File Open intent. If the MainApplication was
@@ -47,6 +57,8 @@ public class MainActivity extends FragmentActivity {
      * HorizontalMindmapView that contains all NodeColumns
      */
     private HorizontalMindmapView horizontalMindmapView;
+    private Menu menu;
+    private boolean mindmapIsLoading;
 
     @Override
     public void onStart() {
@@ -85,48 +97,211 @@ public class MainActivity extends FragmentActivity {
         // enable the Android home button
         enableHomeButton();
 
+        // set up horizontal mindmap view first
+        setUpHorizontalMindmapView();
+
         // get the Mindmap ViewModel
         mindmap = ViewModelProviders.of(this).get(Mindmap.class);
 
-        // intents (how we are called)
-        Intent intent = getIntent();
-        String action = intent.getAction();
+        // then populate view with mindmap
+        // if we already have exactly this document loaded (i.e. we were re-created, e.g. after a screen rotation),
+        // we re-use it. Otherwise we load the document from the intent.
+        AsyncMindmapLoaderTask runningLoad = AsyncMindmapLoaderTask.getRunningTask();
 
-        // we didn't load a mindmap yet, we open it
-        // otherwise, we already have a mindmap in the ViewModel, so we can just show the mindmap view again
-        if (mindmap.getRootNode() == null) {
+        if (mindmap.isLoaded() && mindmap.getRootNode() != null && isAlreadyLoaded(getIntent())) {
+            showLoadedMindmap();
 
-            // create a ProgressDialog, and load the file asynchronously
-            ProgressDialog progressDialog = ProgressDialog.show(
-                    this,
-                    "DroidPlane",
-                    "Opening Mindmap File...",
-                    true,
-                    false
-            );
-
-            // Once the FileOpenTask is complete, we want to set up the horizontal mindmap view. If we already have
-            // a mindmap, we run it immediately.
-            Runnable onPostExecuteTask = new Runnable() {
-                @Override
-                public void run() {
-                    setUpHorizontalMindmapView();
-                }
-            };
-
-            // open file
-            new FileOpenTask(intent, action, progressDialog, onPostExecuteTask).execute();
-
-        } else {
-            setUpHorizontalMindmapView();
         }
 
+        // We were re-created (e.g. the screen was rotated) while this very document was still streaming in. Take
+        // over the running load instead of parsing everything again from the beginning - that would not only lose
+        // all the progress, but also keep the old parse running alongside the new one.
+        else if (runningLoad != null && runningLoad.getMindmap() == mindmap && isAlreadyLoaded(getIntent())) {
+            runningLoad.attachTo(this, createOnRootNodeLoadedListener());
+
+        } else {
+            loadMindmap(getIntent());
+        }
+
+    }
+
+    /* (non-Javadoc)
+     * We are a singleTask activity, so when a document is opened (or the app is started from the launcher) while
+     * DroidPlane is already running, we don't get a new MainActivity, but this callback instead. A file may well
+     * have changed since we loaded it (e.g. Dropbox has synced new content in the meantime), so we load a document
+     * again whenever we are asked to open one.
+     * @see android.app.Activity#onNewIntent(android.content.Intent)
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+
+        super.onNewIntent(intent);
+
+        // A plain launcher intent (the user tapped the app icon while DroidPlane was already running) should not
+        // throw away the mindmap that the user is looking at. We must not remember such an intent as ours either:
+        // it names no document, so the next time we are re-created (e.g. when the screen is rotated) we would not
+        // recognize the document we are showing any more, and would load the default mindmap over it.
+        boolean opensDocument = intent.getData() != null || intent.getBooleanExtra(INTENT_START_HELP, false);
+        if (!opensDocument) {
+            return;
+        }
+
+        // getIntent() should return the intent that we are currently showing
+        setIntent(intent);
+
+        // We are already showing this document, and it has not changed since we read it - so keep it, together with
+        // wherever the user has navigated to. Re-opening an unchanged file from Dropbox is common, and parsing a
+        // large mindmap all over again for it is both slow and, until the whole old document has been collected,
+        // twice the memory.
+        AsyncMindmapLoaderTask runningLoad = AsyncMindmapLoaderTask.getRunningTask();
+        boolean isLoadingThisDocument = runningLoad != null && runningLoad.getMindmap() == mindmap;
+
+        if ((mindmap.isLoaded() || isLoadingThisDocument) && isAlreadyLoaded(intent)) {
+            Log.d(MainApplication.TAG, "Document is unchanged, keeping the mindmap we have");
+            return;
+        }
+
+        loadMindmap(intent);
+    }
+
+    /**
+     * Returns whether the intent asks for the document that we have loaded, at the version that we have loaded
+     */
+    private boolean isAlreadyLoaded(Intent intent) {
+
+        Uri uri = intent.getData();
+        if (!Objects.equals(uri, mindmap.getUri())) {
+            return false;
+        }
+
+        // no URI means the example mindmap from our own resources, which never changes
+        if (uri == null) {
+            return true;
+        }
+
+        // The same file can have new content - that is exactly what happens when Dropbox syncs a mindmap that was
+        // edited elsewhere. If we can find out how big the document is and when it was last modified, we only
+        // re-use what we have if both still match. If we can't tell, we play safe and load it again.
+        String documentVersion = getDocumentVersion(intent.getData());
+        return documentVersion != null && documentVersion.equals(mindmap.getDocumentVersion());
+    }
+
+    /**
+     * Reads size and modification time of a document, as a string that changes whenever the document changes.
+     *
+     * @param uri the document, or null if we are not opening a document (i.e. we show the example mindmap)
+     * @return the version string, or null if the document does not tell us
+     */
+    private String getDocumentVersion(Uri uri) {
+
+        if (uri == null) {
+            return null;
+        }
+
+        // a plain file does not go through a content provider
+        if ("file".equals(uri.getScheme()) && uri.getPath() != null) {
+            File file = new File(uri.getPath());
+            if (!file.exists()) {
+                return null;
+            }
+            return file.length() + "@" + file.lastModified();
+        }
+
+        String[] columns = {OpenableColumns.SIZE, DocumentsContract.Document.COLUMN_LAST_MODIFIED};
+        try (Cursor cursor = getContentResolver().query(uri, columns, null, null, null)) {
+
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+
+            int sizeColumn = cursor.getColumnIndex(OpenableColumns.SIZE);
+            int lastModifiedColumn = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED);
+
+            // without both of these we can not tell one version of the document from another
+            if (sizeColumn < 0 || lastModifiedColumn < 0
+                    || cursor.isNull(sizeColumn) || cursor.isNull(lastModifiedColumn)) {
+                return null;
+            }
+
+            return cursor.getLong(sizeColumn) + "@" + cursor.getLong(lastModifiedColumn);
+
+        } catch (Exception e) {
+
+            // not every content provider answers this query
+            Log.d(MainApplication.TAG, "Could not determine the version of " + uri, e);
+            return null;
+        }
+    }
+
+    /**
+     * Shows the mindmap that is already loaded in the Mindmap view model
+     */
+    private void showLoadedMindmap() {
+
+        horizontalMindmapView.setMindmap(mindmap);
+
+        // continue where the user was before this activity was re-created (e.g. before the screen was rotated). We
+        // only fall back to the root node if we have never expanded anything.
+        if (mindmap.getDeepestSelectedMindmapNode() == null) {
+            horizontalMindmapView.setDeepestSelectedMindmapNode(mindmap.getRootNode());
+        }
+
+        horizontalMindmapView.onRootNodeLoaded();
+        mindmap.getRootNode().subscribeNodeRichContentChanged(this);
+    }
+
+    /**
+     * Discards whatever mindmap we are currently showing, and loads the document of the given intent
+     *
+     * @param intent the intent that specifies which document to load
+     */
+    private void loadMindmap(Intent intent) {
+
+        // Stop a load that is possibly still running, so that it can not write into the mindmap that we are about to
+        // load, and so that we never hold two parsed documents in memory at the same time. This is tracked by the
+        // loader itself and not by this activity, because a load outlives the activity that started it.
+        AsyncMindmapLoaderTask.cancelRunningTask();
+
+        // throw away the mindmap (and its view) that we have loaded so far
+        horizontalMindmapView.clear();
+        mindmap.reset();
+
+        // remember which version of the document we are about to read, so that we can tell next time whether it has
+        // changed in the meantime
+        mindmap.setDocumentVersion(getDocumentVersion(intent.getData()));
+
+        // load the file asynchronously
+        new AsyncMindmapLoaderTask(
+                this,
+                createOnRootNodeLoadedListener(),
+                mindmap,
+                intent
+        ).start();
+    }
+
+    /**
+     * Creates the listener that populates the view once the loader has parsed the root node
+     */
+    private OnRootNodeLoadedListener createOnRootNodeLoadedListener() {
+
+        return (loadedMindmap, rootNode) -> runOnUiThread(() -> {
+
+            horizontalMindmapView.setMindmap(loadedMindmap);
+
+            // by default, the root node is the deepest node that is expanded - but if we are taking over a load
+            // that was started before this activity was re-created, we continue where the user was
+            if (loadedMindmap.getDeepestSelectedMindmapNode() == null) {
+                horizontalMindmapView.setDeepestSelectedMindmapNode(rootNode);
+            }
+
+            horizontalMindmapView.onRootNodeLoaded();
+        });
     }
 
     private void setUpHorizontalMindmapView() {
 
         // create a new HorizontalMindmapView
-        horizontalMindmapView = new HorizontalMindmapView(mindmap, this);
+        horizontalMindmapView = new HorizontalMindmapView(this);
 
         ((LinearLayout)findViewById(R.id.layout_wrapper)).addView(horizontalMindmapView);
 
@@ -142,95 +317,12 @@ public class MainActivity extends FragmentActivity {
         return horizontalMindmapView;
     }
 
-    private class FileOpenTask extends AsyncTask<String, Void, Object> {
-
-        private final Intent intent;
-        private final String action;
-        private final ProgressDialog progressDialog;
-        private final Runnable onPostExecuteTask;
-
-        FileOpenTask(
-                Intent intent,
-                String action,
-                ProgressDialog progressDialog,
-                Runnable onPostExecuteTask
-        ) {
-
-            this.intent = intent;
-            this.action = action;
-            this.progressDialog = progressDialog;
-            this.onPostExecuteTask = onPostExecuteTask;
-        }
-
-        @Override
-        protected Object doInBackground(String... strings) {
-
-            // prepare loading of the Mindmap file
-            InputStream mm = null;
-
-            // determine whether we are started from the EDIT or VIEW intent, or whether we are started from the
-            // launcher started from ACTION_EDIT/VIEW intent
-            if ((Intent.ACTION_EDIT.equals(action) || Intent.ACTION_VIEW.equals(action)) ||
-                Intent.ACTION_OPEN_DOCUMENT.equals(action)
-            ) {
-
-                Log.d(MainApplication.TAG, "started from ACTION_EDIT/VIEW intent");
-
-                // get the URI to the target document (the Mindmap we are opening) and open the InputStream
-                Uri uri = intent.getData();
-                if (uri != null) {
-                    ContentResolver cr = getContentResolver();
-                    try {
-                        mm = cr.openInputStream(uri);
-                    } catch (FileNotFoundException e) {
-
-                        abortWithPopup(R.string.filenotfound);
-                        e.printStackTrace();
-                    }
-                } else {
-                    abortWithPopup(R.string.novalidfile);
-                }
-
-                // store the Uri. Next time the MainActivity is started, we'll
-                // check whether the Uri has changed (-> load new document) or
-                // remained the same (-> reuse previous document)
-                mindmap.setUri(uri);
-            }
-
-            // started from the launcher
-            else {
-                Log.d(MainApplication.TAG, "started from app launcher intent");
-
-                // display the default Mindmap "example.mm", from the resources
-                mm = getApplicationContext().getResources().openRawResource(R.raw.example);
-            }
-
-            // load the mindmap
-            Log.d(MainApplication.TAG, "InputStream fetched, now starting to load document");
-            mindmap.loadDocument(mm);
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-
-            if (onPostExecuteTask != null) {
-                onPostExecuteTask.run();
-            }
-
-            if (progressDialog != null) {
-                progressDialog.dismiss();
-            }
-        }
-    }
-
 
     /**
      * Enables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void enableHomeButton() {
+    public void enableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {
@@ -242,7 +334,7 @@ public class MainActivity extends FragmentActivity {
      * Disables the home button if the Android version allows it
      */
     @SuppressLint("NewApi")
-    void disableHomeButton() {
+    public void disableHomeButton() {
         // menu bar: if we are at least at API 11, the Home button is kind of a back button in the app
         ActionBar bar = getActionBar();
         if (bar != null) {
@@ -260,6 +352,8 @@ public class MainActivity extends FragmentActivity {
 
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
+        this.menu = menu;
+        updateLoadingIndicatorOnUiThread();
         return true;
     }
 
@@ -273,6 +367,7 @@ public class MainActivity extends FragmentActivity {
 
         horizontalMindmapView.upOrClose();
     }
+
 
     /*
      * (non-Javadoc)
@@ -311,7 +406,7 @@ public class MainActivity extends FragmentActivity {
                 performFileSearch();
                 break;
 
-                // App button (top left corner)
+            // App button (top left corner)
             case android.R.id.home:
                 horizontalMindmapView.up();
                 break;
@@ -381,7 +476,7 @@ public class MainActivity extends FragmentActivity {
                     // open RichText content
                     case R.id.openrichtext:
                         Log.d(MainApplication.TAG,
-                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContent()
+                                "Opening rich text of node " + mindmapNodeLayout.getMindmapNode().getRichTextContents()
                         );
                         mindmapNodeLayout.openRichText(this);
 
@@ -409,7 +504,7 @@ public class MainActivity extends FragmentActivity {
      *
      * @param stringResourceId
      */
-    private void abortWithPopup(int stringResourceId) {
+    public void abortWithPopup(int stringResourceId) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(stringResourceId);
@@ -467,5 +562,27 @@ public class MainActivity extends FragmentActivity {
 
             }
         }
+    }
+
+
+    public void setMindmapIsLoading(boolean mindmapIsLoading) {
+
+        this.mindmapIsLoading = mindmapIsLoading;
+
+        // update the loading indicator in the menu
+        updateLoadingIndicatorOnUiThread();
+    }
+
+    private void updateLoadingIndicatorOnUiThread() {
+        if (menu != null && menu.findItem(R.id.mindmap_loading) != null) {
+
+            MenuItem mindmapLoadingIndicator = menu.findItem(R.id.mindmap_loading);
+
+            runOnUiThread(() -> mindmapLoadingIndicator.setVisible(mindmapIsLoading));
+        }
+    }
+
+    public void notifyNodeRichContentChanged(MindmapNode mindmapNode) {
+        this.horizontalMindmapView.notifyNodeContentChanged(this, mindmapNode);
     }
 }

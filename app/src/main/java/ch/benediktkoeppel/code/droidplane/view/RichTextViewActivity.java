@@ -1,9 +1,11 @@
-package ch.benediktkoeppel.code.droidplane;
+package ch.benediktkoeppel.code.droidplane.view;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Base64;
 import android.webkit.WebView;
+
+import ch.benediktkoeppel.code.droidplane.R;
 
 public class RichTextViewActivity extends Activity {
 

@@ -41,6 +41,12 @@ Thumbs.db
 .idea/datasources.xml
 .idea/dataSources.ids
 .idea/libraries/
+# caches the IDE regenerates by itself - deviceStreaming.xml alone is hundreds of lines of device list
+.idea/caches/
+# generated from the Gradle build since AGP 8
+.idea/modules.xml
+.idea/modules/
+*.iml
 
 *.swp
 
